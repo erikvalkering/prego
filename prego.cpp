@@ -1,4 +1,5 @@
 //TODO: are all the todos tested for breaking the app
+//TODO: split calc() into a void func and was_changed() func
 #include <algorithm>
 #include <functional>
 #include <iostream>
@@ -63,8 +64,12 @@ auto log(auto ...args) {
     log_(args..., '\n');
 }
 
+// Conditionally updates dirty_state:
+//   yes->maybe is ignored
+// If value changed returns true, otherwise false
 auto set_dirty_state(auto &state, auto is_dirty) {
-    if (state->is_dirty == dirty_state::yes && is_dirty == dirty_state::maybe) {
+    if (state->is_dirty == dirty_state::yes
+            && is_dirty == dirty_state::maybe) {
         log(0,
             state->name,
             ":dirty_state ",
@@ -106,6 +111,10 @@ auto invalidate(
     dirty_state is_dirty
 ) -> void;
 
+// calculates all dependencies
+// returns true if at least one of them returns true
+//   true indicates that dependents maybe affected
+//   and need to be recalculated
 auto calc_all(const auto &deps) -> bool {
     return std::accumulate(
         RNG(deps),
@@ -151,6 +160,9 @@ auto invalidate_all(
 
 auto remove_dependencies(auto &dependent) -> void;
 
+// Regular void:
+//   T -> T
+//   void -> monostate
 auto wrap(auto f, auto ...args) {
     if constexpr (is_void_v<decltype(f(args...))>) {
         f(args...);
@@ -164,6 +176,7 @@ auto wrap(auto f, auto ...args) {
 auto unwrap(monostate) {}
 auto unwrap(auto value) { return value; }
 
+// clears dependencies and unconditionally runs function
 auto run(const auto &dependent) {
     log(7, "before removal (", dependent.state->name, ")");
     print_dependencies(dependent);
@@ -270,10 +283,14 @@ public:
                 " may have changed, checking deps..."
             );
         }
-        
-        auto should_recalculate =
-            calc_all(state->dependencies)
-         or state->is_dirty == dirty_state::yes;
+       
+	// Make sure dependencies are calculated first.
+        const auto did_any_dep_change = calc_all(state->dependencies);
+
+	// Recalculate if any dependency changed
+	// or if we were forced to recalculate.
+	auto should_recalculate = did_any_dep_change
+		               or state->is_dirty == dirty_state::yes;
 
         if (!should_recalculate) {
             log(1,
@@ -309,6 +326,7 @@ public:
     }
 
     auto operator()(auto dependent) const {
+	// register dependent => dependency
         depends(dependent, *this);
         calc();
         log(3, state->name, "() == ", *state->cache);
@@ -505,6 +523,178 @@ auto observable::set(int value) -> void {
     //for_each(RNG(reactions), reaction::run);
 }
 
+namespace v2 {
+
+enum class notification_t {
+    stale,
+    changed,
+    unchanged,
+};
+
+struct observer_t {
+    virtual void notify(const notification_t) = 0;
+};
+
+struct observable_state_t {
+    virtual void observe(const std::weak_ptr<observer_t> &) = 0;
+    virtual void unobserve(const std::weak_ptr<observer_t> &) = 0;
+};
+
+auto notify(auto &observers, const notification_t notification) {
+    for (auto &observer : observers) {
+	assert(observer != nullptr);
+	observer->notify(notification);
+    }
+}
+
+auto observe(auto &observers, auto observer) {
+    observers.push_back(observer);
+    return [&, idx = observers.size() - 1] {
+	observers.erase(
+	    observers.remove(next(observers.begin(), idx)),
+	    observers.end()
+	);
+    };
+}
+
+
+template<typename T>
+class observable {
+    struct state_t : observable_state_t {
+	T value;
+        std::set<std::weak_ptr<observer_t>> observers;
+
+    	virtual void observe(const std::weak_ptr<observer_t> &observer) final {
+	    observers.insert(observer);
+	}
+
+    	virtual void unobserve(const std::weak_ptr<observer_t> &observer) final {
+	    observers.remove(observer);
+	}
+    };
+
+    std::shared_ptr<state_t> state;
+
+public:
+    explicit observable(T value)
+	: state{std::make_shared<state_t>(value)} {}
+
+    auto set(auto &&value) {
+	if (state->value == std::exchange(state->value, FWD(value)))
+	    return;
+
+        // First sweep: mark all as stale
+        notify(observers, notification_t::stale);
+
+        // Second sweep: update observers
+        notify(observers, notification_t::changed);
+    }
+
+    auto &get() const {
+	return state->value;
+    }
+};
+
+template<typename F>
+class computed {
+    using T = decltype(std::declval<F>()());
+
+    struct state_t : observable_state_t
+	           , observer_
+		   , std::enable_shared_from_this {
+	F f;
+	std::optional<T> value;
+        std::set<std::weak_ptr<observer_t>> observers;
+        std::set<std::weak_ptr<observable_state_t>> observables;
+	int stale = 0;
+	bool maybe_changed = false;
+
+	virtual void notify(const notification_t notification) final {
+	    switch (notification) {
+		default: assert(false);
+
+	        case notification_t::stale: {
+		    // Mark as stale and propagate only if
+		    // we were visited for the first time
+		    if (stale++ == 0)
+		    	notify(observers, notification);
+
+		    break;
+		}
+
+		case notification_t::changed:
+		case notification_t::unchanged: [[fallthrough]]
+	        {
+		    // If an observable was changed,
+		    // we need to recompute as well
+		    maybe_changed |= notification == notification::changed
+
+		    // Only continue if all observables have been updated
+		    if (--stale != 0) break;
+
+		    // Recompute (if necessary) and determine
+		    // whether we actually changed
+		    const changed = maybe_changed
+			         && value != std::exchange(value, compute());
+		    maybe_changed = false;
+
+		    // Finally notify all the observers that we are up to date
+		    notify(observers, changed ? notification_t::changed
+				              : notification_t::unchanged);
+		    break;
+		}
+	    }
+	}
+
+	auto compute() 
+	    const auto observer = shared_from_this();
+	    for (auto &observable : observables)
+		observable->unobserve(observer)
+
+	    return f([=, this](auto observable) {
+		observables.insert(observable);
+		observable->observe(observer);
+		return observable.get();
+	    });
+	}
+    };
+
+    std::shared_ptr<state_t> state;
+
+public:
+    explicit computed(F f)
+	: state{std::make_shared<state_t>(f)} {}
+
+    auto &get() const {
+	if (!state->value)
+	    state->value = state->compute()
+
+	return state->value;
+    }
+};
+
+auto autorun(auto f) {
+    auto c = computed{f};
+    c.get();
+}
+
+auto first_name = observable{"Anita"s};
+auto last_name = observable{"Laera"s}; 
+auto nick_name = observable{""s};
+
+auto full_name = computed{[=](auto get) {
+    if (get(nick_name) != "")
+	return get(nick_name);
+    else
+	return get(first_name) + " " + get(last_name);
+}};
+
+autorun([=](auto get) {
+    std::cout << get(full_name) << std::endl;
+});
+
+} // namespace v2
+
 /*
 /////////////////////////////////
 // HELL2
@@ -529,6 +719,7 @@ What about a dependent that after a state change starts depending on part of the
     */
 // TODO: c depends on a and b (in that order), a sets c to dirty:yes, whereas b sets c to dirty:maybe (incorrect)
 // TODO: c depends on b and a (in that order), b sets c to dirty:maybe, whereas a sets c to dirty:yes (correct)
+// TODO: c depends on b, b depends on a; d depends on a and c; updating a should not trigger d before b and c
 
 #define assert_eq(x, y) { \
     auto z = x; \
