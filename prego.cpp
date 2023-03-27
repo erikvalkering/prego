@@ -1,6 +1,7 @@
 //TODO: are all the todos tested for breaking the app
 //TODO: split calc() into a void func and was_changed() func
 #include <algorithm>
+#include <cassert>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -536,8 +537,23 @@ struct observer_t {
 };
 
 struct observable_state_t {
-    virtual void observe(const std::weak_ptr<observer_t> &) = 0;
-    virtual void unobserve(const std::weak_ptr<observer_t> &) = 0;
+    std::vector<std::weak_ptr<observer_t>> observers;
+
+    void observe(const std::weak_ptr<observer_t> &observer) {
+	auto is_ptr = [&](auto &e) { return e.lock().get() == observer.lock().get(); };
+        const auto it = std::find_if(RNG(observers), is_ptr);
+        if (it != std::end(observers)) return;
+
+        observers.push_back(observer);
+    }
+
+    void unobserve(const std::weak_ptr<observer_t> &observer) {
+	auto is_ptr = [&](auto &e) { return e.lock().get() == observer.lock().get(); };
+        observers.erase(
+	    std::remove_if(RNG(observers), is_ptr),     
+            observers.end()
+        );
+    }
 };
 
 auto notify(auto &observers, const notification_t notification) {
@@ -547,30 +563,10 @@ auto notify(auto &observers, const notification_t notification) {
     }
 }
 
-auto observe(auto &observers, auto observer) {
-    observers.push_back(observer);
-    return [&, idx = observers.size() - 1] {
-	observers.erase(
-	    observers.remove(next(observers.begin(), idx)),
-	    observers.end()
-	);
-    };
-}
-
-
 template<typename T>
 class observable {
     struct state_t : observable_state_t {
 	T value;
-        std::set<std::weak_ptr<observer_t>> observers;
-
-    	virtual void observe(const std::weak_ptr<observer_t> &observer) final {
-	    observers.insert(observer);
-	}
-
-    	virtual void unobserve(const std::weak_ptr<observer_t> &observer) final {
-	    observers.remove(observer);
-	}
     };
 
     std::shared_ptr<state_t> state;
@@ -584,10 +580,10 @@ public:
 	    return;
 
         // First sweep: mark all as stale
-        notify(observers, notification_t::stale);
+        notify(state->observers, notification_t::stale);
 
         // Second sweep: update observers
-        notify(observers, notification_t::changed);
+        notify(state->observers, notification_t::changed);
     }
 
     auto &get() const {
@@ -597,16 +593,15 @@ public:
 
 template<typename F>
 class computed {
-    using T = decltype(std::declval<F>()());
+    using T = decltype(std::declval<F>()([](auto o) { return o.get(); }));
 
     struct state_t : observable_state_t
-	           , observer_
-		   , std::enable_shared_from_this {
+	           , observer_t
+		   , std::enable_shared_from_this<state_t> {
+        std::vector<std::weak_ptr<observer_t>> observables;
 	F f;
 	std::optional<T> value;
-        std::set<std::weak_ptr<observer_t>> observers;
-        std::set<std::weak_ptr<observable_state_t>> observables;
-	int stale = 0;
+	int stale_count = 0;
 	bool maybe_changed = false;
 
 	virtual void notify(const notification_t notification) final {
@@ -616,26 +611,26 @@ class computed {
 	        case notification_t::stale: {
 		    // Mark as stale and propagate only if
 		    // we were visited for the first time
-		    if (stale++ == 0)
+		    if (stale_count++ == 0)
 		    	notify(observers, notification);
 
 		    break;
 		}
 
 		case notification_t::changed:
-		case notification_t::unchanged: [[fallthrough]]
+		case notification_t::unchanged:
 	        {
 		    // If an observable was changed,
 		    // we need to recompute as well
-		    maybe_changed |= notification == notification::changed
+		    maybe_changed |= notification == notification_t::changed;
 
-		    // Only continue if all observables have been updated
-		    if (--stale != 0) break;
+		    // Only continue when all observables have been updated
+		    if (--stale_count != 0) break;
 
 		    // Recompute (if necessary) and determine
 		    // whether we actually changed
-		    const changed = maybe_changed
-			         && value != std::exchange(value, compute());
+		    const auto changed = maybe_changed
+			              && value != std::exchange(value, compute());
 		    maybe_changed = false;
 
 		    // Finally notify all the observers that we are up to date
@@ -646,10 +641,11 @@ class computed {
 	    }
 	}
 
-	auto compute() 
-	    const auto observer = shared_from_this();
+	auto compute() {
+	    const auto observer = this->shared_from_this();
 	    for (auto &observable : observables)
-		observable->unobserve(observer)
+		if (auto p = observable.lock())
+		    p->unobserve(observer);
 
 	    return f([=, this](auto observable) {
 		observables.insert(observable);
@@ -667,7 +663,7 @@ public:
 
     auto &get() const {
 	if (!state->value)
-	    state->value = state->compute()
+	    state->value = state->compute();
 
 	return state->value;
     }
@@ -678,20 +674,22 @@ auto autorun(auto f) {
     c.get();
 }
 
-auto first_name = observable{"Anita"s};
-auto last_name = observable{"Laera"s}; 
-auto nick_name = observable{""s};
+auto test() {
+    auto first_name = observable{"Anita"s};
+    auto last_name = observable{"Laera"s}; 
+    auto nick_name = observable{""s};
 
-auto full_name = computed{[=](auto get) {
-    if (get(nick_name) != "")
-	return get(nick_name);
-    else
-	return get(first_name) + " " + get(last_name);
-}};
+    auto full_name = computed{[=](auto get) {
+        if (get(nick_name) != "")
+    	    return get(nick_name);
+        else
+	    return get(first_name) + " " + get(last_name);
+    }};
 
-autorun([=](auto get) {
-    std::cout << get(full_name) << std::endl;
-});
+    autorun([=](auto get) {
+        std::cout << get(full_name) << std::endl;
+    });
+}
 
 } // namespace v2
 
