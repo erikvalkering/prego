@@ -15,6 +15,7 @@
 using namespace std;
 
 #define RNG(x) std::begin(x), std::end(x)
+#define FWD(x) std::forward<decltype(x)>(x)
 
 struct observable;
 struct computed;
@@ -537,36 +538,31 @@ struct observer_t {
 };
 
 struct observable_state_t {
-    std::vector<std::weak_ptr<observer_t>> observers;
+    using ptr_t = std::weak_ptr<observer_t>;
+    std::set<std::weak_ptr<observer_t>, std::owner_less<>> observers = {};
 
-    void observe(const std::weak_ptr<observer_t> &observer) {
-	auto is_ptr = [&](auto &e) { return e.lock().get() == observer.lock().get(); };
-        const auto it = std::find_if(RNG(observers), is_ptr);
-        if (it != std::end(observers)) return;
-
-        observers.push_back(observer);
+    void observe(const std::weak_ptr<observer_t> &observer) { 
+	observers.insert(observer);
     }
 
     void unobserve(const std::weak_ptr<observer_t> &observer) {
-	auto is_ptr = [&](auto &e) { return e.lock().get() == observer.lock().get(); };
-        observers.erase(
-	    std::remove_if(RNG(observers), is_ptr),     
-            observers.end()
-        );
+	observers.erase(observer);
     }
 };
 
 auto notify(auto &observers, const notification_t notification) {
     for (auto &observer : observers) {
-	assert(observer != nullptr);
-	observer->notify(notification);
+	if (auto p = observer.lock())
+	    p->notify(notification);
     }
 }
 
 template<typename T>
-class observable {
+struct observable {
     struct state_t : observable_state_t {
 	T value;
+
+	explicit state_t(const T &value) : value{value} {}
     };
 
     std::shared_ptr<state_t> state;
@@ -592,19 +588,22 @@ public:
 };
 
 template<typename F>
-class computed {
+struct computed {
     using T = decltype(std::declval<F>()([](auto o) { return o.get(); }));
 
     struct state_t : observable_state_t
 	           , observer_t
 		   , std::enable_shared_from_this<state_t> {
-        std::vector<std::weak_ptr<observer_t>> observables;
 	F f;
-	std::optional<T> value;
+	std::optional<T> value; 
+        std::set<std::weak_ptr<observable_state_t>, std::owner_less<>> observables;
 	int stale_count = 0;
 	bool maybe_changed = false;
 
+	explicit state_t(const F &f) : f{f} {}
+
 	virtual void notify(const notification_t notification) final {
+	    using v2::notify;
 	    switch (notification) {
 		default: assert(false);
 
@@ -646,10 +645,11 @@ class computed {
 	    for (auto &observable : observables)
 		if (auto p = observable.lock())
 		    p->unobserve(observer);
+            observables.clear();
 
 	    return f([=, this](auto observable) {
-		observables.insert(observable);
-		observable->observe(observer);
+		observables.insert(observable.state);
+		observable.state->observe(observer);
 		return observable.get();
 	    });
 	}
@@ -665,7 +665,7 @@ public:
 	if (!state->value)
 	    state->value = state->compute();
 
-	return state->value;
+	return *state->value;
     }
 };
 
@@ -688,7 +688,14 @@ auto test() {
 
     autorun([=](auto get) {
         std::cout << get(full_name) << std::endl;
+	return 0;
     });
+
+    first_name.set("Missi");
+    last_name.set("Valkering");
+    nick_name.set("Ciri");
+    first_name.set("Erik");
+    nick_name.set("");
 }
 
 } // namespace v2
@@ -729,6 +736,10 @@ What about a dependent that after a state change starts depending on part of the
 }
 
 int main() {
+    v2::test();
+}
+
+int main2() {
     auto a = observable{"a", 21};
     /*
     // a(21)
