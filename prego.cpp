@@ -538,7 +538,6 @@ struct observer_t {
 };
 
 struct observable_state_t {
-    using ptr_t = std::weak_ptr<observer_t>;
     std::set<std::weak_ptr<observer_t>, std::owner_less<>> observers = {};
 
     void observe(const std::weak_ptr<observer_t> &observer) { 
@@ -546,21 +545,27 @@ struct observable_state_t {
     }
 
     void unobserve(const std::weak_ptr<observer_t> &observer) {
+	assert(observers.contains(observer));
 	observers.erase(observer);
     }
 };
 
-auto notify(auto &observers, const notification_t notification) {
+auto notify(auto observers, const notification_t notification) {
+    //std::cout << "notify " << observers.size() << " observers\n";
     for (auto &observer : observers) {
 	if (auto p = observer.lock())
 	    p->notify(notification);
+	else std::cout << "err\n";
     }
 }
+
+char id_counter = 'a';
 
 template<typename T>
 struct observable {
     struct state_t : observable_state_t {
 	T value;
+	char id = id_counter++;
 
 	explicit state_t(const T &value) : value{value} {}
     };
@@ -572,8 +577,11 @@ public:
 	: state{std::make_shared<state_t>(value)} {}
 
     auto set(auto &&value) {
-	if (state->value == std::exchange(state->value, FWD(value)))
-	    return;
+	std::cout << state->id << ".set(" << value << ") [" << state->value << "]\n";
+	const auto old_value = std::exchange(state->value, value);
+	if (state->value == old_value)
+	   return;
+	//std::cout << state->id << ": changed\n";
 
         // First sweep: mark all as stale
         notify(state->observers, notification_t::stale);
@@ -594,6 +602,7 @@ struct computed {
     struct state_t : observable_state_t
 	           , observer_t
 		   , std::enable_shared_from_this<state_t> {
+	char id = id_counter++;
 	F f;
 	std::optional<T> value; 
         std::set<std::weak_ptr<observable_state_t>, std::owner_less<>> observables;
@@ -603,6 +612,7 @@ struct computed {
 	explicit state_t(const F &f) : f{f} {}
 
 	virtual void notify(const notification_t notification) final {
+            //std::cout << id << ": notify: " << int(notification) << "\n";
 	    using v2::notify;
 	    switch (notification) {
 		default: assert(false);
@@ -622,6 +632,7 @@ struct computed {
 		    // If an observable was changed,
 		    // we need to recompute as well
 		    maybe_changed |= notification == notification_t::changed;
+	            //std::cout << id << ": maybe_changed: " << maybe_changed << "\n";
 
 		    // Only continue when all observables have been updated
 		    if (--stale_count != 0) break;
@@ -631,10 +642,13 @@ struct computed {
 		    const auto changed = maybe_changed
 			              && value != std::exchange(value, compute());
 		    maybe_changed = false;
+	            //std::cout << id << ": changed: " << changed << "\n";
 
 		    // Finally notify all the observers that we are up to date
+	            //std::cout << id << ": observers: " << observers.size() << "\n";
 		    notify(observers, changed ? notification_t::changed
 				              : notification_t::unchanged);
+	            //std::cout << id << "---\n";
 		    break;
 		}
 	    }
@@ -647,6 +661,7 @@ struct computed {
 		    p->unobserve(observer);
             observables.clear();
 
+	    //std::cout << id << ": recompute\n";
 	    return f([=, this](auto observable) {
 		observables.insert(observable.state);
 		observable.state->observe(observer);
@@ -672,6 +687,7 @@ public:
 auto autorun(auto f) {
     auto c = computed{f};
     c.get();
+    return c;
 }
 
 auto test() {
@@ -680,22 +696,42 @@ auto test() {
     auto nick_name = observable{""s};
 
     auto full_name = computed{[=](auto get) {
+	std::cout << "calc full_name\n";
         if (get(nick_name) != "")
     	    return get(nick_name);
         else
 	    return get(first_name) + " " + get(last_name);
     }};
 
-    autorun([=](auto get) {
-        std::cout << get(full_name) << std::endl;
+    auto display_full = observable{true};
+    auto _ = autorun([=](auto get) {
+	std::cout << "calc autorun\n";
+	if (get(display_full)) {
+	    const auto n = get(full_name);
+            std::cout << ">> " << n << std::endl;
+	}
+	else
+	    std::cout << "disable autorun\n";
+
 	return 0;
     });
 
+    // Anita Laera
     first_name.set("Missi");
+    // full_name >> autorun >> Missi Laera
     last_name.set("Valkering");
-    nick_name.set("Ciri");
+    // full_name >> autorun >> Missi Valkering
     first_name.set("Erik");
-    nick_name.set("");
+    // full_name >> autorun >> Erik Valkering
+    nick_name.set("Erik Valkering");
+    // full_name
+    nick_name.set("Erik Engelbertus Johannes Valkering");
+    // full_name >> autorun >> Erik Engelbertus Johannes Valkering
+    display_full.set(false);
+    // autorun >> disable
+    nick_name.set("Ciri");
+    //
+    // TODO: bool doesn't work?
 }
 
 } // namespace v2
