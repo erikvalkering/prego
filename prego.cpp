@@ -577,7 +577,7 @@ public:
 	: state{std::make_shared<state_t>(value)} {}
 
     auto set(auto &&value) {
-	std::cout << state->id << ".set(" << value << ") [" << state->value << "]\n";
+	//std::cout << state->id << ".set(" << value << ") [" << state->value << "]\n";
 	const auto old_value = std::exchange(state->value, value);
 	if (state->value == old_value)
 	   return;
@@ -690,7 +690,7 @@ auto autorun(auto f) {
     return c;
 }
 
-auto test() {
+auto sandbox() {
     auto first_name = observable{"Anita"s};
     auto last_name = observable{"Laera"s}; 
     auto nick_name = observable{""s};
@@ -731,7 +731,70 @@ auto test() {
     // autorun >> disable
     nick_name.set("Ciri");
     //
-    // TODO: bool doesn't work?
+    // TODO: last set of nickname should not propagate to fullname, because fullname is not observed anymore
+    // TODO: it should preserve the state though in fullname, such that when it gets observed again, it does not have to recompute
+    // TODO: but in this case it should recompute because nickname changed
+    // TODO: rename computed to derived?
+    // TODO: rename autorun to observe or observer or reaction or effect?
+}
+
+auto test_observable() {
+    auto a = observable{42};
+
+    assert(a.get() == 42 && "state should be accessible directly");
+
+    a.set(1729);
+    assert(a.get() == 1 && "mutations should be allowed and observable");
+}
+
+auto test_autorun() {
+    // TODO: register in global
+    // TODO: register in local
+    // TODO: return void
+    // TODO: unobserve when out of scope
+    {
+        auto a = observable{42};
+        auto x = false;
+        auto _ = autorun([&](auto get) { x = true; return 0; });
+
+        a.set(42);
+        assert(x == false && "should not react on mutations of a");
+        a.set(1729);
+        assert(x == false && "should not react on mutations of a");
+    }
+
+    {
+        auto a = observable{42};
+        auto x = false;
+        auto _ = autorun([&](auto get) { get(a); x = true; return 0; });
+
+        a.set(42);
+        assert(x == false && "should not react if a did not change");
+        a.set(1729);
+        assert(x == true && "should react on mutations of a");
+    }
+
+    {
+        auto a = observable{42};
+        auto x = false;
+        auto _ = autorun([=, &x](auto get) { get(a); x = true; return 0; });
+        // tests capture by-value (shared ownership of observable)
+
+        a.set(42);
+        assert(x == false && "should not react if a did not change");
+        a.set(1729);
+        assert(x == true && "should react on mutations of a");
+    }
+}
+
+auto test_3() {
+}
+
+
+auto test() {
+    test_observable();
+    test_autorun();
+    std::cout << "all tests passed\n";
 }
 
 } // namespace v2
@@ -772,6 +835,7 @@ What about a dependent that after a state change starts depending on part of the
 }
 
 int main() {
+    //v2::sandbox();
     v2::test();
 }
 
