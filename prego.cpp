@@ -690,6 +690,20 @@ auto autorun(auto f) {
     return c;
 }
 
+auto join(auto ...args) {
+    return (""s + ... + args);
+}
+
+#define assert_eq(x, y, ...) { \
+    auto z = x; \
+    if (z != y) { \
+        cout << "ASSERTION FAILED(" << __LINE__ << ")\n" \
+             << "\t" << #x << " == " << y << "\n" \
+             << "\t" << z << " != " << y << "\n" \
+	     << "\t" << v2::join(__VA_ARGS__ )<< "\n"; \
+    } \
+}
+
 auto sandbox() {
     auto first_name = observable{"Anita"s};
     auto last_name = observable{"Laera"s}; 
@@ -741,10 +755,10 @@ auto sandbox() {
 auto test_observable() {
     auto a = observable{42};
 
-    assert(a.get() == 42 && "state should be accessible directly");
+    assert_eq(a.get(), 42, "state should be accessible directly");
 
     a.set(1729);
-    assert(a.get() == 1 && "mutations should be allowed and observable");
+    assert_eq(a.get(), 1729, "mutations should be allowed and observable");
 }
 
 auto test_autorun() {
@@ -756,34 +770,40 @@ auto test_autorun() {
         auto a = observable{42};
         auto x = false;
         auto _ = autorun([&](auto get) { x = true; return 0; });
+	assert_eq(x, true, "should execute immediately");
 
+	x = false;
         a.set(42);
-        assert(x == false && "should not react on mutations of a");
+        assert_eq(x, false, "should not react on mutations of a");
         a.set(1729);
-        assert(x == false && "should not react on mutations of a");
+        assert_eq(x, false, "should not react on mutations of a");
     }
 
     {
         auto a = observable{42};
         auto x = false;
         auto _ = autorun([&](auto get) { get(a); x = true; return 0; });
+	assert_eq(x, true, "should execute immediately");
 
+	x = false;
         a.set(42);
-        assert(x == false && "should not react if a did not change");
+        assert_eq(x, false, "should not react if a did not change");
         a.set(1729);
-        assert(x == true && "should react on mutations of a");
+        assert_eq(x, true, "should react on mutations of a");
     }
 
     {
+        // tests capture by-value (shared ownership of observable)
         auto a = observable{42};
         auto x = false;
         auto _ = autorun([=, &x](auto get) { get(a); x = true; return 0; });
-        // tests capture by-value (shared ownership of observable)
+	assert_eq(x, true, "should execute immediately");
 
+	x = false;
         a.set(42);
-        assert(x == false && "should not react if a did not change");
+        assert_eq(x, false, "should not react if a did not change");
         a.set(1729);
-        assert(x == true && "should react on mutations of a");
+        assert_eq(x, true, "should react on mutations of a");
     }
 }
 
@@ -824,15 +844,6 @@ What about a dependent that after a state change starts depending on part of the
 // TODO: c depends on a and b (in that order), a sets c to dirty:yes, whereas b sets c to dirty:maybe (incorrect)
 // TODO: c depends on b and a (in that order), b sets c to dirty:maybe, whereas a sets c to dirty:yes (correct)
 // TODO: c depends on b, b depends on a; d depends on a and c; updating a should not trigger d before b and c
-
-#define assert_eq(x, y) { \
-    auto z = x; \
-    if (z != y) { \
-        cout << "ASSERTION FAILED(" << __LINE__ << ")\n" \
-             << "\t" << #x << " == " << y << "\n" \
-             << "\t" << z << " != " << y << "\n"; \
-    } \
-}
 
 int main() {
     //v2::sandbox();
