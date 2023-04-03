@@ -550,6 +550,9 @@ struct observable_state_t {
     }
 };
 
+using scope_manager_t = std::vector<std::shared_ptr<observable_state_t>>;
+auto global_scope_manager = scope_manager_t{};
+
 auto notify(auto observers, const notification_t notification) {
     //std::cout << "notify " << observers.size() << " observers\n";
     for (auto &observer : observers) {
@@ -671,6 +674,7 @@ struct computed {
     };
 
     std::shared_ptr<state_t> state;
+    friend auto autorun(auto f, scope_manager_t *);
 
 public:
     explicit computed(F f)
@@ -684,10 +688,18 @@ public:
     }
 };
 
-auto autorun(auto f) {
-    auto c = computed{f};
+auto autorun(auto f, scope_manager_t *scope_manager = &global_scope_manager) {
+    // TODO: optimize away the unnecessary int
+    auto c = computed{[=](auto get) { f(get); return 0; }};
     c.get();
+
+    if (scope_manager) scope_manager->push_back(c.state);
+
     return c;
+}
+
+[[nodiscard]] auto autorun(auto f, std::nullptr_t) {
+    return autorun(f, static_cast<scope_manager_t *>(nullptr));
 }
 
 auto join(auto ...args) {
@@ -718,7 +730,7 @@ auto sandbox() {
     }};
 
     auto display_full = observable{true};
-    auto _ = autorun([=](auto get) {
+    autorun([=](auto get) {
 	std::cout << "calc autorun\n";
 	if (get(display_full)) {
 	    const auto n = get(full_name);
@@ -726,8 +738,6 @@ auto sandbox() {
 	}
 	else
 	    std::cout << "disable autorun\n";
-
-	return 0;
     });
 
     // Anita Laera
@@ -762,14 +772,11 @@ auto test_observable() {
 }
 
 auto test_autorun() {
-    // TODO: register in global
-    // TODO: register in local
-    // TODO: return void
     // TODO: unobserve when out of scope
     {
         auto a = observable{42};
         auto x = false;
-        auto _ = autorun([&](auto get) { x = true; return 0; });
+        autorun([&](auto get) { x = true; });
 	assert_eq(x, true, "should execute immediately");
 
 	x = false;
@@ -782,7 +789,7 @@ auto test_autorun() {
     {
         auto a = observable{42};
         auto x = false;
-        auto _ = autorun([&](auto get) { get(a); x = true; return 0; });
+        autorun([&](auto get) { get(a); x = true; });
 	assert_eq(x, true, "should execute immediately");
 
 	x = false;
@@ -796,7 +803,7 @@ auto test_autorun() {
         // tests capture by-value (shared ownership of observable)
         auto a = observable{42};
         auto x = false;
-        auto _ = autorun([=, &x](auto get) { get(a); x = true; return 0; });
+        autorun([=, &x](auto get) { get(a); x = true; });
 	assert_eq(x, true, "should execute immediately");
 
 	x = false;
@@ -807,13 +814,17 @@ auto test_autorun() {
     }
 }
 
-auto test_3() {
+auto test_scope_manager() {
+    // TODO: global scope
+    // TODO: local scope
+    // TODO: nullptr scope + nodiscard
 }
 
 
 auto test() {
     test_observable();
     test_autorun();
+    test_scope_manager();
     std::cout << "all tests passed\n";
 }
 
