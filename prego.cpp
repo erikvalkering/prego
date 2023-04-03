@@ -707,12 +707,12 @@ auto join(auto ...args) {
 }
 
 #define assert_eq(x, y, ...) { \
-    auto z = x; \
-    if (z != y) { \
+    auto $$ = x; \
+    if ($$ != y) { \
         cout << "ASSERTION FAILED(" << __LINE__ << ")\n" \
              << "\t" << #x << " == " << y << "\n" \
-             << "\t" << z << " != " << y << "\n" \
-	     << "\t" << v2::join(__VA_ARGS__ )<< "\n"; \
+             << "\t" << $$ << " != " << y << "\n" \
+	     << "\t" << v2::join(__VA_ARGS__ ) << "\n"; \
     } \
 }
 
@@ -815,9 +815,71 @@ auto test_autorun() {
 }
 
 auto test_scope_manager() {
-    // TODO: global scope
-    // TODO: local scope
-    // TODO: nullptr scope + nodiscard
+    auto a = observable{42};
+
+    auto x = false;
+    auto y = false;
+    auto z = false;
+    auto w = false;
+
+    {
+	{
+	    auto scope_manager = scope_manager_t{};
+
+	    {
+	        autorun([&, a](auto get) { get(a); x = true; });
+	        autorun([&, a](auto get) { get(a); y = true; }, &scope_manager);
+	        auto _ = autorun([&, a](auto get) { get(a); z = true; }, nullptr);
+	        std::ignore = autorun([&, a](auto get) { get(a); w = true; }, nullptr);
+
+	        assert_eq(x, true, "sanity check");
+	        assert_eq(y, true, "sanity check");
+	        assert_eq(z, true, "sanity check");
+	        assert_eq(w, true, "sanity check");
+
+		x = false;
+	        y = false;
+		z = false;
+		w = false;
+	        a.set(1729);
+	        assert_eq(x, true, "autorun should be kept alive by global_scope_manager");
+	        assert_eq(y, true, "autorun should be kept alive by local scope_manager");
+	        assert_eq(z, true, "autorun should be kept alive by local variable");
+	        assert_eq(w, false, "autorun should be destroyed immediately");
+	    }
+
+	    x = false;
+	    y = false;
+	    z = false;
+	    w = false;
+	    a.set(42);
+            assert_eq(x, true, "autorun should be kept alive by global_scope_manager");
+	    assert_eq(y, true, "autorun should be kept alive by local scope_manager");
+	    assert_eq(z, false, "autorun should be destroyed by local variable");
+	    assert_eq(w, false, "autorun should be destroyed immediately");
+	}
+
+        x = false;
+	y = false;
+	z = false;
+	w = false;
+	a.set(1729);
+        assert_eq(x, true, "autorun should be kept alive by global_scope_manager");
+	assert_eq(y, false, "autorun should be destroyed by local scope_manager");
+	assert_eq(z, false, "autorun should be destroyed by local variable");
+	assert_eq(w, false, "autorun should be destroyed immediately");
+    }
+
+    global_scope_manager.clear();
+    x = false;
+    y = false;
+    z = false;
+    w = false;
+    a.set(42);
+    assert_eq(x, false, "autorun should be destroyed by global_scope_manager");
+    assert_eq(y, false, "autorun should be destroyed by local scope_manager");
+    assert_eq(z, false, "autorun should be destroyed by local variable");
+    assert_eq(w, false, "autorun should be destroyed immediately");
 }
 
 
