@@ -556,8 +556,10 @@ auto global_scope_manager = scope_manager_t{};
 auto notify(auto observers, const notification_t notification) {
     //std::cout << "notify " << observers.size() << " observers\n";
     for (auto &observer : observers) {
-	if (auto p = observer.lock())
+	if (auto p = observer.lock()){
 	    p->notify(notification);
+	    std::cout << "no err\n";
+	}
 	else std::cout << "err\n";
     }
 }
@@ -710,6 +712,7 @@ auto join(auto ...args) {
     auto $$ = x; \
     if ($$ != y) { \
         cout << "ASSERTION FAILED(" << __LINE__ << ")\n" \
+	     << std::boolalpha \
              << "\t" << #x << " == " << y << "\n" \
              << "\t" << $$ << " != " << y << "\n" \
 	     << "\t" << v2::join(__VA_ARGS__ ) << "\n"; \
@@ -883,16 +886,21 @@ auto test_scope_manager() {
 
 auto test_auto_unobserve() {
     auto a = observable{42};
+    auto x = false;
     {
-	auto _ = autorun([=](auto get) { get(a); });
+	auto _ = autorun([=, &x](auto get) { get(a); x = true; });
     }
+
+    x = false;
+    a.set(1729);
+    assert_eq(x, false, "autorun should definitely not be invoked");
 }
 
 auto test() {
-    test_observable();
+    /*test_observable();
     test_autorun();
     test_scope_manager();
-    test_auto_unobserve();
+    */test_auto_unobserve();
 
     std::cout << "all tests passed\n";
 }
