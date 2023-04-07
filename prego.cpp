@@ -759,7 +759,7 @@ auto sandbox() {
     // TODO: it should preserve the state though in fullname, such that when it gets observed again, it does not have to recompute
     // TODO: but in this case it should recompute because nickname changed
     // TODO: rename computed to derived?
-    // TODO: rename autorun to observe or observer or reaction or effect?
+    // TODO: rename autorun to observe or observer or reaction or effect? or reactive?
 }
 
 auto test_observable() {
@@ -772,7 +772,6 @@ auto test_observable() {
 }
 
 auto test_autorun() {
-    // TODO: unobserve when out of scope
     {
         auto a = observable{42};
         auto x = false;
@@ -882,11 +881,19 @@ auto test_scope_manager() {
     assert_eq(w, false, "autorun should be destroyed immediately");
 }
 
+auto test_auto_unobserve() {
+    auto a = observable{42};
+    {
+	auto _ = autorun([=](auto get) { get(a); });
+    }
+}
 
 auto test() {
     test_observable();
     test_autorun();
     test_scope_manager();
+    test_auto_unobserve();
+
     std::cout << "all tests passed\n";
 }
 
