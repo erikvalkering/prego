@@ -2,6 +2,7 @@
 //TODO: split calc() into a void func and was_changed() func
 #include <algorithm>
 #include <cassert>
+#include <compare>
 #include <functional>
 #include <iostream>
 #include <memory>
@@ -888,12 +889,52 @@ auto test_auto_unobserve() {
     auto a = observable{42};
     auto x = false;
     {
-	auto _ = autorun([=, &x](auto get) { get(a); x = true; });
+	// TODO: autorun's lifetime should be managed by observable a
+	// TODO: a's lifetime should also be managed by autorun
+	// TODO: this way, we don't need the global scope_manager
+	// TODO: how to resolve this cyclic ownership dependency?
+	auto _ = autorun([=, &x](auto get) { get(a); x = true; }, nullptr);
     }
 
     x = false;
     a.set(1729);
     assert_eq(x, false, "autorun should definitely not be invoked");
+    // TODO: autorun should not even be referenced
+}
+
+struct destructor {
+    bool *p;
+    ~destructor() { *p = true; }
+
+    auto operator <=>(const destructor &) const = default;
+};
+
+auto test_lifetime() {
+    auto a_dead = false;
+    auto autorun_dead = false;
+    {
+        auto a = observable{destructor{&a_dead}};
+        {
+	    autorun([=, x = destructor{&autorun_dead}](auto get) { get(a); });
+        }
+        assert_eq(autorun_dead, false, "autorun should be kept alive by a");
+    }
+    assert_eq(a_dead, true, "a should be destroyed");
+    assert_eq(autorun_dead, true, "autorun should be destroyed");
+
+    auto b_dead = false;
+    auto c_dead = false;
+    {
+	auto c = [&] {
+	    auto b = observable{destructor{&b_dead}};
+
+	    return computed{[=, x = destructor{&c_dead}](auto get) { return get(b); }};
+	}();
+
+        assert_eq(b_dead, false, "b should be kept alive by c");
+    }
+    assert_eq(b_dead, true, "b should be destroyed");
+    assert_eq(c_dead, true, "c should be destroyed");
 }
 
 auto test() {
@@ -901,6 +942,7 @@ auto test() {
     test_autorun();
     test_scope_manager();
     */test_auto_unobserve();
+    test_lifetime();
 
     std::cout << "all tests passed\n";
 }
