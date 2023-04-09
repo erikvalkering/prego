@@ -906,10 +906,10 @@ struct destructor {
     bool *p;
     ~destructor() { *p = true; }
 
-    auto operator <=>(const destructor &) const = default;
+    auto operator<=>(const destructor &) const = default;
 };
 
-auto test_lifetime() {
+auto test_gc_lifetimes() {
     auto a_dead = false;
     auto autorun_dead = false;
     {
@@ -942,7 +942,7 @@ auto test() {
     test_autorun();
     test_scope_manager();
     */test_auto_unobserve();
-    test_lifetime();
+    test_gc_lifetimes();
 
     std::cout << "all tests passed\n";
 }
