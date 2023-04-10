@@ -620,6 +620,12 @@ struct computed {
 	bool maybe_changed = false;
 
 	explicit state_t(const F &f) : f{f} {}
+        ~state_t() {
+	    const auto observer = this->shared_from_this();
+	    for (auto &observable : observables)
+		if (auto p = observable.lock())
+		    p->unobserve(observer);
+	}
 
 	virtual void notify(const notification_t notification) final {
             //std::cout << id << ": notify: " << int(notification) << "\n";
