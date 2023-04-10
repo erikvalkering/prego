@@ -599,6 +599,10 @@ public:
     auto &get() const {
 	return state->value;
     }
+
+    auto observers() const {
+	return state->observers;
+    }
 };
 
 template<typename F>
@@ -688,6 +692,10 @@ public:
 	    state->value = state->compute();
 
 	return *state->value;
+    }
+
+    auto observers() const {
+	return state->observers;
     }
 };
 
@@ -899,7 +907,7 @@ auto test_auto_unobserve() {
     x = false;
     a.set(1729);
     assert_eq(x, false, "autorun should definitely not be invoked");
-    // TODO: autorun should not even be referenced
+    assert_eq(std::size(a.observers()), 0, "autorun should not be referenced anymore");
 }
 
 struct destructor {
@@ -940,9 +948,9 @@ auto test_gc_lifetimes() {
 auto test() {
     /*test_observable();
     test_autorun();
-    test_scope_manager();
-    */test_auto_unobserve();
-    test_gc_lifetimes();
+    test_scope_manager();*/
+    test_auto_unobserve();
+    //test_gc_lifetimes();
 
     std::cout << "all tests passed\n";
 }
