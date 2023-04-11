@@ -670,7 +670,7 @@ struct computed {
 	}
 
 	auto compute() {
-	    const auto observer = this->shared_from_this();
+	    const auto observer = this->weak_from_this();
 	    for (auto &observable : observables)
 		if (auto p = observable.lock())
 		    p->unobserve(observer);
@@ -725,7 +725,7 @@ auto join(auto ...args) {
 #define assert_eq(x, y, ...) { \
     auto $$ = x; \
     if ($$ != y) { \
-        cout << "ASSERTION FAILED(" << __LINE__ << ")\n" \
+        cout << "ASSERTION FAILED(" << __FUNCTION__ << "@" << __LINE__ << ")\n" \
 	     << std::boolalpha \
              << "\t" << #x << " == " << y << "\n" \
              << "\t" << $$ << " != " << y << "\n" \
@@ -915,6 +915,18 @@ auto test_auto_unobserve() {
     assert_eq(std::size(a.observers()), 0, "autorun should not be referenced anymore");
 }
 
+auto test_computed() {
+    assert_eq(true, false, "not implemented yet");
+}
+
+auto test_dynamic_reactions() {
+    assert_eq(true, false, "not implemented yet");
+}
+
+auto test_lazy_observing() {
+    assert_eq(true, false, "not implemented yet");
+}
+
 struct destructor {
     bool *p;
     ~destructor() { *p = true; }
@@ -954,6 +966,9 @@ auto test() {
     test_observable();
     test_autorun();
     test_scope_manager();
+    test_computed();
+    test_dynamic_reactions();
+    test_lazy_observing();
     test_auto_unobserve();
     //test_gc_lifetimes();
 
