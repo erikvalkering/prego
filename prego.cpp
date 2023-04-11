@@ -559,7 +559,6 @@ auto notify(auto observers, const notification_t notification) {
     for (auto &observer : observers) {
 	if (auto p = observer.lock()){
 	    p->notify(notification);
-	    std::cout << "no err\n";
 	}
 	else std::cout << "err\n";
     }
@@ -952,9 +951,9 @@ auto test_gc_lifetimes() {
 }
 
 auto test() {
-    /*test_observable();
+    test_observable();
     test_autorun();
-    test_scope_manager();*/
+    test_scope_manager();
     test_auto_unobserve();
     //test_gc_lifetimes();
 
