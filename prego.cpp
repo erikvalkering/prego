@@ -621,7 +621,7 @@ struct computed {
 
 	explicit state_t(const F &f) : f{f} {}
         ~state_t() {
-	    const auto observer = this->shared_from_this();
+	    const auto observer = this->weak_from_this();
 	    for (auto &observable : observables)
 		if (auto p = observable.lock())
 		    p->unobserve(observer);
