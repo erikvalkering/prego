@@ -554,10 +554,10 @@ struct observable_state_t {
 using scope_manager_t = std::vector<std::shared_ptr<observable_state_t>>;
 auto global_scope_manager = scope_manager_t{};
 
-auto notify(auto observers, const notification_t notification) {
+auto notify(auto &observers, const notification_t notification) {
     //std::cout << "notify " << observers.size() << " observers\n";
     for (auto &observer : observers) {
-	if (auto p = observer.lock()){
+	if (auto p = observer.lock()) {
 	    p->notify(notification);
 	}
 	else std::cout << "err\n";
