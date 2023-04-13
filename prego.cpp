@@ -722,6 +722,7 @@ auto join(auto ...args) {
     return (""s + ... + args);
 }
 
+auto all_tests_passed = true;
 #define assert_eq(x, y, ...) { \
     auto $$ = x; \
     if ($$ != y) { \
@@ -730,6 +731,7 @@ auto join(auto ...args) {
              << "\t" << #x << " == " << y << "\n" \
              << "\t" << $$ << " != " << y << "\n" \
 	     << "\t" << v2::join(__VA_ARGS__ ) << "\n"; \
+	v2::all_tests_passed = false; \
     } \
 }
 
@@ -972,7 +974,10 @@ auto test() {
     test_auto_unobserve();
     //test_gc_lifetimes();
 
-    std::cout << "all tests passed\n";
+    if (all_tests_passed)
+        std::cout << "all tests passed\n";
+    else
+	std::cout << "some tests failed\n";
 }
 
 } // namespace v2
