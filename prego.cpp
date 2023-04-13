@@ -936,7 +936,9 @@ struct destructor {
     auto operator<=>(const destructor &) const = default;
 };
 
-auto test_gc_lifetimes() {
+auto test_lifetimes() {
+// TODO: full gc-like lifetime management without need for global scope manager
+#if 0
     auto a_dead = false;
     auto autorun_dead = false;
     {
@@ -948,6 +950,7 @@ auto test_gc_lifetimes() {
     }
     assert_eq(a_dead, true, "a should be destroyed");
     assert_eq(autorun_dead, true, "autorun should be destroyed");
+#endif
 
     auto b_dead = false;
     auto c_dead = false;
@@ -972,7 +975,7 @@ auto test() {
     test_dynamic_reactions();
     test_lazy_observing();
     test_auto_unobserve();
-    //test_gc_lifetimes();
+    test_lifetimes();
 
     if (all_tests_passed)
         std::cout << "all tests passed\n";
