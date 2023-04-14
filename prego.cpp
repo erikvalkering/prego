@@ -790,6 +790,27 @@ auto test_observable() {
     assert_eq(a.get(), 1729, "mutations should be allowed and observable");
 }
 
+auto test_computed() {
+    auto a = observable{42};
+
+    auto b = computed{[=](auto get) {
+        return 2 * get(a);
+    }};
+
+    assert_eq(b.get(), 2 * 42, "computed state should be accessible directly");
+
+    a.set(1729);
+    assert_eq(b.get(), 2 * 1729, "mutations should be allowed and observable through computed state");
+}
+
+auto test_dynamic_reactions() {
+    assert_eq(true, false, "not implemented yet");
+}
+
+auto test_lazy_observing() {
+    assert_eq(true, false, "not implemented yet");
+}
+
 auto test_autorun() {
     {
         auto a = observable{42};
@@ -917,54 +938,59 @@ auto test_auto_unobserve() {
     assert_eq(std::size(a.observers()), 0, "autorun should not be referenced anymore");
 }
 
-auto test_computed() {
-    assert_eq(true, false, "not implemented yet");
-}
+class lifetime_tracker {
+    std::weak_ptr<int> p;
 
-auto test_dynamic_reactions() {
-    assert_eq(true, false, "not implemented yet");
-}
+public:
+    auto alive() const {
+	return !p.expired();
+    }
 
-auto test_lazy_observing() {
-    assert_eq(true, false, "not implemented yet");
-}
-
-struct destructor {
-    bool *p;
-    ~destructor() { *p = true; }
-
-    auto operator<=>(const destructor &) const = default;
+    auto track() {
+        auto sp = std::make_shared<int>();
+	p = sp;
+	return sp;
+    }
 };
 
 auto test_lifetimes() {
 // TODO: full gc-like lifetime management without need for global scope manager
 #if 0
-    auto a_dead = false;
-    auto autorun_dead = false;
+    auto a_lt = lifetime_tracker{};
+    auto autorun_lt = lifetime_tracker{};
     {
-        auto a = observable{destructor{&a_dead}};
+        auto a = observable{a_lt.track()};
         {
-	    autorun([=, x = destructor{&autorun_dead}](auto get) { get(a); });
+	    autorun([=, x = autorun_lt.track()](auto get) { get(a); });
         }
-        assert_eq(autorun_dead, false, "autorun should be kept alive by a");
+        assert_eq(autorun_lt.alive(), true, "autorun should be kept alive by a");
     }
-    assert_eq(a_dead, true, "a should be destroyed");
-    assert_eq(autorun_dead, true, "autorun should be destroyed");
+    assert_eq(a_lt.alive(), false, "a should be destroyed");
+    assert_eq(autorun_lt.alive(), false, "autorun should be destroyed");
 #endif
 
-    auto b_dead = false;
-    auto c_dead = false;
+    auto b_lt = lifetime_tracker{};
+    auto c_lt = lifetime_tracker{};
     {
 	auto c = [&] {
-	    auto b = observable{destructor{&b_dead}};
+            assert_eq(b_lt.alive(), false, "b should not be alive");
+	    auto b = observable{b_lt.track()};
+            assert_eq(b_lt.alive(), true, "b should be alive");
 
-	    return computed{[=, x = destructor{&c_dead}](auto get) { return get(b); }};
+	    return computed{[=, x = c_lt.track()](auto get) { return get(b); }};
 	}();
 
-        assert_eq(b_dead, false, "b should be kept alive by c");
+        assert_eq(b_lt.alive(), true, "b should be kept alive by c");
     }
-    assert_eq(b_dead, true, "b should be destroyed");
-    assert_eq(c_dead, true, "c should be destroyed");
+    assert_eq(b_lt.alive(), false, "b should be destroyed");
+    assert_eq(c_lt.alive(), false, "c should be destroyed");
+}
+
+auto test_noncopyable_types() {
+    assert_eq(true, false, "not implemented yet");
+}
+auto test_immovable_types() {
+    assert_eq(true, false, "not implemented yet");
 }
 
 auto test() {
@@ -976,6 +1002,8 @@ auto test() {
     test_lazy_observing();
     test_auto_unobserve();
     test_lifetimes();
+    test_noncopyable_types();
+    test_immovable_types();
 
     if (all_tests_passed)
         std::cout << "all tests passed\n";
