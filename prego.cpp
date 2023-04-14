@@ -803,11 +803,31 @@ auto test_computed() {
     assert_eq(b.get(), 2 * 1729, "mutations should be allowed and observable through computed state");
 }
 
-auto test_dynamic_reactions() {
-    assert_eq(true, false, "not implemented yet");
+auto test_lazy_observing() {
+    auto a = observable{42};
+
+    auto x = false;
+    auto b = computed{[=, &x](auto get) {
+	x = true;
+        get(a);
+	return 0;
+    }};
+
+    assert_eq(x, false, "computed state should not compute when not requested");
+    b.get();
+    assert_eq(x, true, "computed state should compute the first time when requested");
+
+    x = false;
+    b.get();
+    assert_eq(x, false, "computed state should not recompute when dependencies have not changed");
+
+    x = false;
+    a.set(1729);
+    b.get();
+    assert_eq(x, true, "computed state should recompute when dependencies have changed");
 }
 
-auto test_lazy_observing() {
+auto test_dynamic_reactions() {
     assert_eq(true, false, "not implemented yet");
 }
 
