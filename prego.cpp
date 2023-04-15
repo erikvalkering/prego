@@ -833,41 +833,71 @@ auto test_dynamic_reactions() {
     auto last_name = observable{"Laera"s}; 
     auto nick_name = observable{""s};
 
-    auto full_name = computed{[=](auto get) {
-	std::cout << "calc full_name\n";
+    auto x = false;
+    auto full_name = computed{[=, &x](auto get) {
+	x = true;
         if (get(nick_name) != "")
     	    return get(nick_name);
         else
 	    return get(first_name) + " " + get(last_name);
     }};
 
+    auto y = false;
     auto display_full = observable{true};
-    autorun([=](auto get) {
-	std::cout << "calc autorun\n";
+    autorun([=, &y](auto get) {
+	y = true;
 	if (get(display_full)) {
-	    const auto n = get(full_name);
-            std::cout << ">> " << n << std::endl;
+	    get(full_name);
 	}
-	else
-	    std::cout << "disable autorun\n";
     });
 
-    // Anita Laera
+    assert_eq(x, true, "full_name should be computed");
+    assert_eq(y, true, "autorun should execute immediately");
+
+    x = false;
+    y = false;
+
     first_name.set("Missi");
-    // full_name >> autorun >> Missi Laera
+    assert_eq(x, true, "full_name should react to change of first_name");
+    assert_eq(y, true, "autorun should react to change of full_name");
+
+    x = false;
+    y = false;
+
     last_name.set("Valkering");
-    // full_name >> autorun >> Missi Valkering
+    assert_eq(x, true, "full_name should react to change of last_name");
+    assert_eq(y, true, "autorun should react to change of full_name");
+    
     first_name.set("Erik");
-    // full_name >> autorun >> Erik Valkering
+    
+    x = false;
+    y = false;
+
     nick_name.set("Erik Valkering");
-    // full_name
+    assert_eq(x, true, "full_name should react to change of nick_name");
+    assert_eq(y, false, "autorun should not react because full_name did not change");
+
+    x = false;
+    y = false;
+
     nick_name.set("Erik Engelbertus Johannes Valkering");
-    // full_name >> autorun >> Erik Engelbertus Johannes Valkering
+    assert_eq(x, true, "full_name should react to change of nick_name");
+    assert_eq(y, true, "autorun should react to change of full_name");
+
+    x = false;
+    y = false;
+
     display_full.set(false);
-    // autorun >> disable
+    assert_eq(x, false, "full_name should react to change of display_full");
+    assert_eq(y, true, "autorun should react to change of display_full");
+
+    x = false;
+    y = false;
+
     nick_name.set("Ciri");
-    //
-    // TODO: last set of nickname should not propagate to fullname, because fullname is not observed anymore
+    assert_eq(x, false, "full_name should not react to change of nick_name, because it is not being observed right now");
+    assert_eq(y, false, "autorun should not react to change of nick_name, because it is not being observed right now (through full_name)");
+
     // TODO: it should preserve the state though in fullname, such that when it gets observed again, it does not have to recompute
     // TODO: but in this case it should recompute because nickname changed
     // TODO: rename computed to derived?
@@ -1052,8 +1082,49 @@ auto test_lifetimes() {
 auto test_noncopyable_types() {
     assert_eq(true, false, "not implemented yet");
 }
+
 auto test_immovable_types() {
     assert_eq(true, false, "not implemented yet");
+}
+
+auto test_syntaxes() {
+    auto a = observable{42};
+
+    // alternative syntax observable: function instead of class
+    //   which might be more flexible in the design space of the
+    //   implementation. Same for computed.
+    auto b = observable(42);
+
+    // mutation syntax 1: set
+    a.set(1729);
+
+    // mutation syntax 2: direct assignment
+    // a = 1729;
+
+    // computed syntax 1: get as parameter
+    //   - thread-safe
+    //   - may allow for optimizations
+    auto c = computed{[=](auto get) { return get(a) + get(b); }};
+
+    // computed syntax 2: parameterless function
+    //   - not thread-safe
+    //   - maybe more difficult to optimize
+    //   - less boilerplate
+    // auto d = computed{[=] { return a() + b(); }};
+
+    // computed syntax 3: parameterless function + smartref
+    //   - not thread-safe
+    //   - maybe more difficult to optimize
+    //   - minimal boilerplate (except for user defined types)
+    //   - maybe not worth the effort, considering only 2 chars per observable
+    // auto e = computed{[=] { return a + b; }};
+
+    // computed syntax 4: static get
+    //   - thread-safe
+    //   - may allow for more optimization
+    //   - every observable/computed should be declared globally and becomes stateless
+    //   - does every observable have to be unique?
+    // auto f = computed{[](auto get) { return get(a) + get(b); }};
 }
 
 auto test() {
