@@ -823,12 +823,55 @@ auto test_lazy_observing() {
 
     x = false;
     a.set(1729);
+    assert_eq(x, false, "computed state should not be reactive if not reactively observed");
     b.get();
     assert_eq(x, true, "computed state should recompute when dependencies have changed");
 }
 
 auto test_dynamic_reactions() {
-    assert_eq(true, false, "not implemented yet");
+    auto first_name = observable{"Anita"s};
+    auto last_name = observable{"Laera"s}; 
+    auto nick_name = observable{""s};
+
+    auto full_name = computed{[=](auto get) {
+	std::cout << "calc full_name\n";
+        if (get(nick_name) != "")
+    	    return get(nick_name);
+        else
+	    return get(first_name) + " " + get(last_name);
+    }};
+
+    auto display_full = observable{true};
+    autorun([=](auto get) {
+	std::cout << "calc autorun\n";
+	if (get(display_full)) {
+	    const auto n = get(full_name);
+            std::cout << ">> " << n << std::endl;
+	}
+	else
+	    std::cout << "disable autorun\n";
+    });
+
+    // Anita Laera
+    first_name.set("Missi");
+    // full_name >> autorun >> Missi Laera
+    last_name.set("Valkering");
+    // full_name >> autorun >> Missi Valkering
+    first_name.set("Erik");
+    // full_name >> autorun >> Erik Valkering
+    nick_name.set("Erik Valkering");
+    // full_name
+    nick_name.set("Erik Engelbertus Johannes Valkering");
+    // full_name >> autorun >> Erik Engelbertus Johannes Valkering
+    display_full.set(false);
+    // autorun >> disable
+    nick_name.set("Ciri");
+    //
+    // TODO: last set of nickname should not propagate to fullname, because fullname is not observed anymore
+    // TODO: it should preserve the state though in fullname, such that when it gets observed again, it does not have to recompute
+    // TODO: but in this case it should recompute because nickname changed
+    // TODO: rename computed to derived?
+    // TODO: rename autorun to observe or observer or reaction or effect? or reactive?
 }
 
 auto test_autorun() {
