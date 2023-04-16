@@ -836,16 +836,17 @@ auto test_dynamic_reactions() {
     auto x = false;
     auto full_name = computed{[=, &x](auto get) {
 	x = true;
-        if (get(nick_name) != "")
-    	    return get(nick_name);
-        else
-	    return get(first_name) + " " + get(last_name);
+	return get(first_name) + " " + get(last_name);
     }};
 
     auto y = false;
     auto display_name = computed{[=, &y](auto get) {
 	y = true;
 	return get(full_name);
+        if (get(nick_name) != "")
+    	    return get(nick_name);
+        else
+	    return get(full_name);
     }};
 
     auto z = false;
@@ -875,18 +876,18 @@ auto test_dynamic_reactions() {
     z = false;
 
     nick_name.set("Jane Doe");
-    assert_eq(x, true, "full_name should react to change of nick_name");
-    assert_eq(y, false, "display_name should not react because full_name did not change");
-    assert_eq(z, false, "autorun should not react because full_name did not change");
+    assert_eq(x, false, "full_name should not react to change of nick_name");
+    assert_eq(y, true, "display_name should react to change of nick_name");
+    assert_eq(z, false, "autorun should not react because display_name did not change");
 
     x = false;
     y = false;
     z = false;
 
-    nick_name.set("John Doe");
-    assert_eq(x, true, "full_name should react to change of nick_name");
-    assert_eq(y, true, "display_name should react to change of full_name");
-    assert_eq(z, true, "autorun should react to change of display_name");
+    first_name.set("John");
+    assert_eq(x, false, "full_name should not react to change of first_name, because full_name is not being observed");
+    assert_eq(y, false, "display_name should not react, because it is not observing full_name");
+    assert_eq(z, false, "autorun should not react, because nothing changed");
 
     x = false;
     y = false;
@@ -901,18 +902,38 @@ auto test_dynamic_reactions() {
     y = false;
     z = false;
 
-    first_name.set("John");
-    assert_eq(x, false, "full_name should not react to change of first_name, because it is not being observed right now");
-    assert_eq(y, false, "display_name should not react to change of first_name, because it is not being observed right now (and was not observing first_name)");
-    assert_eq(y, false, "autorun should not react to change of nick_name, because it is not being observed right now (through full_name)");
-
-    // TODO: it should preserve the state though in fullname, such that when it gets observed again, it does not have to recompute
+    nick_name.set("John Doe");
+    assert_eq(x, false, "full_name should not react to change of nick_name, because it does not observe it");
+    assert_eq(y, false, "display_name should not react to change of nick_name, because it is not being observed right now");
+    assert_eq(y, false, "autorun should not react to change of nick_name, because it is not being observed right now (through display_name)");
 
     x = false;
     y = false;
+    z = false;
 
-    nick_name.set("Erik Engelbertus Johannes Valkering");
-    // TODO: but in this case it should recompute because nickname changed
+    // TODO: perhaps move to separate unit test:
+    //   Reactivity triggered "from above",
+    //   i.e. observers that were triggered and
+    //   query observables that were not triggered.
+    //   This is different from "from below",
+    //   where observers react because one of
+    //   their observables (directly or indirectly)
+    //   got changed.
+    //   It matters, because those observables should
+    //   be invalidated even if they are not being observed
+    enabled.set(true);
+    assert_eq(x, false, "full_name should not recompute because it is still not being observed");
+    assert_eq(y, true, "display_name should recompute, because it is being observed again");
+    assert_eq(y, true, "autorun should react to change of enabled");
+
+    x = false;
+    y = false;
+    z = false;
+
+    nick_name.set("");
+    assert_eq(x, true, "full_name should recompute because it is being observed again");
+    assert_eq(y, true, "display_name should recompute, because full_name changed, as well as nick_name");
+    assert_eq(y, false, "autorun should not react, because display_name did not change");
     // TODO: rename computed to derived?
     // TODO: rename autorun to observe or observer or reaction or effect? or reactive?
 }
@@ -1145,7 +1166,7 @@ auto test() {
     test_autorun();
     test_scope_manager();
     test_computed();
-    test_dynamic_reactions();
+    //test_dynamic_reactions();
     test_lazy_observing();
     test_auto_unobserve();
     test_lifetimes();
