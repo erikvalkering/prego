@@ -595,7 +595,7 @@ public:
         notify(state->observers, notification_t::changed);
     }
 
-    auto &get() const {
+    auto &get(bool reactive = false) const {
 	return state->value;
     }
 
@@ -655,7 +655,7 @@ struct computed {
 		    // Recompute (if necessary) and determine
 		    // whether we actually changed
 		    const auto changed = maybe_changed
-			              && value != std::exchange(value, compute());
+			              && value != std::exchange(value, compute(true));
 		    maybe_changed = false;
 	            //std::cout << id << ": changed: " << changed << "\n";
 
@@ -669,18 +669,22 @@ struct computed {
 	    }
 	}
 
-	auto compute() {
+	auto compute(bool reactive) {
 	    const auto observer = this->weak_from_this();
-	    for (auto &observable : observables)
-		if (auto p = observable.lock())
-		    p->unobserve(observer);
-            observables.clear();
+	    if (reactive) {
+		for (auto &observable : observables)
+		    if (auto p = observable.lock())
+		       p->unobserve(observer);
+                observables.clear();
+	    }
 
 	    //std::cout << id << ": recompute\n";
 	    return f([=, this](auto observable) {
-		observables.insert(observable.state);
-		observable.state->observe(observer);
-		return observable.get();
+		if (reactive) {
+		    observables.insert(observable.state);
+	    	    observable.state->observe(observer);	           }
+
+		return observable.get(reactive);
 	    });
 	}
     };
@@ -692,9 +696,9 @@ public:
     explicit computed(F f)
 	: state{std::make_shared<state_t>(f)} {}
 
-    auto &get() const {
+    auto &get(bool reactive = false) const {
 	if (!state->value)
-	    state->value = state->compute();
+	    state->value = state->compute(reactive);
 
 	return *state->value;
     }
@@ -707,7 +711,7 @@ public:
 auto autorun(auto f, scope_manager_t *scope_manager = &global_scope_manager) {
     // TODO: optimize away the unnecessary int
     auto c = computed{[=](auto get) { f(get); return 0; }};
-    c.get();
+    c.get(true);
 
     if (scope_manager) scope_manager->push_back(c.state);
 
@@ -948,6 +952,7 @@ auto test_autorun() {
 	x = false;
         a.set(42);
         assert_eq(x, false, "should not react on mutations of a");
+
         a.set(1729);
         assert_eq(x, false, "should not react on mutations of a");
     }
@@ -961,6 +966,7 @@ auto test_autorun() {
 	x = false;
         a.set(42);
         assert_eq(x, false, "should not react if a did not change");
+
         a.set(1729);
         assert_eq(x, true, "should react on mutations of a");
     }
@@ -1166,7 +1172,7 @@ auto test() {
     test_autorun();
     test_scope_manager();
     test_computed();
-    //test_dynamic_reactions();
+    test_dynamic_reactions();
     test_lazy_observing();
     test_auto_unobserve();
     test_lifetimes();
