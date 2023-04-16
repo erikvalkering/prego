@@ -829,8 +829,8 @@ auto test_lazy_observing() {
 }
 
 auto test_dynamic_reactions() {
-    auto first_name = observable{"Anita"s};
-    auto last_name = observable{"Laera"s}; 
+    auto first_name = observable{"John"s};
+    auto last_name = observable{"Doe"s};
     auto nick_name = observable{""s};
 
     auto x = false;
@@ -843,62 +843,75 @@ auto test_dynamic_reactions() {
     }};
 
     auto y = false;
-    auto display_full = observable{true};
-    autorun([=, &y](auto get) {
+    auto display_name = computed{[=, &y](auto get) {
 	y = true;
-	if (get(display_full)) {
-	    get(full_name);
+	return get(full_name);
+    }};
+
+    auto z = false;
+    auto enabled = observable{true};
+    autorun([=, &z](auto get) {
+	z = true;
+	if (get(enabled)) {
+	    get(display_name);
 	}
     });
 
     assert_eq(x, true, "full_name should be computed");
-    assert_eq(y, true, "autorun should execute immediately");
+    assert_eq(y, true, "display_name should be computed");
+    assert_eq(z, true, "autorun should execute immediately");
 
     x = false;
     y = false;
+    z = false;
 
-    first_name.set("Missi");
+    first_name.set("Jane");
     assert_eq(x, true, "full_name should react to change of first_name");
-    assert_eq(y, true, "autorun should react to change of full_name");
+    assert_eq(y, true, "display_name should react to change of full_name");
+    assert_eq(z, true, "autorun should react to change of display_name");
 
     x = false;
     y = false;
+    z = false;
 
-    last_name.set("Valkering");
-    assert_eq(x, true, "full_name should react to change of last_name");
-    assert_eq(y, true, "autorun should react to change of full_name");
-    
-    first_name.set("Erik");
-    
-    x = false;
-    y = false;
-
-    nick_name.set("Erik Valkering");
+    nick_name.set("Jane Doe");
     assert_eq(x, true, "full_name should react to change of nick_name");
-    assert_eq(y, false, "autorun should not react because full_name did not change");
+    assert_eq(y, false, "display_name should not react because full_name did not change");
+    assert_eq(z, false, "autorun should not react because full_name did not change");
+
+    x = false;
+    y = false;
+    z = false;
+
+    nick_name.set("John Doe");
+    assert_eq(x, true, "full_name should react to change of nick_name");
+    assert_eq(y, true, "display_name should react to change of full_name");
+    assert_eq(z, true, "autorun should react to change of display_name");
+
+    x = false;
+    y = false;
+    z = false;
+
+    enabled.set(false);
+    assert_eq(x, false, "full_name should not react to change of enabled");
+    assert_eq(y, false, "display_name should not react, because full_name  did not change");
+    assert_eq(z, true, "autorun should react to change of enabled");
+
+    x = false;
+    y = false;
+    z = false;
+
+    first_name.set("John");
+    assert_eq(x, false, "full_name should not react to change of first_name, because it is not being observed right now");
+    assert_eq(y, false, "display_name should not react to change of first_name, because it is not being observed right now (and was not observing first_name)");
+    assert_eq(y, false, "autorun should not react to change of nick_name, because it is not being observed right now (through full_name)");
+
+    // TODO: it should preserve the state though in fullname, such that when it gets observed again, it does not have to recompute
 
     x = false;
     y = false;
 
     nick_name.set("Erik Engelbertus Johannes Valkering");
-    assert_eq(x, true, "full_name should react to change of nick_name");
-    assert_eq(y, true, "autorun should react to change of full_name");
-
-    x = false;
-    y = false;
-
-    display_full.set(false);
-    assert_eq(x, false, "full_name should react to change of display_full");
-    assert_eq(y, true, "autorun should react to change of display_full");
-
-    x = false;
-    y = false;
-
-    nick_name.set("Ciri");
-    assert_eq(x, false, "full_name should not react to change of nick_name, because it is not being observed right now");
-    assert_eq(y, false, "autorun should not react to change of nick_name, because it is not being observed right now (through full_name)");
-
-    // TODO: it should preserve the state though in fullname, such that when it gets observed again, it does not have to recompute
     // TODO: but in this case it should recompute because nickname changed
     // TODO: rename computed to derived?
     // TODO: rename autorun to observe or observer or reaction or effect? or reactive?
