@@ -554,13 +554,15 @@ struct observable_state_t {
 using scope_manager_t = std::vector<std::shared_ptr<observable_state_t>>;
 auto global_scope_manager = scope_manager_t{};
 
-auto notify(auto &observers, const notification_t notification) {
+auto notify(auto id, auto &observers, const notification_t notification) {
     //std::cout << "notify " << observers.size() << " observers\n";
     for (auto &observer : observers) {
 	if (auto p = observer.lock()) {
 	    p->notify(notification);
 	}
-	else std::cout << "err\n";
+	else {
+	    std::cout << id << ": err\n";
+	}
     }
 }
 
@@ -589,10 +591,10 @@ public:
 	//std::cout << state->id << ": changed\n";
 
         // First sweep: mark all as stale
-        notify(state->observers, notification_t::stale);
+        notify(state->id, state->observers, notification_t::stale);
 
         // Second sweep: update observers
-        notify(state->observers, notification_t::changed);
+        notify(state->id, state->observers, notification_t::changed);
     }
 
     auto &get(bool reactive = false) const {
@@ -620,6 +622,7 @@ struct computed {
 
 	explicit state_t(const F &f) : f{f} {}
         ~state_t() {
+	    //std::cout << "~" << id << std::endl;
 	    const auto observer = this->weak_from_this();
 	    for (auto &observable : observables)
 		if (auto p = observable.lock())
@@ -636,7 +639,7 @@ struct computed {
 		    // Mark as stale and propagate only if
 		    // we were visited for the first time
 		    if (stale_count++ == 0)
-		    	notify(observers, notification);
+		    	notify(id, observers, notification);
 
 		    break;
 		}
@@ -661,7 +664,7 @@ struct computed {
 
 		    // Finally notify all the observers that we are up to date
 	            //std::cout << id << ": observers: " << observers.size() << "\n";
-		    notify(observers, changed ? notification_t::changed
+		    notify(id, observers, changed ? notification_t::changed
 				              : notification_t::unchanged);
 	            //std::cout << id << "---\n";
 		    break;
@@ -670,22 +673,25 @@ struct computed {
 	}
 
 	auto compute(bool reactive) {
-	    const auto observer = this->weak_from_this();
-	    if (reactive) {
-		for (auto &observable : observables)
-		    if (auto p = observable.lock())
-		       p->unobserve(observer);
-                observables.clear();
-	    }
-
 	    //std::cout << id << ": recompute\n";
-	    return f([=, this](auto observable) {
-		if (reactive) {
-		    observables.insert(observable.state);
-	    	    observable.state->observe(observer);	           }
+
+	    const auto observer = this->weak_from_this();
+	    auto previous_observables = std::move(observables);
+	    return f([&](auto observable) {
+		observables.insert(observable.state);
+	    	observable.state->observe(observer);
 
 		return observable.get(reactive);
 	    });
+
+	    if (reactive) {
+		for (auto &observable : previous_observables) {
+		    if (observables.contains(observable)) continue;
+
+		    if (auto p = observable.lock())
+		       p->unobserve(observer);
+		}
+	    }
 	}
     };
 
@@ -696,6 +702,7 @@ public:
     explicit computed(F f)
 	: state{std::make_shared<state_t>(f)} {}
 
+    // TODO: make reactive compile-time
     auto &get(bool reactive = false) const {
 	if (!state->value)
 	    state->value = state->compute(reactive);
@@ -1171,7 +1178,7 @@ auto test() {
     test_observable();
     test_autorun();
     test_scope_manager();
-    test_computed();
+    test_computed();   
     test_dynamic_reactions();
     test_lazy_observing();
     test_auto_unobserve();
