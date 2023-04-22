@@ -575,7 +575,7 @@ struct observable_state_t {
 using scope_manager_t = std::vector<std::shared_ptr<observable_state_t>>;
 auto global_scope_manager = scope_manager_t{};
 
-auto notify(auto id, auto &observers, const notification_t notification) {
+auto notify_all(auto id, auto &observers, const notification_t notification) {
     //std::cout << "notify " << observers.size() << " observers\n";
     for (auto &[observer, _] : observers) {
 	if (auto p = observer.lock()) {
@@ -626,10 +626,10 @@ public:
 	//std::cout << state->id << ": changed\n";
 
         // First sweep: mark all as stale
-        notify(state->id, state->observers, notification_t::stale);
+        notify_all(state->id, state->observers, notification_t::stale);
 
         // Second sweep: update observers
-        notify(state->id, state->observers, notification_t::changed);
+        notify_all(state->id, state->observers, notification_t::changed);
     }
 
     auto &get(bool reactive = false) const {
@@ -669,7 +669,6 @@ struct computed {
 
 	virtual void notify(const notification_t notification) final {
             //std::cout << id << ": notify: " << int(notification) << "\n";
-	    using v2::notify;
 	    switch (notification) {
 		default: assert(false);
 
@@ -678,14 +677,13 @@ struct computed {
 		    // we were visited for the first time
 		    // and only if we are reactive
 		    if (stale_count++ == 0 and is_reactive())
-		    	notify(id, observers, notification);
+		    	notify_all(id, observers, notification);
 
 		    break;
 		}
 
 		case notification_t::changed:
-		case notification_t::unchanged:
-	        {
+		case notification_t::unchanged: {
 		    // If an observable was changed,
 		    // we need to recompute as well
 		    maybe_changed |= notification == notification_t::changed;
@@ -696,10 +694,10 @@ struct computed {
 
 		    // If all observables are up to date and unchanged,
 		    // propagate and early-exit
-		    if (!maybe_changed) 
+		    if (!maybe_changed) {
 			// But only propagate if we are reactive
 		        if (is_reactive())
-			    notify(id, observers, notification_t::unchanged);
+			    notify_all(id, observers, notification_t::unchanged);
 		        break;
 		    }
 
@@ -810,10 +808,9 @@ struct computed {
 
 	    // Finally notify all the observers that we are up to date
 	    //std::cout << id << ": observers: " << observers.size() << "\n";
-	    notify(id, observers, changed ? notification_t::changed
+	    notify_all(id, observers, changed ? notification_t::changed
 					  : notification_t::unchanged);
 	    //std::cout << id << "---\n";
-	    break;
 	}
     };
 
