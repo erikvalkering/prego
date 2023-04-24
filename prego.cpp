@@ -535,11 +535,23 @@ enum class notification_t {
     unchanged,
 };
 
+auto to_string(const notification_t notification) {
+    switch (notification) {
+	default: throw 0;
+	case notification_t::stale: return "stale";
+	case notification_t::changed: return "changed";
+	case notification_t::unchanged: return "unchanged";
+    }
+}
+
 struct observer_t {
     virtual void notify(const notification_t) = 0;
 };
 
+char id_counter = 'a';
+
 struct observable_state_t {
+    char id = id_counter++;
     std::map<std::weak_ptr<observer_t>, bool, std::owner_less<>> observers = {};
 
     virtual void on_observers_changed() {}
@@ -559,11 +571,13 @@ struct observable_state_t {
 	const std::weak_ptr<observer_t> &observer,
 	const bool reactive
     ) {
+	std::cout << id << ".observe(" << std::dynamic_pointer_cast<observable_state_t>(observer.lock())->id << ", " << reactive << ")\n";
 	if (reactive != std::exchange(observers[observer], reactive))
 	    on_observers_changed();
     }
 
     void unobserve(const std::weak_ptr<observer_t> &observer) {
+	std::cout << id << ".unobserve(" << std::dynamic_pointer_cast<observable_state_t>(observer.lock())->id << ")\n";
 	assert(observers.contains(observer));
 	observers.erase(observer);
 	on_observers_changed();
@@ -582,20 +596,20 @@ auto notify_all(auto id, auto &observers, const notification_t notification) {
 	    p->notify(notification);
 	}
 	else {
-	    std::cout << id << ": err\n";
+	    std::cout << id << ": err - notify_all\n";
 	}
     }
 }
-
-char id_counter = 'a';
 
 template<typename T>
 struct observable {
     struct state_t : observable_state_t {
 	T value;
-	char id = id_counter++;
 
 	explicit state_t(const T &value) : value{value} {}
+	~state_t() {
+	    std::cout << "~" << id << "\n";
+	}
 
         virtual bool is_up_to_date() const final {
 	    // We will end up here only if a direct
@@ -619,11 +633,11 @@ public:
 	: state{std::make_shared<state_t>(value)} {}
 
     auto set(auto &&value) {
-	//std::cout << state->id << ".set(" << value << ") [" << state->value << "]\n";
+	std::cout << state->id << ".set(" << value << ") [" << state->value << "]\n";
 	const auto old_value = std::exchange(state->value, value);
 	if (state->value == old_value)
 	   return;
-	//std::cout << state->id << ": changed\n";
+	std::cout << state->id << ": changed\n";
 
         // First sweep: mark all as stale
         notify_all(state->id, state->observers, notification_t::stale);
@@ -649,7 +663,6 @@ struct computed {
     struct state_t : observable_state_t
 	           , observer_t
 		   , std::enable_shared_from_this<state_t> {
-	char id = id_counter++;
 	F f;
 	std::optional<T> value; 
         std::set<std::weak_ptr<observable_state_t>, std::owner_less<>> observables;
@@ -658,17 +671,17 @@ struct computed {
 
 	explicit state_t(const F &f) : f{f} {}
         ~state_t() {
-	    //std::cout << "~" << id << std::endl;
+	    std::cout << "~computed::state_t(" << id << ")\n";
 	    const auto observer = this->weak_from_this();
 	    for (auto &observable : observables)
 		if (auto p = observable.lock())
 		    p->unobserve(observer);
 	        else
-		    std::cout << "err\n";
+		    std::cout << id << ": err - ~computed::state_t\n";
 	}
 
 	virtual void notify(const notification_t notification) final {
-            //std::cout << id << ": notify: " << int(notification) << "\n";
+            std::cout << id << "(reactive=" << is_reactive() << "): notify: " << to_string(notification) << "\n";
 	    switch (notification) {
 		default: assert(false);
 
@@ -687,23 +700,24 @@ struct computed {
 		    // If an observable was changed,
 		    // we need to recompute as well
 		    maybe_changed |= notification == notification_t::changed;
-	            //std::cout << id << ": maybe_changed: " << maybe_changed << "\n";
+	            std::cout << id << ": maybe_changed: " << maybe_changed << "\n";
 
 		    // Only continue when all observables have been updated
 		    if (--stale_count != 0) break;
 
-		    // If all observables are up to date and unchanged,
-		    // propagate and early-exit
+		    // If we are not reactive,
+		    // don't propagate nor recompute
+		    if (!is_reactive()) break;
+
+		    // If all observables are up to date 
+		    // and unchanged, propagate and early-exit
 		    if (!maybe_changed) {
-			// But only propagate if we are reactive
-		        if (is_reactive())
-			    notify_all(id, observers, notification_t::unchanged);
+			notify_all(id, observers, notification_t::unchanged);
 		        break;
 		    }
 
-		    // If we are not reactive, don't recompute
-		    if (!is_reactive()) break;
-
+		    // Some observables have changed,
+		    // so we must recompute
 		    recompute(true);
 		    break;
 		}
@@ -717,7 +731,7 @@ struct computed {
 		    if (auto p = observable.lock())
 		        p->observe(observer, false);
 	            else
-		        std::cout << "err\n";
+		        std::cout << id << ": err - on_observers_changed\n";
 	    }
         }
 
@@ -732,6 +746,7 @@ struct computed {
 	    //       calculated observable, we need to redetermine this.
 	    //       Maybe pass a set with visited observables, which we can use
 	    //       as an additional criterion.
+	    // TODO: implement two-pass algorithm like with stale_count
 
 	    // TODO: check correctness of stale_count check
 	    // TODO: check correctness of this for-loop
@@ -741,13 +756,13 @@ struct computed {
 			return false;
 		}
 	        else
-		    std::cout << "err\n";
+		    std::cout << "err - is_up_to_date\n";
 
 	    return true;
         }
 
 	auto compute(bool reactive) {
-	    //std::cout << id << ": compute\n";
+	    std::cout << id << ": compute\n";
 
 	    // Continue reactively if we are either called
 	    // reactively (via observable::set()) or if we
@@ -791,7 +806,7 @@ struct computed {
 		if (auto p = observable.lock())
 		    p->observe(observer, false);
 		else
-		    std::cout << "err\n";
+		    std::cout << "err - compute\n";
 	    }
 	}
 
@@ -804,13 +819,11 @@ struct computed {
 	    stale_count = 0;
 	    maybe_changed = false;
 
-	    //std::cout << id << ": changed: " << changed << "\n";
+	    std::cout << id << ": changed: " << changed << "\n";
 
 	    // Finally notify all the observers that we are up to date
-	    //std::cout << id << ": observers: " << observers.size() << "\n";
 	    notify_all(id, observers, changed ? notification_t::changed
-					  : notification_t::unchanged);
-	    //std::cout << id << "---\n";
+					      : notification_t::unchanged);
 	}
     };
 
@@ -836,11 +849,12 @@ public:
 };
 
 auto autorun(auto f, scope_manager_t *scope_manager = &global_scope_manager) {
-    // TODO: optimize away the unnecessary int
     auto c = computed{[=](auto get) { f(get); return 0; }};
-    c.get(true);
 
-    if (scope_manager) scope_manager->push_back(c.state);
+    auto reaction = computed{[=](auto get) { get(c); return 0; }};
+    reaction.get(true);
+
+    if (scope_manager) scope_manager->push_back(reaction.state);
 
     return c;
 }
@@ -1098,7 +1112,7 @@ auto test_autorun() {
         assert_eq(x, true, "should react on mutations of a");
     }
 
-    {
+    /*{
         // tests capture by-value (shared ownership of observable)
         auto a = observable{42};
         auto x = false;
@@ -1110,7 +1124,7 @@ auto test_autorun() {
         assert_eq(x, false, "should not react if a did not change");
         a.set(1729);
         assert_eq(x, true, "should react on mutations of a");
-    }
+    }*/
 }
 
 auto test_scope_manager() {
@@ -1295,12 +1309,12 @@ auto test_syntaxes() {
 }
 
 auto test() {
-   /* test_observable();
+    //test_observable();
     test_autorun();
-    test_scope_manager();
-    test_computed();   
-    test_dynamic_reactions();*/
-    test_lazy_observing();
+    //test_scope_manager();
+    //test_computed();
+    //test_dynamic_reactions();
+    //test_lazy_observing();
     /*test_auto_unobserve();
     test_lifetimes();*/
     //test_noncopyable_types();
