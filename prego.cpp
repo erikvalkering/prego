@@ -1087,7 +1087,7 @@ auto test_autorun() {
     {
         auto a = observable{42};
         auto x = false;
-        autorun([&](auto get) { x = true; });
+        autorun([&x](auto get) { x = true; });
 	assert_eq(x, true, "should execute immediately");
 
 	x = false;
@@ -1101,7 +1101,7 @@ auto test_autorun() {
     {
         auto a = observable{42};
         auto x = false;
-        autorun([&](auto get) { get(a); x = true; });
+        autorun([=, &x](auto get) { get(a); x = true; });
 	assert_eq(x, true, "should execute immediately");
 
 	x = false;
@@ -1140,10 +1140,10 @@ auto test_scope_manager() {
 	    auto scope_manager = scope_manager_t{};
 
 	    {
-	        autorun([&, a](auto get) { get(a); x = true; });
-	        autorun([&, a](auto get) { get(a); y = true; }, &scope_manager);
-	        auto _ = autorun([&, a](auto get) { get(a); z = true; }, nullptr);
-	        std::ignore = autorun([&, a](auto get) { get(a); w = true; }, nullptr);
+	        autorun([=, &x](auto get) { get(a); x = true; });
+	        autorun([=, &y](auto get) { get(a); y = true; }, &scope_manager);
+	        auto _ = autorun([=, &z](auto get) { get(a); z = true; }, nullptr);
+	        std::ignore = autorun([=, &w](auto get) { get(a); w = true; }, nullptr);
 
 	        assert_eq(x, true, "sanity check");
 	        assert_eq(y, true, "sanity check");
