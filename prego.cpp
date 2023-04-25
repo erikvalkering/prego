@@ -57,7 +57,7 @@ auto log_(int id, auto ...args) {
     case 3:
     case 4:
     case 5:
-    case 6:
+    case 6: return;
     break;
     }
 
@@ -860,7 +860,7 @@ auto autorun(auto f, scope_manager_t *scope_manager = &global_scope_manager) {
 
     if (scope_manager) scope_manager->push_back(reaction.state);
 
-    return c;
+    return reaction;
 }
 
 [[nodiscard]] auto autorun(auto f, std::nullptr_t) {
@@ -1088,7 +1088,7 @@ auto test_dynamic_reactions() {
 }
 
 auto test_autorun() {
-    /*{
+    {
         auto a = observable{42};
         auto x = false;
         autorun([&x](auto get) { x = true; });
@@ -1100,7 +1100,7 @@ auto test_autorun() {
 
         a.set(1729);
         assert_eq(x, false, "should not react on mutations of a");
-    }*/
+    }
 
     {
         auto a = observable{42};
@@ -1116,7 +1116,7 @@ auto test_autorun() {
         assert_eq(x, true, "should react on mutations of a");
     }
 
-    /*{
+    {
         // tests capture by-value (shared ownership of observable)
         auto a = observable{42};
         auto x = false;
@@ -1128,7 +1128,7 @@ auto test_autorun() {
         assert_eq(x, false, "should not react if a did not change");
         a.set(1729);
         assert_eq(x, true, "should react on mutations of a");
-    }*/
+    }
 }
 
 auto test_scope_manager() {
@@ -1313,14 +1313,14 @@ auto test_syntaxes() {
 }
 
 auto test() {
-    //test_observable();
+    test_observable();
     test_autorun();
-    //test_scope_manager();
-    //test_computed();
-    //test_dynamic_reactions();
-    //test_lazy_observing();
-    /*test_auto_unobserve();
-    test_lifetimes();*/
+    test_scope_manager();
+    test_computed();
+    test_dynamic_reactions();
+    test_lazy_observing();
+    test_auto_unobserve();
+    test_lifetimes();
     //test_noncopyable_types();
     //test_immovable_types();
 
