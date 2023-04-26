@@ -553,7 +553,7 @@ struct observer_t {
 char id_counter = 'a';
 
 struct observable_state_t {
-    char id = id_counter++;
+    std::string id = {1, id_counter++};
     std::map<std::weak_ptr<observer_t>, bool, std::owner_less<>> observers = {};
 
     virtual void on_observers_changed() {}
@@ -630,10 +630,13 @@ struct observable {
     std::shared_ptr<state_t> state;
 
 public:
-    explicit observable(T value)
-	: state{std::make_shared<state_t>(value)} {}
+    explicit observable(T value, std::optional<std::string> id = {})
+	: state{std::make_shared<state_t>(value)} {
+	   if (id) state->id = *id; 
+	}
 
     auto set(auto &&value) {
+	log(1, "");
 	log(1, state->id, ".set(", value, ") [", state->value, "]");
 	const auto old_value = std::exchange(state->value, value);
 	if (state->value == old_value)
@@ -774,17 +777,26 @@ struct computed {
 	    // already-reactive observable.
 	    reactive = reactive or is_reactive();
 
+	    for (auto &observable : observables)
+		if (auto p = observable.lock())
+		    log(1, "observable - ", p->id);
 	    // Clear the old observables by moving them
 	    // into a temporary variable, such that we can
 	    // later compute the diff between them.
 	    auto previous_observables = std::move(observables);
 
+	    for (auto &observable : observables)
+		if (auto p = observable.lock())
+		    log(1, "moved observable - ", p->id);
+	    for (auto &observable : previous_observables)
+		if (auto p = observable.lock())
+		    log(1, "prev observable - ", p->id);
 	    // Create a reference to the current observer,
 	    // which we will pass later while linking
 	    // together the observer and observable.
 	    const auto observer = this->weak_from_this();
 
-	    return f([&](auto observable) {
+	    auto value = f([&](auto observable) {
 		// Before linking together the observer
 		// and observable, get the value,
 		// because the computed::get() function
@@ -800,6 +812,13 @@ struct computed {
 		return value;
 	    });
 
+	    for (auto &observable : observables)
+		if (auto p = observable.lock())
+		    log(1, "after observable - ", p->id);
+	    for (auto &observable : previous_observables)
+		if (auto p = observable.lock())
+		    log(1, "prev observable - ", p->id);
+
 	    // Set any previously-observed observables to
 	    // non-reactive. NOTE: they should not be
 	    // removed, because they might become reactive
@@ -812,6 +831,8 @@ struct computed {
 		else
 		    log(1, "err - compute");
 	    }
+
+	    return value;
 	}
 
 	auto recompute(bool reactive) {
@@ -835,8 +856,10 @@ struct computed {
     friend auto autorun(auto f, scope_manager_t *);
 
 public:
-    explicit computed(F f)
-	: state{std::make_shared<state_t>(f)} {}
+    explicit computed(F f, std::optional<std::string> id = {})
+	: state{std::make_shared<state_t>(f)} {
+	    if (id) state->id = *id;
+	}
 
     // TODO: reactive == true should not be accessible publicly,
     //       because there's no way to unsubscribe
@@ -852,15 +875,20 @@ public:
     }
 };
 
-auto autorun(auto f, scope_manager_t *scope_manager = &global_scope_manager) {
-    auto c = computed{[=](auto get) { f(get); return 0; }};
+auto autorun(std::optional<std::string> id, auto f, scope_manager_t *scope_manager = &global_scope_manager) {
+    auto c = computed{[=](auto get) { f(get); return 0; }, id};
 
-    auto reaction = computed{[=](auto get) { get(c); return 0; }};
+    if (id) id = *id + "_reaction";
+    auto reaction = computed{[=](auto get) { get(c); return 0; }, id};
     reaction.get(true);
 
     if (scope_manager) scope_manager->push_back(reaction.state);
 
     return reaction;
+}
+
+auto autorun(auto f, scope_manager_t *scope_manager = &global_scope_manager) {
+    return autorun({}, f, scope_manager);
 }
 
 [[nodiscard]] auto autorun(auto f, std::nullptr_t) {
@@ -978,33 +1006,43 @@ auto test_lazy_observing() {
 }
 
 auto test_dynamic_reactions() {
-    auto first_name = observable{"John"s};
-    auto last_name = observable{"Doe"s};
-    auto nick_name = observable{""s};
+    auto first_name = observable{"John"s, "first_name"};
+    auto last_name = observable{"Doe"s, "last_name"};
+    auto nick_name = observable{""s, "nick_name"};
 
     auto x = false;
     auto full_name = computed{[=, &x](auto get) {
 	x = true;
-	return get(first_name) + " " + get(last_name);
-    }};
+	auto value = get(first_name) + " " + get(last_name);
+	log(1, "full_name = ", value);
+	return value;
+    }, "full_name"};
 
     auto y = false;
     auto display_name = computed{[=, &y](auto get) {
 	y = true;
-	return get(full_name);
-        if (get(nick_name) != "")
-    	    return get(nick_name);
-        else
-	    return get(full_name);
-    }};
+        if (get(nick_name) != "") {
+    	    auto value = get(nick_name);
+	    log(1, "display_name = ", value);
+	    return value;
+	}
+        else {
+	    auto value = get(full_name);
+	    log(1, "display_name = ", value);
+	    return value;
+	}
+    }, "display_name"};
 
     auto z = false;
-    auto enabled = observable{true};
-    autorun([=, &z](auto get) {
+    auto enabled = observable{true, "enabled"};
+    autorun("autorun", [=, &z](auto get) {
 	z = true;
 	if (get(enabled)) {
-	    get(display_name);
+	    auto value = get(display_name);
+	    log(1, "autorun = ", value);
 	}
+	else
+	    log(1, "autorun = disabled");
     });
 
     assert_eq(x, true, "full_name should be computed");
@@ -1082,7 +1120,7 @@ auto test_dynamic_reactions() {
     nick_name.set("");
     assert_eq(x, true, "full_name should recompute because it is being observed again");
     assert_eq(y, true, "display_name should recompute, because full_name changed, as well as nick_name");
-    assert_eq(y, false, "autorun should not react, because display_name did not change");
+    assert_eq(z, false, "autorun should not react, because display_name did not change");
     // TODO: rename computed to derived?
     // TODO: rename autorun to observe or observer or reaction or effect? or reactive?
 }
