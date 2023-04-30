@@ -630,10 +630,8 @@ struct observable {
     std::shared_ptr<state_t> state;
 
 public:
-    explicit observable(T value, std::optional<std::string> id = {})
-	: state{std::make_shared<state_t>(value)} {
-	   if (id) state->id = *id; 
-	}
+    explicit observable(T value)
+	: state{std::make_shared<state_t>(value)} {}
 
     auto set(auto &&value) {
 	log(1, "");
@@ -856,10 +854,8 @@ struct computed {
     friend auto autorun(auto f, scope_manager_t *);
 
 public:
-    explicit computed(F f, std::optional<std::string> id = {})
-	: state{std::make_shared<state_t>(f)} {
-	    if (id) state->id = *id;
-	}
+    explicit computed(F f)
+	: state{std::make_shared<state_t>(f)} {}
 
     // TODO: reactive == true should not be accessible publicly,
     //       because there's no way to unsubscribe
@@ -875,20 +871,15 @@ public:
     }
 };
 
-auto autorun(std::optional<std::string> id, auto f, scope_manager_t *scope_manager = &global_scope_manager) {
-    auto c = computed{[=](auto get) { f(get); return 0; }, id};
+auto autorun(auto f, scope_manager_t *scope_manager = &global_scope_manager) {
+    auto c = computed{[=](auto get) { f(get); return 0; }};
 
-    if (id) id = *id + "_reaction";
-    auto reaction = computed{[=](auto get) { get(c); return 0; }, id};
+    auto reaction = computed{[=](auto get) { get(c); return 0; }};
     reaction.get(true);
 
     if (scope_manager) scope_manager->push_back(reaction.state);
 
     return reaction;
-}
-
-auto autorun(auto f, scope_manager_t *scope_manager = &global_scope_manager) {
-    return autorun({}, f, scope_manager);
 }
 
 [[nodiscard]] auto autorun(auto f, std::nullptr_t) {
@@ -1006,9 +997,9 @@ auto test_lazy_observing() {
 }
 
 auto test_dynamic_reactions() {
-    auto first_name = observable{"John"s, "first_name"};
-    auto last_name = observable{"Doe"s, "last_name"};
-    auto nick_name = observable{""s, "nick_name"};
+    auto first_name = observable{"John"s};
+    auto last_name = observable{"Doe"s};
+    auto nick_name = observable{""s};
 
     auto x = false;
     auto full_name = computed{[=, &x](auto get) {
@@ -1016,7 +1007,7 @@ auto test_dynamic_reactions() {
 	auto value = get(first_name) + " " + get(last_name);
 	log(1, "full_name = ", value);
 	return value;
-    }, "full_name"};
+    }};
 
     auto y = false;
     auto display_name = computed{[=, &y](auto get) {
@@ -1031,11 +1022,11 @@ auto test_dynamic_reactions() {
 	    log(1, "display_name = ", value);
 	    return value;
 	}
-    }, "display_name"};
+    }};
 
     auto z = false;
-    auto enabled = observable{true, "enabled"};
-    autorun("autorun", [=, &z](auto get) {
+    auto enabled = observable{true};
+    autorun([=, &z](auto get) {
 	z = true;
 	if (get(enabled)) {
 	    auto value = get(display_name);
@@ -1350,6 +1341,38 @@ auto test_syntaxes() {
     // auto f = computed{[](auto get) { return get(a) + get(b); }};
 }
 
+auto test_oo() {
+    struct Person {
+	observable<std::string> first_name;
+	observable<std::string> last_name;
+
+	//computed<decltype(&full_name_)> full_name{&full_name_};
+	/*auto full_name_(auto get) const { 
+	    return get(first_name) + " " + get(last_name);
+	}*/
+    };
+
+    /*auto john = Person{"John"s, "Doe"s};
+    auto jane = Person{"Jane"s, "Doe"s};
+
+    [] {
+	observable first_name{"John"s};
+	observable last_name{"Doe"s};
+
+	computed full_name = [=](auto get) {
+	    return get(first_name) + " " + get(last_name);
+	};
+    };
+*/
+    class observable_vector {
+        std::vector<int> v;
+
+    public:
+	void push_back(int x) {
+	}
+    };
+}
+
 auto test() {
     test_observable();
     test_autorun();
@@ -1359,6 +1382,7 @@ auto test() {
     test_lazy_observing();
     test_auto_unobserve();
     test_lifetimes();
+    test_oo();
     //test_noncopyable_types();
     //test_immovable_types();
 
