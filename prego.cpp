@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cassert>
 #include <compare>
+#include <concepts>
 #include <functional>
 #include <iostream>
 #include <map>
@@ -602,12 +603,20 @@ auto notify_all(auto id, auto &observers, const notification_t notification) {
     }
 }
 
+template<typename From, typename To>
+concept convertible_to = 
+    std::is_convertible_v<From, To> &&
+    requires {
+        static_cast<To>(std::declval<From>());
+    };
+
+// TODO: rename to atom to free up name for observable concept
 template<typename T>
 struct observable {
     struct state_t : observable_state_t {
 	T value;
 
-	explicit state_t(const T &value) : value{value} {}
+	state_t(auto &&value) : value{FWD(value)} {}
 	~state_t() {
 	    log(1, "~", id);
 	}
@@ -630,13 +639,23 @@ struct observable {
     std::shared_ptr<state_t> state;
 
 public:
-    explicit observable(T value)
-	: state{std::make_shared<state_t>(value)} {}
+    observable(const observable &) = default;
+    observable &operator=(const observable &) = default;
+
+    observable(observable &&) = default;
+    observable &operator=(observable &&) = default;
+
+    observable(convertible_to<T> auto &&value)
+	: state{std::make_shared<state_t>(FWD(value))} {}
+
+    template<typename U> requires convertible_to<U, T>
+    observable(observable<U> &&src)
+      : observable{std::move(src.state->value)} {}
 
     auto set(auto &&value) {
 	log(1, "");
 	log(1, state->id, ".set(", value, ") [", state->value, "]");
-	const auto old_value = std::exchange(state->value, value);
+	const auto old_value = std::exchange(state->value, FWD(value));
 	if (state->value == old_value)
 	   return;
 	log(1, state->id, ": changed");
@@ -657,7 +676,19 @@ public:
     }
 };
 
-// TODO: change into class
+template<typename T>
+observable(T &&) -> observable<T>;
+
+/*
+ * TODO: type and static or dynamic function type
+template<typename T, typename F = std::function<T ()>>
+struct computed;
+
+template<typename F>
+computed(F &&) -> computed<std::invoke_result_t<F>, F>;
+*/
+
+// TODO: change into class instead of struct
 template<typename F>
 struct computed {
     using T = decltype(std::declval<F>()([](auto o) { return o.get(); }));
@@ -941,12 +972,6 @@ auto sandbox() {
     display_full.set(false);
     // autorun >> disable
     nick_name.set("Ciri");
-    //
-    // TODO: last set of nickname should not propagate to fullname, because fullname is not observed anymore
-    // TODO: it should preserve the state though in fullname, such that when it gets observed again, it does not have to recompute
-    // TODO: but in this case it should recompute because nickname changed
-    // TODO: rename computed to derived?
-    // TODO: rename autorun to observe or observer or reaction or effect? or reactive?
 }
 
 auto test_observable() {
@@ -1073,7 +1098,7 @@ auto test_dynamic_reactions() {
 
     enabled.set(false);
     assert_eq(x, false, "full_name should not react to change of enabled");
-    assert_eq(y, false, "display_name should not react, because full_name  did not change");
+    assert_eq(y, false, "display_name should not react, because nick_name did not change");
     assert_eq(z, true, "autorun should react to change of enabled");
 
     x = false;
@@ -1082,8 +1107,8 @@ auto test_dynamic_reactions() {
 
     nick_name.set("John Doe");
     assert_eq(x, false, "full_name should not react to change of nick_name, because it does not observe it");
-    assert_eq(y, false, "display_name should not react to change of nick_name, because it is not being observed right now");
-    assert_eq(y, false, "autorun should not react to change of nick_name, because it is not being observed right now (through display_name)");
+    assert_eq(y, false, "display_name should not react to change of nick_name, because display_name is not being observed right now");
+    assert_eq(z, false, "autorun should not react to change of nick_name, because it is not being observed right now (through display_name)");
 
     x = false;
     y = false;
@@ -1102,18 +1127,28 @@ auto test_dynamic_reactions() {
     enabled.set(true);
     assert_eq(x, false, "full_name should not recompute because it is still not being observed");
     assert_eq(y, true, "display_name should recompute, because it is being observed again");
-    assert_eq(y, true, "autorun should react to change of enabled");
+    assert_eq(z, true, "autorun should react to change of enabled, as well as display_name that was changed");
 
     x = false;
     y = false;
     z = false;
 
     nick_name.set("");
-    assert_eq(x, true, "full_name should recompute because it is being observed again");
-    assert_eq(y, true, "display_name should recompute, because full_name changed, as well as nick_name");
+    assert_eq(x, true, "full_name should be queried through display_name and recompute because it was previously changed");
+    assert_eq(y, true, "display_name should recompute, because nick_name changed, as well as full_name");
     assert_eq(z, false, "autorun should not react, because display_name did not change");
     // TODO: rename computed to derived?
     // TODO: rename autorun to observe or observer or reaction or effect? or reactive?
+
+    enabled.set(false);
+    x = false;
+    y = false;
+    z = false;
+
+    enabled.set(false);
+    assert_eq(x, false, "full_name should not recompute because nothing changed");
+    assert_eq(y, false, "display_name should recompute, because nothing changed");
+    assert_eq(z, true, "autorun should react to change of enabled");
 }
 
 auto test_autorun() {
@@ -1352,9 +1387,9 @@ auto test_oo() {
 	}*/
     };
 
-    /*auto john = Person{"John"s, "Doe"s};
-    auto jane = Person{"Jane"s, "Doe"s};
-
+    auto john = Person{"John"s, "Doe"s};
+    //auto jane = Person{"Jane", "Doe"s};
+/*
     [] {
 	observable first_name{"John"s};
 	observable last_name{"Doe"s};
