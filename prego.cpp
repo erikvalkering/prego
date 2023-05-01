@@ -1388,7 +1388,7 @@ auto test_oo() {
     };
 
     auto john = Person{"John"s, "Doe"s};
-    //auto jane = Person{"Jane", "Doe"s};
+    auto jane = Person{"Jane", "Doe"};
 /*
     [] {
 	observable first_name{"John"s};
