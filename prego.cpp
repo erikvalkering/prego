@@ -1145,7 +1145,7 @@ auto test_dynamic_reactions() {
     y = false;
     z = false;
 
-    enabled.set(false);
+    enabled.set(true);
     assert_eq(x, false, "full_name should not recompute because nothing changed");
     assert_eq(y, false, "display_name should recompute, because nothing changed");
     assert_eq(z, true, "autorun should react to change of enabled");
