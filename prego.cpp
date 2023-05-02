@@ -1336,19 +1336,24 @@ auto test_immovable_types() {
     assert_eq(true, false, "not implemented yet");
 }
 
-auto test_syntaxes() {
+auto test_observable_syntaxes() {
     auto a = observable{42};
-
+    observable b = 42;
     // alternative syntax observable: function instead of class
     //   which might be more flexible in the design space of the
     //   implementation. Same for computed.
-    auto b = observable(42);
+    auto c = observable(42);
 
     // mutation syntax 1: set
     a.set(1729);
 
     // mutation syntax 2: direct assignment
     // a = 1729;
+}
+
+auto test_computed_syntaxes() {
+    auto a = observable{42};
+    auto b = observable{42};
 
     // computed syntax 1: get as parameter
     //   - thread-safe
@@ -1420,7 +1425,8 @@ auto test() {
     test_oo();
     //test_noncopyable_types();
     //test_immovable_types();
-
+    test_observable_syntaxes();
+    test_computed_syntaxes();
     if (all_tests_passed)
         std::cout << "all tests passed\n";
     else
