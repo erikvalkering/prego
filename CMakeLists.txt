@@ -8,4 +8,4 @@ project(
   DESCRIPTION ""
   LANGUAGES CXX)
 
-add_executable(prego prego.cpp)
+add_executable(prego prego.test.cpp)
