@@ -1,4 +1,5 @@
 #include <cassert>
+#include <concepts>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -111,6 +112,12 @@ concept convertible_to =
         static_cast<To>(std::declval<From>());
     };
 
+template<typename T>
+struct observable;
+
+template<typename T>
+observable(T &&) -> observable<T>;
+
 // TODO: rename to atom to free up name for observable concept
 template<typename T>
 struct observable {
@@ -177,23 +184,20 @@ public:
     }
 };
 
-template<typename T>
-observable(T &&) -> observable<T>;
-
-/*
- * TODO: type and static or dynamic function type
-template<typename T, typename F = std::function<T ()>>
+template<typename F>
 struct computed;
 
 template<typename F>
-computed(F &&) -> computed<std::invoke_result_t<F>, F>;
-*/
+computed(F &&) -> computed<F>;
 
 // TODO: change into class instead of struct
 template<typename F>
 struct computed {
-    using T = decltype(std::declval<F>()([](auto o) { return o.get(); }));
+private:
+    using get_t = decltype([](const auto &o) { return o.get(); });
+    using T = std::invoke_result_t<F, get_t>;
 
+public:
     struct state_t : observable_state_t
 	           , observer_t
 		   , std::enable_shared_from_this<state_t> {
@@ -203,7 +207,7 @@ struct computed {
 	int stale_count = 0;
 	bool maybe_changed = false;
 
-	explicit state_t(const F &f) : f{f} {}
+	explicit state_t(auto &&f) : f{FWD(f)} {}
         ~state_t() {
 	    log(1, "~computed::state_t(", id, ")");
 	    const auto observer = this->weak_from_this();
@@ -386,8 +390,14 @@ struct computed {
     friend auto autorun(auto f, scope_manager_t *);
 
 public:
-    explicit computed(F f)
-	: state{std::make_shared<state_t>(f)} {}
+    computed(const computed &) = default;
+    computed &operator=(const computed &) = default;
+
+    computed(computed &&) = default;
+    computed &operator=(computed &&) = default;
+
+    computed(std::same_as<F> auto &&f)
+	: state{std::make_shared<state_t>(FWD(f))} {}
 
     // TODO: reactive == true should not be accessible publicly,
     //       because there's no way to unsubscribe
