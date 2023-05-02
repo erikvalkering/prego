@@ -454,27 +454,26 @@ auto test_computed_syntaxes() {
     //   - may allow for optimizations
     auto c = computed{[=](auto get) { return get(a) + get(b); }};
     computed d = [=](auto get) { return get(a) + get(b); };
-    computed<int> e = [=](auto get) { return get(a) + get(b); }
 
     // computed syntax 2: parameterless function
     //   - not thread-safe
     //   - maybe more difficult to optimize
     //   - less boilerplate
-    // auto f = computed{[=] { return a() + b(); }};
+    // auto e = computed{[=] { return a() + b(); }};
 
     // computed syntax 3: parameterless function + smartref
     //   - not thread-safe
     //   - maybe more difficult to optimize
     //   - minimal boilerplate (except for user defined types)
     //   - maybe not worth the effort, considering only 2 chars per observable
-    // auto g = computed{[=] { return a + b; }};
+    // auto f = computed{[=] { return a + b; }};
 
     // computed syntax 4: static get
     //   - thread-safe
     //   - may allow for more optimization
     //   - every observable/computed should be declared globally and becomes stateless
     //   - does every observable have to be unique?
-    // auto h = computed{[](auto get) { return get(a) + get(b); }};
+    // auto g = computed{[](auto get) { return get(a) + get(b); }};
 }
 
 auto test_oo() {
