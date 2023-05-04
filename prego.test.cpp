@@ -476,29 +476,65 @@ auto test_computed_syntaxes() {
     // auto g = computed{[](auto get) { return get(a) + get(b); }};
 }
 
+template<typename Class, auto thunk>
+struct Thunk {
+    const Class *obj;
+    Thunk(Class *obj) : obj{obj} {}
+    auto operator()(auto get) const {
+	return thunk(*obj, get);
+    }
+};
+
+struct Person_ {
+    observable<std::string> first_name;
+    observable<std::string> last_name;
+
+    auto full_name(auto get) const { 
+	return get(first_name) + " " + get(last_name);
+    }
+};
+
+struct PersonThunks : Person_ {
+    using full_name_thunk = Thunk<Person_, [](auto &self, auto get) {
+	return self.full_name(get);
+    }>;
+};
+
+struct Person : PersonThunks {
+    computed<full_name_thunk> full_name{this};
+};
+
 auto test_oo() {
-    struct Person {
-	observable<std::string> first_name;
-	observable<std::string> last_name;
+    {
+        auto john = Person{"John"s, "Doe"s};
+        auto jane = Person{"Jane", "Doe"};
 
-	//computed<decltype(&full_name_)> full_name{&full_name_};
-	/*auto full_name_(auto get) const { 
-	    return get(first_name) + " " + get(last_name);
-	}*/
-    };
+	assert_eq(john.full_name.get(), "John Doe", "John and Jane should not share state");
+	assert_eq(jane.full_name.get(), "Jane Doe", "John and Jane should not share state");
+    }
 
-    auto john = Person{"John"s, "Doe"s};
-    auto jane = Person{"Jane", "Doe"};
-/*
-    [] {
-	observable first_name{"John"s};
-	observable last_name{"Doe"s};
+    {
+        using Person = decltype([] {
+	    observable first_name{"John"s};
+	    observable last_name{"Doe"s};
 
-	computed full_name = [=](auto get) {
-	    return get(first_name) + " " + get(last_name);
-	};
-    };
-*/
+	    computed full_name = [=](auto get) {
+	        return get(first_name) + " " + get(last_name);
+	    };
+
+	    struct Person {
+	        decltype(first_name) first_name{first_name};
+	        decltype(last_name) last_name{last_name};
+	        //decltype(full_name) full_name{full_name};
+	    };
+
+	    return Person{};
+        }());
+
+        auto john = Person{"John"s, "Doe"s};
+        auto jane = Person{"Jane", "Doe"};
+    }
+
     class observable_vector {
         std::vector<int> v;
 

@@ -396,7 +396,7 @@ public:
     computed(computed &&) = default;
     computed &operator=(computed &&) = default;
 
-    computed(std::same_as<F> auto &&f)
+    computed(convertible_to<F> auto &&f)
 	: state{std::make_shared<state_t>(FWD(f))} {}
 
     // TODO: reactive == true should not be accessible publicly,
