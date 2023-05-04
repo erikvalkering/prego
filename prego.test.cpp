@@ -480,10 +480,23 @@ template<typename Class, auto thunk>
 struct Thunk {
     const Class *obj;
     Thunk(Class *obj) : obj{obj} {}
+
     auto operator()(auto get) const {
 	return thunk(*obj, get);
     }
 };
+
+template<typename Base>
+struct Computable : Base {
+    using Class = Base;
+};
+
+#define PREGO_COMPUTED(name)                                     \
+    using name##_thunk = Thunk<Class, [](auto &self, auto get) { \
+	return self.name(get);                                   \
+    }>;                                                          \
+                                                                 \
+    computed<name##_thunk> name{this};                           \
 
 struct Person_ {
     observable<std::string> first_name;
@@ -494,14 +507,13 @@ struct Person_ {
     }
 };
 
-struct PersonThunks : Person_ {
-    using full_name_thunk = Thunk<Person_, [](auto &self, auto get) {
+struct Person : Computable<Person_>  {
+/*    using full_name_thunk = Thunk<Class, [](auto &self, auto get) {
 	return self.full_name(get);
     }>;
-};
 
-struct Person : PersonThunks {
-    computed<full_name_thunk> full_name{this};
+    computed<full_name_thunk> full_name{this};*/
+    PREGO_COMPUTED(full_name);
 };
 
 auto test_oo() {
