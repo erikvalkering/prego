@@ -190,12 +190,13 @@ struct computed;
 template<typename F>
 computed(F &&) -> computed<F>;
 
+inline constexpr auto noop_get = [](const auto &o) { return o.get(); };
+
 // TODO: change into class instead of struct
 template<typename F>
 struct computed {
 private:
-    using get_t = decltype([](const auto &o) { return o.get(); });
-    using T = std::invoke_result_t<F, get_t>;
+    using T = std::invoke_result_t<F, decltype(noop_get)>;
 
 public:
     struct state_t : observable_state_t
