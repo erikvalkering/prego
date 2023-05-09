@@ -90,6 +90,10 @@ struct observable_state_t {
     }
 };
 
+using observables_t = std::set<std::weak_ptr<observable_state_t>, std::owner_less<>>;
+
+auto active_observers = std::vector<std::tuple<observables_t *, bool>>{};
+
 using scope_manager_t = std::vector<std::shared_ptr<observable_state_t>>;
 auto global_scope_manager = scope_manager_t{};
 
@@ -140,6 +144,7 @@ struct observable {
 	    // did not change with respect to the previous time
 	    // that the observer was computed, and
 	    // must therefore be considered up-to-date.
+	    log(6, id, ".is_up_to_date() [true]");
             return true;
         }
     };
@@ -175,9 +180,20 @@ public:
         notify_all(state->id, state->observers, notification_t::changed);
     }
 
-    auto &get(bool reactive = false) const {
+    auto &internal_get(bool reactive = false) const {
 	return state->value;
     }
+
+    auto &get() const {
+	if (active_observers.empty()) return internal_get();
+
+	auto [observables, reactive] = active_observers.back();
+	auto &value = internal_get(reactive);
+	observables->insert(state);
+	return value;
+    }
+
+    auto &operator()() const { return get(); }
 
     auto observers() const {
 	return state->observers;
@@ -190,13 +206,44 @@ struct computed;
 template<typename F>
 computed(F &&) -> computed<F>;
 
-inline constexpr auto noop_get = [](const auto &o) { return o.get(); };
+inline constexpr auto noop_get = [](const auto &o) { return o.internal_get(); };
+using noop_get_t = decltype(noop_get);
+
+template<typename F, typename ...Args>
+concept invocable = std::is_invocable_v<F, Args...>;
+
+auto get_result_t(invocable<noop_get_t> auto f) -> decltype(f(noop_get));
+auto get_result_t(invocable auto f) -> decltype(f());
+
+auto get_value(invocable<noop_get_t> auto &f, auto &observables, bool reactive) {
+    return f([&](auto observable) {
+	// Before linking together the observer
+	// and observable, get the value,
+	// because the computed::internal_get() function
+	// uses the link to determine whether
+	// it should recompute (via is_reactive).
+	// TODO: fix linking behaviour (should be done immediately, because of the above)
+	auto value = observable.internal_get(reactive);
+
+	// Register this observable
+	observables.insert(observable.state);
+
+	return value;
+    });
+}
+
+auto get_value(invocable auto &f, auto &observables, bool reactive) {
+    active_observers.emplace_back(&observables, reactive);
+    auto value = f();
+    active_observers.pop_back();
+    return value;
+}
 
 // TODO: change into class instead of struct
 template<typename F>
 struct computed {
 private:
-    using T = std::invoke_result_t<F, decltype(noop_get)>;
+    using T = decltype(get_result_t(std::declval<F>()));
 
 public:
     struct state_t : observable_state_t
@@ -204,7 +251,7 @@ public:
 		   , std::enable_shared_from_this<state_t> {
 	F f;
 	std::optional<T> value; 
-        std::set<std::weak_ptr<observable_state_t>, std::owner_less<>> observables;
+        observables_t  observables;
 	int stale_count = 0;
 	bool maybe_changed = false;
 
@@ -331,22 +378,18 @@ public:
 	    // together the observer and observable.
 	    const auto observer = this->weak_from_this();
 
-	    auto value = f([&](auto observable) {
-		// Before linking together the observer
-		// and observable, get the value,
-		// because the computed::get() function
-		// uses the link to determine whether
-		// it should recompute (via is_reactive).
-		auto value = observable.get(reactive);
+	    auto value = get_value(f, observables, reactive);
 
-		// After having obtained the value,
-		// we can finally link them.
-		observables.insert(observable.state);
-	    	observable.state->observe(observer, reactive);
-
-		return value;
-	    });
-
+	    // Now link them.
+	    // TODO: this used to be done right after adding adding to the set
+	    //       of observables. Did we change behaviour?
+	    //       Maybe it was just because of the .lock()
+	    //       (observables are weak_ptrs and observable.state
+	    //       was shared_ptr)
+	    for (auto &observable : observables)
+		if (auto p = observable.lock())
+		   p->observe(observer, reactive);
+    
 	    for (auto &observable : observables)
 		if (auto p = observable.lock())
 		    log(1, "after observable - ", p->id);
@@ -402,12 +445,23 @@ public:
 
     // TODO: reactive == true should not be accessible publicly,
     //       because there's no way to unsubscribe
-    auto &get(bool reactive = false) const {
+    auto &internal_get(bool reactive = false) const {
 	if (!state->is_up_to_date())
 	    state->recompute(reactive);
 
 	return *state->value;
     }
+
+    auto &get() const {
+	if (active_observers.empty()) return internal_get();
+
+	auto [observables, reactive] = active_observers.back();
+	auto &value = internal_get(reactive);
+	observables->insert(state);
+	return value;
+    }
+
+    auto &operator()() const { return get(); }
 
     auto observers() const {
 	return state->observers;
@@ -415,10 +469,11 @@ public:
 };
 
 auto autorun(auto f, scope_manager_t *scope_manager = &global_scope_manager) {
+    // TODO: void support (currently even missing get-less autorun support because of this)
     auto c = computed{[=](auto get) { f(get); return 0; }};
 
     auto reaction = computed{[=](auto get) { get(c); return 0; }};
-    reaction.get(true);
+    reaction.internal_get(true);
 
     if (scope_manager) scope_manager->push_back(reaction.state);
 
