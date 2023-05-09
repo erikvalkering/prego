@@ -459,7 +459,7 @@ auto test_computed_syntaxes() {
     //   - not thread-safe
     //   - maybe more difficult to optimize
     //   - less boilerplate
-    // auto e = computed{[=] { return a() + b(); }};
+    auto e = computed{[=] { return a() + b(); }};
 
     // computed syntax 3: parameterless function + smartref
     //   - not thread-safe
