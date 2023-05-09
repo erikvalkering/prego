@@ -180,6 +180,11 @@ public:
         notify_all(state->id, state->observers, notification_t::changed);
     }
 
+    auto &operator=(auto &&value) {
+	set(value);
+	return *this;
+    }
+
     auto &internal_get(bool reactive = false) const {
 	return state->value;
     }

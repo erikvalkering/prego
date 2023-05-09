@@ -442,7 +442,7 @@ auto test_observable_syntaxes() {
     a.set(1729);
 
     // mutation syntax 2: direct assignment
-    // a = 1729;
+    a = 1729;
 }
 
 auto test_computed_syntaxes() {
