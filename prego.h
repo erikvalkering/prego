@@ -222,10 +222,13 @@ using noop_get_t = decltype(noop_get);
 template<typename F, typename ...Args>
 concept invocable = std::is_invocable_v<F, Args...>;
 
-auto get_result_t(invocable<noop_get_t> auto f) -> decltype(f(noop_get));
+template<typename F>
+concept invocable_with_get = invocable<F, noop_get_t>;
+
+auto get_result_t(invocable_with_get auto f) -> decltype(f(noop_get));
 auto get_result_t(invocable auto f) -> decltype(f());
 
-auto get_value(invocable<noop_get_t> auto &f, auto &observables, bool reactive) {
+auto get_value(invocable_with_get auto &f, auto &observables, bool reactive) {
     return f([&](auto observable) {
 	// Before linking together the observer
 	// and observable, get the value,

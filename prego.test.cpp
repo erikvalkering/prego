@@ -481,8 +481,12 @@ struct Thunk {
     const Class *obj;
     Thunk(Class *obj) : obj{obj} {}
 
-    auto operator()(auto get) const {
+    auto operator()(auto get) const requires prego::invocable_with_get<decltype(thunk)> {
 	return thunk(*obj, get);
+    }
+
+    auto operator()() const requires prego::invocable<decltype(thunk)>{
+	return thunk(*obj);
     }
 };
 
@@ -491,12 +495,20 @@ struct Computable : Base {
     using Class = Base;
 };
 
-#define PREGO_COMPUTED(name)                                     \
-    using name##_thunk = Thunk<Class, [](auto &self, auto get) { \
-	return self.name(get);                                   \
-    }>;                                                          \
-                                                                 \
-    calc<name##_thunk> name{this};                           \
+#define PREGO_COMPUTED(name)                                       \
+    using name##_thunk_get = Thunk<Class, [](auto &self, auto get) \
+        -> decltype(self.name(get)) {                              \
+	return self.name(get);                                     \
+    }>;                                                            \
+    using name##_thunk_simple = Thunk<Class, [](auto &self)        \
+        -> decltype(self.name()) {                                 \
+	return self.name();                                        \
+    }>;                                                            \
+    struct name##_thunk : name##_thunk_get, name##_thunk_simple {  \
+	using name##_thunk_get::operator(); \
+    };                                                             \
+                                                                   \
+    calc<name##_thunk> name{this};                                 \
 
 struct Person_ {
     atom<std::string> first_name;
