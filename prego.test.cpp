@@ -5,51 +5,48 @@
 using namespace std::string_literals;
 
 using prego::atom;
-using prego::calc;
 using prego::autorun;
-using prego::scope_manager_t;
+using prego::calc;
 using prego::global_scope_manager;
 using prego::log;
+using prego::scope_manager_t;
 
-auto join(auto ...args) {
-    return (""s + ... + args);
-}
+auto join(auto... args) { return (""s + ... + args); }
 
 auto all_tests_passed = true;
-#define assert_eq(x, y, ...) { \
-    auto $$ = x; \
-    if ($$ != y) { \
-        std::cout << "ASSERTION FAILED(" << __FUNCTION__ << "@" << __LINE__ << ")\n" \
-	     << std::boolalpha \
-             << "\t" << #x << " == " << y << "\n" \
-             << "\t" << $$ << " != " << y << "\n" \
-	     << "\t" << join(__VA_ARGS__ ) << "\n"; \
-	all_tests_passed = false; \
-    } \
-}
+#define assert_eq(x, y, ...)                                                             \
+    {                                                                                    \
+        auto $$ = x;                                                                     \
+        if ($$ != y) {                                                                   \
+            std::cout << "ASSERTION FAILED(" << __FUNCTION__ << "@" << __LINE__ << ")\n" \
+                      << std::boolalpha << "\t" << #x << " == " << y << "\n"             \
+                      << "\t" << $$ << " != " << y << "\n"                               \
+                      << "\t" << join(__VA_ARGS__) << "\n";                              \
+            all_tests_passed = false;                                                    \
+        }                                                                                \
+    }
 
 auto sandbox() {
-    auto first_name = atom{"Anita"s};
-    auto last_name = atom{"Laera"s}; 
-    auto nick_name = atom{""s};
+    auto first_name = atom{ "Anita"s };
+    auto last_name = atom{ "Laera"s };
+    auto nick_name = atom{ ""s };
 
-    auto full_name = calc{[=](auto get) {
-	std::cout << "calc full_name\n";
+    auto full_name = calc{ [=](auto get) {
+        std::cout << "calc full_name\n";
         if (get(nick_name) != "")
-    	    return get(nick_name);
+            return get(nick_name);
         else
-	    return get(first_name) + " " + get(last_name);
-    }};
+            return get(first_name) + " " + get(last_name);
+    } };
 
-    auto display_full = atom{true};
+    auto display_full = atom{ true };
     autorun([=](auto get) {
-	std::cout << "calc autorun\n";
-	if (get(display_full)) {
-	    const auto n = get(full_name);
+        std::cout << "calc autorun\n";
+        if (get(display_full)) {
+            const auto n = get(full_name);
             std::cout << ">> " << n << std::endl;
-	}
-	else
-	    std::cout << "disable autorun\n";
+        } else
+            std::cout << "disable autorun\n";
     });
 
     // Anita Laera
@@ -69,7 +66,7 @@ auto sandbox() {
 }
 
 auto test_atom() {
-    auto a = atom{42};
+    auto a = atom{ 42 };
 
     assert_eq(a.get(), 42, "state should be accessible directly");
 
@@ -78,11 +75,9 @@ auto test_atom() {
 }
 
 auto test_calc() {
-    auto a = atom{42};
+    auto a = atom{ 42 };
 
-    auto b = calc{[=](auto get) {
-        return 2 * get(a);
-    }};
+    auto b = calc{ [=](auto get) { return 2 * get(a); } };
 
     assert_eq(b.get(), 2 * 42, "computed state should be accessible directly");
 
@@ -91,14 +86,14 @@ auto test_calc() {
 }
 
 auto test_lazy_observing() {
-    auto a = atom{42};
+    auto a = atom{ 42 };
 
     auto x = false;
-    auto b = calc{[=, &x](auto get) {
-	x = true;
+    auto b = calc{ [=, &x](auto get) {
+        x = true;
         get(a);
-	return 0;
-    }};
+        return 0;
+    } };
 
     assert_eq(x, false, "computed state should not compute when not requested");
     b.get();
@@ -116,43 +111,41 @@ auto test_lazy_observing() {
 }
 
 auto test_dynamic_reactions() {
-    auto first_name = atom{"John"s};
-    auto last_name = atom{"Doe"s};
-    auto nick_name = atom{""s};
+    auto first_name = atom{ "John"s };
+    auto last_name = atom{ "Doe"s };
+    auto nick_name = atom{ ""s };
 
     auto x = false;
-    auto full_name = calc{[=, &x](auto get) {
-	x = true;
-	auto value = get(first_name) + " " + get(last_name);
-	log(1, "full_name = ", value);
-	return value;
-    }};
+    auto full_name = calc{ [=, &x](auto get) {
+        x = true;
+        auto value = get(first_name) + " " + get(last_name);
+        log(1, "full_name = ", value);
+        return value;
+    } };
 
     auto y = false;
-    auto display_name = calc{[=, &y](auto get) {
-	y = true;
+    auto display_name = calc{ [=, &y](auto get) {
+        y = true;
         if (get(nick_name) != "") {
-    	    auto value = get(nick_name);
-	    log(1, "display_name = ", value);
-	    return value;
-	}
-        else {
-	    auto value = get(full_name);
-	    log(1, "display_name = ", value);
-	    return value;
-	}
-    }};
+            auto value = get(nick_name);
+            log(1, "display_name = ", value);
+            return value;
+        } else {
+            auto value = get(full_name);
+            log(1, "display_name = ", value);
+            return value;
+        }
+    } };
 
     auto z = false;
-    auto enabled = atom{true};
+    auto enabled = atom{ true };
     autorun([=, &z](auto get) {
-	z = true;
-	if (get(enabled)) {
-	    auto value = get(display_name);
-	    log(1, "autorun = ", value);
-	}
-	else
-	    log(1, "autorun = disabled");
+        z = true;
+        if (get(enabled)) {
+            auto value = get(display_name);
+            log(1, "autorun = ", value);
+        } else
+            log(1, "autorun = disabled");
     });
 
     assert_eq(x, true, "full_name should be computed");
@@ -247,12 +240,12 @@ auto test_dynamic_reactions() {
 
 auto test_autorun() {
     {
-        auto a = atom{42};
+        auto a = atom{ 42 };
         auto x = false;
         autorun([&x](auto get) { x = true; });
-	assert_eq(x, true, "should execute immediately");
+        assert_eq(x, true, "should execute immediately");
 
-	x = false;
+        x = false;
         a.set(42);
         assert_eq(x, false, "should not react on mutations of a");
 
@@ -261,12 +254,12 @@ auto test_autorun() {
     }
 
     {
-        auto a = atom{42};
+        auto a = atom{ 42 };
         auto x = false;
         autorun([=, &x](auto get) { get(a); x = true; });
-	assert_eq(x, true, "should execute immediately");
+        assert_eq(x, true, "should execute immediately");
 
-	x = false;
+        x = false;
         a.set(42);
         assert_eq(x, false, "should not react if a did not change");
 
@@ -276,12 +269,12 @@ auto test_autorun() {
 
     {
         // tests capture by-value (shared ownership of atom)
-        auto a = atom{42};
+        auto a = atom{ 42 };
         auto x = false;
         autorun([=, &x](auto get) { get(a); x = true; });
-	assert_eq(x, true, "should execute immediately");
+        assert_eq(x, true, "should execute immediately");
 
-	x = false;
+        x = false;
         a.set(42);
         assert_eq(x, false, "should not react if a did not change");
         a.set(1729);
@@ -290,7 +283,7 @@ auto test_autorun() {
 }
 
 auto test_scope_manager() {
-    auto a = atom{42};
+    auto a = atom{ 42 };
 
     auto x = false;
     auto y = false;
@@ -298,51 +291,51 @@ auto test_scope_manager() {
     auto w = false;
 
     {
-	{
-	    auto scope_manager = scope_manager_t{};
+        {
+            auto scope_manager = scope_manager_t{};
 
-	    {
-	        autorun([=, &x](auto get) { get(a); x = true; });
-	        autorun([=, &y](auto get) { get(a); y = true; }, &scope_manager);
-	        auto _ = autorun([=, &z](auto get) { get(a); z = true; }, nullptr);
-	        std::ignore = autorun([=, &w](auto get) { get(a); w = true; }, nullptr);
+            {
+                autorun([=, &x](auto get) { get(a); x = true; });
+                autorun([=, &y](auto get) { get(a); y = true; }, &scope_manager);
+                auto _ = autorun([=, &z](auto get) { get(a); z = true; }, nullptr);
+                std::ignore = autorun([=, &w](auto get) { get(a); w = true; }, nullptr);
 
-	        assert_eq(x, true, "sanity check");
-	        assert_eq(y, true, "sanity check");
-	        assert_eq(z, true, "sanity check");
-	        assert_eq(w, true, "sanity check");
+                assert_eq(x, true, "sanity check");
+                assert_eq(y, true, "sanity check");
+                assert_eq(z, true, "sanity check");
+                assert_eq(w, true, "sanity check");
 
-		x = false;
-	        y = false;
-		z = false;
-		w = false;
-	        a.set(1729);
-	        assert_eq(x, true, "autorun should be kept alive by global_scope_manager");
-	        assert_eq(y, true, "autorun should be kept alive by local scope_manager");
-	        assert_eq(z, true, "autorun should be kept alive by local variable");
-	        assert_eq(w, false, "autorun should be destroyed immediately");
-	    }
+                x = false;
+                y = false;
+                z = false;
+                w = false;
+                a.set(1729);
+                assert_eq(x, true, "autorun should be kept alive by global_scope_manager");
+                assert_eq(y, true, "autorun should be kept alive by local scope_manager");
+                assert_eq(z, true, "autorun should be kept alive by local variable");
+                assert_eq(w, false, "autorun should be destroyed immediately");
+            }
 
-	    x = false;
-	    y = false;
-	    z = false;
-	    w = false;
-	    a.set(42);
+            x = false;
+            y = false;
+            z = false;
+            w = false;
+            a.set(42);
             assert_eq(x, true, "autorun should be kept alive by global_scope_manager");
-	    assert_eq(y, true, "autorun should be kept alive by local scope_manager");
-	    assert_eq(z, false, "autorun should be destroyed by local variable");
-	    assert_eq(w, false, "autorun should be destroyed immediately");
-	}
+            assert_eq(y, true, "autorun should be kept alive by local scope_manager");
+            assert_eq(z, false, "autorun should be destroyed by local variable");
+            assert_eq(w, false, "autorun should be destroyed immediately");
+        }
 
         x = false;
-	y = false;
-	z = false;
-	w = false;
-	a.set(1729);
+        y = false;
+        z = false;
+        w = false;
+        a.set(1729);
         assert_eq(x, true, "autorun should be kept alive by global_scope_manager");
-	assert_eq(y, false, "autorun should be destroyed by local scope_manager");
-	assert_eq(z, false, "autorun should be destroyed by local variable");
-	assert_eq(w, false, "autorun should be destroyed immediately");
+        assert_eq(y, false, "autorun should be destroyed by local scope_manager");
+        assert_eq(z, false, "autorun should be destroyed by local variable");
+        assert_eq(w, false, "autorun should be destroyed immediately");
     }
 
     global_scope_manager.clear();
@@ -358,14 +351,14 @@ auto test_scope_manager() {
 }
 
 auto test_auto_unobserve() {
-    auto a = atom{42};
+    auto a = atom{ 42 };
     auto x = false;
     {
-	// TODO: autorun's lifetime should be managed by atom a
-	// TODO: a's lifetime should also be managed by autorun
-	// TODO: this way, we don't need the global scope_manager
-	// TODO: how to resolve this cyclic ownership dependency?
-	auto _ = autorun([=, &x](auto get) { get(a); x = true; }, nullptr);
+        // TODO: autorun's lifetime should be managed by atom a
+        // TODO: a's lifetime should also be managed by autorun
+        // TODO: this way, we don't need the global scope_manager
+        // TODO: how to resolve this cyclic ownership dependency?
+        auto _ = autorun([=, &x](auto get) { get(a); x = true; }, nullptr);
     }
 
     x = false;
@@ -378,14 +371,12 @@ class lifetime_tracker {
     std::weak_ptr<int> p;
 
 public:
-    auto alive() const {
-	return !p.expired();
-    }
+    auto alive() const { return !p.expired(); }
 
     auto track() {
         auto sp = std::make_shared<int>();
-	p = sp;
-	return sp;
+        p = sp;
+        return sp;
     }
 };
 
@@ -408,13 +399,13 @@ auto test_lifetimes() {
     auto b_lt = lifetime_tracker{};
     auto c_lt = lifetime_tracker{};
     {
-	auto c = [&] {
+        auto c = [&] {
             assert_eq(b_lt.alive(), false, "b should not be alive");
-	    auto b = atom{b_lt.track()};
+            auto b = atom{ b_lt.track() };
             assert_eq(b_lt.alive(), true, "b should be alive");
 
-	    return calc{[=, x = c_lt.track()](auto get) { return get(b); }};
-	}();
+            return calc{ [=, x = c_lt.track()](auto get) { return get(b); } };
+        }();
 
         assert_eq(b_lt.alive(), true, "b should be kept alive by c");
     }
@@ -422,16 +413,11 @@ auto test_lifetimes() {
     assert_eq(c_lt.alive(), false, "c should be destroyed");
 }
 
-auto test_noncopyable_types() {
-    assert_eq(true, false, "not implemented yet");
-}
-
-auto test_immovable_types() {
-    assert_eq(true, false, "not implemented yet");
-}
+auto test_noncopyable_types() { assert_eq(true, false, "not implemented yet"); }
+auto test_immovable_types() { assert_eq(true, false, "not implemented yet"); }
 
 auto test_atom_syntaxes() {
-    auto a = atom{42};
+    auto a = atom{ 42 };
     atom b = 42;
     // alternative syntax atom: function instead of class
     //   which might be more flexible in the design space of the
@@ -446,20 +432,20 @@ auto test_atom_syntaxes() {
 }
 
 auto test_calc_syntaxes() {
-    auto a = atom{42};
-    auto b = atom{42};
+    auto a = atom{ 42 };
+    auto b = atom{ 42 };
 
     // calc syntax 1: get as parameter
     //   - thread-safe
     //   - may allow for optimizations
-    auto c = calc{[=](auto get) { return get(a) + get(b); }};
+    auto c = calc{ [=](auto get) { return get(a) + get(b); } };
     calc d = [=](auto get) { return get(a) + get(b); };
 
     // calc syntax 2: parameterless function
     //   - not thread-safe
     //   - maybe more difficult to optimize
     //   - less boilerplate
-    auto e = calc{[=] { return a() + b(); }};
+    auto e = calc{ [=] { return a() + b(); } };
 
     // calc syntax 3: parameterless function + smartref
     //   - not thread-safe
@@ -514,57 +500,52 @@ struct Person_ {
     atom<std::string> first_name;
     atom<std::string> last_name;
 
-    auto full_name(auto get) const { 
-	return get(first_name) + " " + get(last_name);
-    }
+    auto full_name(auto get) const { return get(first_name) + " " + get(last_name); }
 };
 
-struct Person : Computable<Person_>  {
-/*    using full_name_thunk = Thunk<Class, [](auto &self, auto get) {
-	return self.full_name(get);
-    }>;
+struct Person : Computable<Person_> {
+    /*    using full_name_thunk = Thunk<Class, [](auto &self, auto get) {
+        return self.full_name(get);
+        }>;
 
-    calc<full_name_thunk> full_name{this};*/
+        calc<full_name_thunk> full_name{this};*/
     PREGO_COMPUTED(full_name);
 };
 
 auto test_oo() {
     {
-        auto john = Person{"John"s, "Doe"s};
-        auto jane = Person{"Jane", "Doe"};
+        auto john = Person{ "John"s, "Doe"s };
+        auto jane = Person{ "Jane", "Doe" };
 
-	assert_eq(john.full_name.get(), "John Doe", "John and Jane should not share state");
-	assert_eq(jane.full_name.get(), "Jane Doe", "John and Jane should not share state");
+        assert_eq(john.full_name.get(), "John Doe", "John and Jane should not share state");
+        assert_eq(jane.full_name.get(), "Jane Doe", "John and Jane should not share state");
     }
 
     {
         using Person = decltype([] {
-	    atom first_name{"John"s};
-	    atom last_name{"Doe"s};
+            atom first_name{ "John"s };
+            atom last_name{ "Doe"s };
 
-	    calc full_name = [=](auto get) {
-	        return get(first_name) + " " + get(last_name);
-	    };
+            calc full_name = [=](auto get) { return get(first_name) + " " + get(last_name); };
 
-	    struct Person {
-	        decltype(first_name) first_name{first_name};
-	        decltype(last_name) last_name{last_name};
-	        //decltype(full_name) full_name{full_name};
-	    };
+            struct Person {
+                decltype(first_name) first_name{ first_name };
+                decltype(last_name) last_name{ last_name };
+                // decltype(full_name) full_name{full_name};
+            };
 
-	    return Person{};
+            return Person{};
         }());
 
-        auto john = Person{"John"s, "Doe"s};
-        auto jane = Person{"Jane", "Doe"};
+        auto john = Person{ "John"s, "Doe"s };
+        auto jane = Person{ "Jane", "Doe" };
     }
 
     class atom_vector {
         std::vector<int> v;
 
     public:
-	void push_back(int x) {
-	}
+        void push_back(int x) {}
     };
 }
 
@@ -578,15 +559,15 @@ auto test() {
     test_auto_unobserve();
     test_lifetimes();
     test_oo();
-    //test_noncopyable_types();
-    //test_immovable_types();
+    // test_noncopyable_types();
+    // test_immovable_types();
     test_atom_syntaxes();
     test_calc_syntaxes();
 
     if (all_tests_passed)
         std::cout << "all tests passed\n";
     else
-	std::cout << "some tests failed\n";
+        std::cout << "some tests failed\n";
 }
 
 int main() {
