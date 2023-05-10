@@ -4,8 +4,8 @@
 
 using namespace std::string_literals;
 
-using prego::observable;
-using prego::computed;
+using prego::atom;
+using prego::calc;
 using prego::autorun;
 using prego::scope_manager_t;
 using prego::global_scope_manager;
@@ -29,11 +29,11 @@ auto all_tests_passed = true;
 }
 
 auto sandbox() {
-    auto first_name = observable{"Anita"s};
-    auto last_name = observable{"Laera"s}; 
-    auto nick_name = observable{""s};
+    auto first_name = atom{"Anita"s};
+    auto last_name = atom{"Laera"s}; 
+    auto nick_name = atom{""s};
 
-    auto full_name = computed{[=](auto get) {
+    auto full_name = calc{[=](auto get) {
 	std::cout << "calc full_name\n";
         if (get(nick_name) != "")
     	    return get(nick_name);
@@ -41,7 +41,7 @@ auto sandbox() {
 	    return get(first_name) + " " + get(last_name);
     }};
 
-    auto display_full = observable{true};
+    auto display_full = atom{true};
     autorun([=](auto get) {
 	std::cout << "calc autorun\n";
 	if (get(display_full)) {
@@ -68,8 +68,8 @@ auto sandbox() {
     nick_name.set("Ciri");
 }
 
-auto test_observable() {
-    auto a = observable{42};
+auto test_atom() {
+    auto a = atom{42};
 
     assert_eq(a.get(), 42, "state should be accessible directly");
 
@@ -77,10 +77,10 @@ auto test_observable() {
     assert_eq(a.get(), 1729, "mutations should be allowed and observable");
 }
 
-auto test_computed() {
-    auto a = observable{42};
+auto test_calc() {
+    auto a = atom{42};
 
-    auto b = computed{[=](auto get) {
+    auto b = calc{[=](auto get) {
         return 2 * get(a);
     }};
 
@@ -91,10 +91,10 @@ auto test_computed() {
 }
 
 auto test_lazy_observing() {
-    auto a = observable{42};
+    auto a = atom{42};
 
     auto x = false;
-    auto b = computed{[=, &x](auto get) {
+    auto b = calc{[=, &x](auto get) {
 	x = true;
         get(a);
 	return 0;
@@ -116,12 +116,12 @@ auto test_lazy_observing() {
 }
 
 auto test_dynamic_reactions() {
-    auto first_name = observable{"John"s};
-    auto last_name = observable{"Doe"s};
-    auto nick_name = observable{""s};
+    auto first_name = atom{"John"s};
+    auto last_name = atom{"Doe"s};
+    auto nick_name = atom{""s};
 
     auto x = false;
-    auto full_name = computed{[=, &x](auto get) {
+    auto full_name = calc{[=, &x](auto get) {
 	x = true;
 	auto value = get(first_name) + " " + get(last_name);
 	log(1, "full_name = ", value);
@@ -129,7 +129,7 @@ auto test_dynamic_reactions() {
     }};
 
     auto y = false;
-    auto display_name = computed{[=, &y](auto get) {
+    auto display_name = calc{[=, &y](auto get) {
 	y = true;
         if (get(nick_name) != "") {
     	    auto value = get(nick_name);
@@ -144,7 +144,7 @@ auto test_dynamic_reactions() {
     }};
 
     auto z = false;
-    auto enabled = observable{true};
+    auto enabled = atom{true};
     autorun([=, &z](auto get) {
 	z = true;
 	if (get(enabled)) {
@@ -247,7 +247,7 @@ auto test_dynamic_reactions() {
 
 auto test_autorun() {
     {
-        auto a = observable{42};
+        auto a = atom{42};
         auto x = false;
         autorun([&x](auto get) { x = true; });
 	assert_eq(x, true, "should execute immediately");
@@ -261,7 +261,7 @@ auto test_autorun() {
     }
 
     {
-        auto a = observable{42};
+        auto a = atom{42};
         auto x = false;
         autorun([=, &x](auto get) { get(a); x = true; });
 	assert_eq(x, true, "should execute immediately");
@@ -275,8 +275,8 @@ auto test_autorun() {
     }
 
     {
-        // tests capture by-value (shared ownership of observable)
-        auto a = observable{42};
+        // tests capture by-value (shared ownership of atom)
+        auto a = atom{42};
         auto x = false;
         autorun([=, &x](auto get) { get(a); x = true; });
 	assert_eq(x, true, "should execute immediately");
@@ -290,7 +290,7 @@ auto test_autorun() {
 }
 
 auto test_scope_manager() {
-    auto a = observable{42};
+    auto a = atom{42};
 
     auto x = false;
     auto y = false;
@@ -358,10 +358,10 @@ auto test_scope_manager() {
 }
 
 auto test_auto_unobserve() {
-    auto a = observable{42};
+    auto a = atom{42};
     auto x = false;
     {
-	// TODO: autorun's lifetime should be managed by observable a
+	// TODO: autorun's lifetime should be managed by atom a
 	// TODO: a's lifetime should also be managed by autorun
 	// TODO: this way, we don't need the global scope_manager
 	// TODO: how to resolve this cyclic ownership dependency?
@@ -395,7 +395,7 @@ auto test_lifetimes() {
     auto a_lt = lifetime_tracker{};
     auto autorun_lt = lifetime_tracker{};
     {
-        auto a = observable{a_lt.track()};
+        auto a = atom{a_lt.track()};
         {
 	    autorun([=, x = autorun_lt.track()](auto get) { get(a); });
         }
@@ -410,10 +410,10 @@ auto test_lifetimes() {
     {
 	auto c = [&] {
             assert_eq(b_lt.alive(), false, "b should not be alive");
-	    auto b = observable{b_lt.track()};
+	    auto b = atom{b_lt.track()};
             assert_eq(b_lt.alive(), true, "b should be alive");
 
-	    return computed{[=, x = c_lt.track()](auto get) { return get(b); }};
+	    return calc{[=, x = c_lt.track()](auto get) { return get(b); }};
 	}();
 
         assert_eq(b_lt.alive(), true, "b should be kept alive by c");
@@ -430,13 +430,13 @@ auto test_immovable_types() {
     assert_eq(true, false, "not implemented yet");
 }
 
-auto test_observable_syntaxes() {
-    auto a = observable{42};
-    observable b = 42;
-    // alternative syntax observable: function instead of class
+auto test_atom_syntaxes() {
+    auto a = atom{42};
+    atom b = 42;
+    // alternative syntax atom: function instead of class
     //   which might be more flexible in the design space of the
-    //   implementation. Same for computed.
-    auto c = observable(42);
+    //   implementation. Same for calc.
+    auto c = atom(42);
 
     // mutation syntax 1: set
     a.set(1729);
@@ -445,35 +445,35 @@ auto test_observable_syntaxes() {
     a = 1729;
 }
 
-auto test_computed_syntaxes() {
-    auto a = observable{42};
-    auto b = observable{42};
+auto test_calc_syntaxes() {
+    auto a = atom{42};
+    auto b = atom{42};
 
-    // computed syntax 1: get as parameter
+    // calc syntax 1: get as parameter
     //   - thread-safe
     //   - may allow for optimizations
-    auto c = computed{[=](auto get) { return get(a) + get(b); }};
-    computed d = [=](auto get) { return get(a) + get(b); };
+    auto c = calc{[=](auto get) { return get(a) + get(b); }};
+    calc d = [=](auto get) { return get(a) + get(b); };
 
-    // computed syntax 2: parameterless function
+    // calc syntax 2: parameterless function
     //   - not thread-safe
     //   - maybe more difficult to optimize
     //   - less boilerplate
-    auto e = computed{[=] { return a() + b(); }};
+    auto e = calc{[=] { return a() + b(); }};
 
-    // computed syntax 3: parameterless function + smartref
+    // calc syntax 3: parameterless function + smartref
     //   - not thread-safe
     //   - maybe more difficult to optimize
     //   - minimal boilerplate (except for user defined types)
     //   - maybe not worth the effort, considering only 2 chars per observable
-    // auto f = computed{[=] { return a + b; }};
+    // auto f = calc{[=] { return a + b; }};
 
-    // computed syntax 4: static get
+    // calc syntax 4: static get
     //   - thread-safe
     //   - may allow for more optimization
-    //   - every observable/computed should be declared globally and becomes stateless
+    //   - every atom/calc should be declared globally and becomes stateless
     //   - does every observable have to be unique?
-    // auto g = computed{[](auto get) { return get(a) + get(b); }};
+    // auto g = calc{[](auto get) { return get(a) + get(b); }};
 }
 
 template<typename Class, auto thunk>
@@ -496,11 +496,11 @@ struct Computable : Base {
 	return self.name(get);                                   \
     }>;                                                          \
                                                                  \
-    computed<name##_thunk> name{this};                           \
+    calc<name##_thunk> name{this};                           \
 
 struct Person_ {
-    observable<std::string> first_name;
-    observable<std::string> last_name;
+    atom<std::string> first_name;
+    atom<std::string> last_name;
 
     auto full_name(auto get) const { 
 	return get(first_name) + " " + get(last_name);
@@ -512,7 +512,7 @@ struct Person : Computable<Person_>  {
 	return self.full_name(get);
     }>;
 
-    computed<full_name_thunk> full_name{this};*/
+    calc<full_name_thunk> full_name{this};*/
     PREGO_COMPUTED(full_name);
 };
 
@@ -527,10 +527,10 @@ auto test_oo() {
 
     {
         using Person = decltype([] {
-	    observable first_name{"John"s};
-	    observable last_name{"Doe"s};
+	    atom first_name{"John"s};
+	    atom last_name{"Doe"s};
 
-	    computed full_name = [=](auto get) {
+	    calc full_name = [=](auto get) {
 	        return get(first_name) + " " + get(last_name);
 	    };
 
@@ -547,7 +547,7 @@ auto test_oo() {
         auto jane = Person{"Jane", "Doe"};
     }
 
-    class observable_vector {
+    class atom_vector {
         std::vector<int> v;
 
     public:
@@ -557,10 +557,10 @@ auto test_oo() {
 }
 
 auto test() {
-    test_observable();
+    test_atom();
     test_autorun();
     test_scope_manager();
-    test_computed();
+    test_calc();
     test_dynamic_reactions();
     test_lazy_observing();
     test_auto_unobserve();
@@ -568,8 +568,8 @@ auto test() {
     test_oo();
     //test_noncopyable_types();
     //test_immovable_types();
-    test_observable_syntaxes();
-    test_computed_syntaxes();
+    test_atom_syntaxes();
+    test_calc_syntaxes();
 
     if (all_tests_passed)
         std::cout << "all tests passed\n";

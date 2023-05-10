@@ -116,54 +116,59 @@ concept convertible_to =
         static_cast<To>(std::declval<From>());
     };
 
+// TODO: define concept
 template<typename T>
-struct observable;
+concept observable = false;
 
 template<typename T>
-observable(T &&) -> observable<T>;
+struct atom_state : observable_state_t {
+    T value;
 
-// TODO: rename to atom to free up name for observable concept
+    atom_state(auto &&value) : value{FWD(value)} {}
+    ~atom_state() {
+	log(1, "~", id);
+    }
+
+    virtual bool is_up_to_date() const final {
+	// We will end up here only if a direct
+	// observer was not able to determine whether
+	// it was up to date by looking at its own state.
+	// In that case, it means that it was not notified
+	// by any atom that it was changed
+	// (using the stale_count).
+	// Therefore, we know that this atom
+	// did not change with respect to the previous time
+	// that the observer was computed, and
+	// must therefore be considered up-to-date.
+	log(6, id, ".is_up_to_date() [true]");
+	return true;
+    }
+};
+
 template<typename T>
-struct observable {
-    struct state_t : observable_state_t {
-	T value;
+struct atom;
 
-	state_t(auto &&value) : value{FWD(value)} {}
-	~state_t() {
-	    log(1, "~", id);
-	}
+template<typename T>
+atom(T &&) -> atom<T>;
 
-        virtual bool is_up_to_date() const final {
-	    // We will end up here only if a direct
-	    // observer was not able to determine whether
-	    // it was up to date by looking at its own state.
-	    // In that case, it means that it was not notified
-	    // by any observable that it was changed
-	    // (using the stale_count).
-	    // Therefore, we know that this observable
-	    // did not change with respect to the previous time
-	    // that the observer was computed, and
-	    // must therefore be considered up-to-date.
-	    log(6, id, ".is_up_to_date() [true]");
-            return true;
-        }
-    };
-
+template<typename T>
+struct atom {
+    using state_t = atom_state<T>;
     std::shared_ptr<state_t> state;
 
 public:
-    observable(const observable &) = default;
-    observable &operator=(const observable &) = default;
+    atom(const atom &) = default;
+    atom &operator=(const atom &) = default;
 
-    observable(observable &&) = default;
-    observable &operator=(observable &&) = default;
+    atom(atom &&) = default;
+    atom &operator=(atom &&) = default;
 
-    observable(convertible_to<T> auto &&value)
+    atom(convertible_to<T> auto &&value)
 	: state{std::make_shared<state_t>(FWD(value))} {}
 
     template<typename U> requires convertible_to<U, T>
-    observable(observable<U> &&src)
-      : observable{std::move(src.state->value)} {}
+    atom(atom<U> &&src)
+      : atom{std::move(src.state->value)} {}
 
     auto set(auto &&value) {
 	log(1, "");
@@ -206,10 +211,10 @@ public:
 };
 
 template<typename F>
-struct computed;
+struct calc;
 
 template<typename F>
-computed(F &&) -> computed<F>;
+calc(F &&) -> calc<F>;
 
 inline constexpr auto noop_get = [](const auto &o) { return o.internal_get(); };
 using noop_get_t = decltype(noop_get);
@@ -224,7 +229,7 @@ auto get_value(invocable<noop_get_t> auto &f, auto &observables, bool reactive) 
     return f([&](auto observable) {
 	// Before linking together the observer
 	// and observable, get the value,
-	// because the computed::internal_get() function
+	// because the calc::internal_get() function
 	// uses the link to determine whether
 	// it should recompute (via is_reactive).
 	// TODO: fix linking behaviour (should be done immediately, because of the above)
@@ -246,7 +251,7 @@ auto get_value(invocable auto &f, auto &observables, bool reactive) {
 
 // TODO: change into class instead of struct
 template<typename F>
-struct computed {
+struct calc {
 private:
     using T = decltype(get_result_t(std::declval<F>()));
 
@@ -262,7 +267,7 @@ public:
 
 	explicit state_t(auto &&f) : f{FWD(f)} {}
         ~state_t() {
-	    log(1, "~computed::state_t(", id, ")");
+	    log(1, "~calc::state_t(", id, ")");
 	    const auto observer = this->weak_from_this();
 	    for (auto &observable : observables) {
 		if (auto p = observable.lock()) {
@@ -270,7 +275,7 @@ public:
 		    p->unobserve(observer);
 		}
 	        else
-		    log(1, ": err - ~computed::state_t");
+		    log(1, ": err - ~calc::state_t");
 	    }
 	}
 
@@ -439,13 +444,13 @@ public:
     friend auto autorun(auto f, scope_manager_t *);
 
 public:
-    computed(const computed &) = default;
-    computed &operator=(const computed &) = default;
+    calc(const calc &) = default;
+    calc &operator=(const calc &) = default;
 
-    computed(computed &&) = default;
-    computed &operator=(computed &&) = default;
+    calc(calc &&) = default;
+    calc &operator=(calc &&) = default;
 
-    computed(convertible_to<F> auto &&f)
+    calc(convertible_to<F> auto &&f)
 	: state{std::make_shared<state_t>(FWD(f))} {}
 
     // TODO: reactive == true should not be accessible publicly,
@@ -475,9 +480,9 @@ public:
 
 auto autorun(auto f, scope_manager_t *scope_manager = &global_scope_manager) {
     // TODO: void support (currently even missing get-less autorun support because of this)
-    auto c = computed{[=](auto get) { f(get); return 0; }};
+    auto c = calc{[=](auto get) { f(get); return 0; }};
 
-    auto reaction = computed{[=](auto get) { get(c); return 0; }};
+    auto reaction = calc{[=](auto get) { get(c); return 0; }};
     reaction.internal_get(true);
 
     if (scope_manager) scope_manager->push_back(reaction.state);
