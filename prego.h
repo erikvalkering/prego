@@ -3,7 +3,9 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
+#include <utility>
 #include <vector>
 
 #define FWD(x) std::forward<decltype(x)>(x)
@@ -469,6 +471,22 @@ public:
 
     auto observers() const { return state->observers; }
 };
+
+template<typename T, template<typename> class base>
+struct data : base<T> {
+    using base_ = base<T>;
+    using base_::base_;
+    using base_::operator=;
+};
+
+template<invocable F>
+data(F &&) -> data<F, calc>;
+
+template<invocable_with_get F>
+data(F &&) -> data<F, calc>;
+
+template<typename T>
+data(T &&) -> data<T, atom>;
 
 auto autorun(auto f, scope_manager_t *scope_manager = &global_scope_manager) {
     // TODO: void support (currently even missing get-less autorun support because of this)
