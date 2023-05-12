@@ -526,6 +526,14 @@ auto test_oo() {
     };
 }
 
+auto test_simple_syntax() {
+    atom x = 42;
+    calc y = [=] { return x(); };
+    autorun([=] { y(); });
+
+    x = 1729;
+}
+
 auto test() {
     test_atom();
     test_autorun();
@@ -541,6 +549,7 @@ auto test() {
     test_atom_syntaxes();
     test_calc_syntaxes();
     test_data_syntax();
+    test_simple_syntax();
 
     if (all_tests_passed)
         std::cout << "all tests passed\n";
