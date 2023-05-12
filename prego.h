@@ -488,11 +488,18 @@ data(F &&) -> data<F, calc>;
 template<typename T>
 data(T &&) -> data<T, atom>;
 
-auto autorun(auto f, scope_manager_t *scope_manager = &global_scope_manager) {
-    // TODO: void support (currently even missing get-less autorun support because of this)
-    auto c = calc{ [=](auto get) { f(get); return 0; } };
+auto with_return(invocable_with_get auto f) {
+    return [=](auto get) { f(get); return 0; };
+}
 
-    auto reaction = calc{ [=](auto get) {get(c); return 0; } };
+auto with_return(invocable auto f) {
+    return [=] { f(); return 0; };
+}
+
+auto autorun(auto f, scope_manager_t *scope_manager = &global_scope_manager) {
+    auto c = calc{ with_return(f) };
+
+    auto reaction = calc{ [=](auto get) { get(c); return 0; } };
     reaction.internal_get(true);
 
     if (scope_manager) scope_manager->push_back(reaction.state);
