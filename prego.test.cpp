@@ -7,7 +7,6 @@ using namespace std::string_literals;
 using prego::atom;
 using prego::autorun;
 using prego::calc;
-using prego::data;
 using prego::global_scope_manager;
 using prego::log;
 using prego::scope_manager_t;
@@ -479,16 +478,6 @@ struct Person : prego::Computable<Person_> {
     // PREGO_COMPUTED(full_name);
 };
 
-auto test_data_syntax() {
-    data x = 42;
-    data y = [=] { return x() + 1729; };
-    data z = [=](auto get) { return get(y); };
-    autorun([=](auto get) { std::cout << get(z) << std::endl; });
-
-    x = 1729;
-    x.set(42);
-}
-
 auto test_oo() {
     {
         auto john = Person{ "John"s, "Doe"s };
@@ -534,6 +523,30 @@ auto test_simple_syntax() {
     x = 1729;
 }
 
+template<typename T>
+struct atom_state_mock : prego::observable_state_t {
+    T value;
+    mutable int is_up_to_date_counter = 0;
+
+    atom_state_mock(auto &&value) : value{ FWD(value) } {}
+
+    virtual bool is_up_to_date() const final {
+	++is_up_to_date_counter;
+        return true;
+    }
+};
+
+auto test_graph_traversal_efficiency() {
+    atom<int, atom_state_mock> a{42};
+    calc b = [=] { return a(); };
+    calc c = [=] { return b(); };
+    calc d = [=] { return b(); };
+    calc e = [=] { return c() + d(); };
+
+    e();
+    assert_eq(a.state->is_up_to_date_counter, 1, "b should only check a once for determining whether it is up to date");
+}
+
 auto test() {
     test_atom();
     test_autorun();
@@ -548,8 +561,8 @@ auto test() {
     // test_immovable_types();
     test_atom_syntaxes();
     test_calc_syntaxes();
-    test_data_syntax();
     test_simple_syntax();
+    test_graph_traversal_efficiency();
 
     if (all_tests_passed)
         std::cout << "all tests passed\n";

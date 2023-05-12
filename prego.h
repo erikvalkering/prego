@@ -139,16 +139,15 @@ struct atom_state : observable_state_t {
     }
 };
 
-template<typename T>
+template<typename T, template<typename> class state_t = atom_state>
 struct atom;
 
 template<typename T>
 atom(T &&) -> atom<T>;
 
-template<typename T>
+template<typename T, template<typename > class state_t>
 struct atom {
-    using state_t = atom_state<T>;
-    std::shared_ptr<state_t> state;
+    std::shared_ptr<state_t<T>> state;
 
 public:
     atom(const atom &) = default;
@@ -158,10 +157,9 @@ public:
     atom &operator=(atom &&) = default;
 
     atom(convertible_to<T> auto &&value)
-        : state{ std::make_shared<state_t>(FWD(value)) } {}
+        : state{ std::make_shared<state_t<T>>(FWD(value)) } {}
 
-    template<typename U>
-        requires convertible_to<U, T>
+    template<convertible_to<T> U>
     atom(atom<U> &&src)
         : atom{ std::move(src.state->value) } {}
 
@@ -471,22 +469,6 @@ public:
 
     auto observers() const { return state->observers; }
 };
-
-template<typename T, template<typename> class base>
-struct data : base<T> {
-    using base_ = base<T>;
-    using base_::base_;
-    using base_::operator=;
-};
-
-template<invocable F>
-data(F &&) -> data<F, calc>;
-
-template<invocable_with_get F>
-data(F &&) -> data<F, calc>;
-
-template<typename T>
-data(T &&) -> data<T, atom>;
 
 auto with_return(invocable_with_get auto f) {
     return [=](auto get) { f(get); return 0; };
