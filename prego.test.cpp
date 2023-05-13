@@ -538,13 +538,16 @@ struct atom_state_mock : prego::observable_state_t {
 
 auto test_graph_traversal_efficiency() {
     atom<int, atom_state_mock> a{42};
+    a();
+    assert_eq(a.state->is_up_to_date_counter, 0, "accessing a should directly return the value, without checking if it's up to date (because it always is)");
+
     calc b = [=] { return a(); };
+    b();
+    assert_eq(a.state->is_up_to_date_counter, 0, "b is initially not calculated yet, so we know it is not up to date and don't need to check a");
+
     calc c = [=] { return b(); };
     calc d = [=] { return b(); };
     calc e = [=] { return c() + d(); };
-
-    e();
-    assert_eq(a.state->is_up_to_date_counter, 1, "b should only check a once, and only when it was calculated before, for determining whether it is up to date");
 
     a.state->is_up_to_date_counter = 0;
     e();
