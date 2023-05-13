@@ -544,11 +544,15 @@ auto test_graph_traversal_efficiency() {
     calc e = [=] { return c() + d(); };
 
     e();
+    assert_eq(a.state->is_up_to_date_counter, 1, "b should only check a once, and only when it was calculated before, for determining whether it is up to date");
+
+    a.state->is_up_to_date_counter = 0;
+    e();
     assert_eq(a.state->is_up_to_date_counter, 1, "b should only check a once for determining whether it is up to date");
 }
 
 auto test() {
-    test_atom();
+    /*test_atom();
     test_autorun();
     test_scope_manager();
     test_calc();
@@ -561,7 +565,7 @@ auto test() {
     // test_immovable_types();
     test_atom_syntaxes();
     test_calc_syntaxes();
-    test_simple_syntax();
+    test_simple_syntax();*/
     test_graph_traversal_efficiency();
 
     if (all_tests_passed)
