@@ -332,9 +332,9 @@ public:
 
         virtual bool is_up_to_date() const final {
             if (!value) return false;
-            if (is_reactive()) return true;
             if (maybe_changed) return false;
             if (stale_count != 0) return false;
+            if (is_reactive()) return true;
 
             // TODO: like this we get a lot of redundant is_up_to_date() checks
             //       for non-reactive branches. Each time we visit a previously
