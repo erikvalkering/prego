@@ -91,7 +91,9 @@ struct observable_state_t {
 
 using observables_t = std::set<std::weak_ptr<observable_state_t>, std::owner_less<>>;
 
-auto active_observers = std::vector<std::tuple<observables_t *, bool>>{};
+auto active_observers = std::vector<
+    std::tuple<std::weak_ptr<observer_t>, observables_t *, bool>
+>{};
 
 using scope_manager_t = std::vector<std::shared_ptr<observable_state_t>>;
 auto global_scope_manager = scope_manager_t{};
@@ -189,9 +191,11 @@ public:
     auto &get() const {
         if (active_observers.empty()) return internal_get();
 
-        auto [observables, reactive] = active_observers.back();
+        auto [observer, observables, reactive] = active_observers.back();
         auto &value = internal_get(reactive);
         observables->insert(state);
+	state->observe(observer, reactive);
+
         return value;
     }
 
@@ -220,26 +224,30 @@ concept invocable_with_get = invocable<F, noop_get_t>;
 auto get_result_t(invocable_with_get auto f) -> decltype(f(noop_get));
 auto get_result_t(invocable auto f) -> decltype(f());
 
-auto get_value(invocable_with_get auto &f, auto &observables, bool reactive) {
+auto get_value(invocable_with_get auto &f, auto observer, auto &observables, bool reactive) {
     return f([&](auto observable) {
         // Before linking together the observer
         // and observable, get the value,
         // because the calc::internal_get() function
         // uses the link to determine whether
         // it should recompute (via is_reactive).
-        // TODO: fix linking behaviour (should be done immediately, because of the
-        // above)
+	// So linking them before retrieving the value,
+	// might incorrectly flag the observable as
+	// reactive and therefore up-to-date,
+	// which would skip a recomputation and
+	// return an outdated value instead.
         auto value = observable.internal_get(reactive);
 
         // Register this observable
         observables.insert(observable.state);
+	observable.state->observe(observer, reactive);
 
         return value;
     });
 }
 
-auto get_value(invocable auto &f, auto &observables, bool reactive) {
-    active_observers.emplace_back(&observables, reactive);
+auto get_value(invocable auto &f, auto observer, auto &observables, bool reactive) {
+    active_observers.emplace_back(observer, &observables, reactive);
     auto value = f();
     active_observers.pop_back();
     return value;
@@ -364,43 +372,17 @@ public:
             // already-reactive observable.
             reactive = reactive or is_reactive();
 
-            for (auto &observable : observables)
-                if (auto p = observable.lock())
-                    log(1, "observable - ", p->id);
             // Clear the old observables by moving them
             // into a temporary variable, such that we can
             // later compute the diff between them.
             auto previous_observables = std::move(observables);
 
-            for (auto &observable : observables)
-                if (auto p = observable.lock())
-                    log(1, "moved observable - ", p->id);
-            for (auto &observable : previous_observables)
-                if (auto p = observable.lock())
-                    log(1, "prev observable - ", p->id);
             // Create a reference to the current observer,
             // which we will pass later while linking
             // together the observer and observable.
             const auto observer = this->weak_from_this();
 
-            auto value = get_value(f, observables, reactive);
-
-            // Now link them.
-            // TODO: this used to be done right after adding adding to the set
-            //       of observables. Did we change behaviour?
-            //       Maybe it was just because of the .lock()
-            //       (observables are weak_ptrs and observable.state
-            //       was shared_ptr)
-            for (auto &observable : observables)
-                if (auto p = observable.lock())
-                    p->observe(observer, reactive);
-
-            for (auto &observable : observables)
-                if (auto p = observable.lock())
-                    log(1, "after observable - ", p->id);
-            for (auto &observable : previous_observables)
-                if (auto p = observable.lock())
-                    log(1, "prev observable - ", p->id);
+            auto value = get_value(f, observer, observables, reactive);
 
             // Set any previously-observed observables to
             // non-reactive. NOTE: they should not be
@@ -459,9 +441,11 @@ public:
     auto &get() const {
         if (active_observers.empty()) return internal_get();
 
-        auto [observables, reactive] = active_observers.back();
+        auto [observer, observables, reactive] = active_observers.back();
         auto &value = internal_get(reactive);
         observables->insert(state);
+	state->observe(observer, reactive);
+
         return value;
     }
 

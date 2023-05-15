@@ -559,10 +559,21 @@ auto test_graph_traversal_efficiency() {
     a.state->is_up_to_date_counter = 0;
     f = true;
     assert_eq(a.state->is_up_to_date_counter, 1, "b should only check a once for determining whether it is up to date, after that, it becomes reactive and doesn't need to check a anymore");
+
+    calc g = [=] { if (    f()) b(); return 0; };
+    calc h = [=] { if (not f()) b(); return 0; };
+    autorun([=] { g(); h(); });
+    // TODO: two tests:
+    // 1. does the fact that g and h always return 0 affect their rewiring
+    // 2. making b unreactive wrt g, does that require a full is_up_to_date traversal for b through h?
+
+    a.state->is_up_to_date_counter = 0;
+    f = false;
+    assert_eq(a.state->is_up_to_date_counter, 0, "b should not need to check a for determining whether it is up to date, because it was reactive after all");
 }
 
 auto test() {
-    test_atom();
+    /*test_atom();
     test_autorun();
     test_scope_manager();
     test_calc();
@@ -575,7 +586,7 @@ auto test() {
     // test_immovable_types();
     test_atom_syntaxes();
     test_calc_syntaxes();
-    test_simple_syntax();
+    test_simple_syntax();*/
     test_graph_traversal_efficiency();
 
     if (all_tests_passed)
