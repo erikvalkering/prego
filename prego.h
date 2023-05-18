@@ -62,7 +62,7 @@ struct observable_state_t {
     std::map<std::weak_ptr<observer_t>, bool, std::owner_less<>> observers = {};
 
     virtual void on_observers_changed() {}
-    virtual bool is_up_to_date() const = 0;
+    virtual bool is_up_to_date(bool reactive) = 0;
 
     auto is_reactive() const {
         for (auto &[_, reactive] : observers)
@@ -84,8 +84,6 @@ struct observable_state_t {
         assert(observers.contains(observer));
         observers.erase(observer);
         on_observers_changed();
-        // TODO: make on change more clever
-        //       by comparing is reactive before with after
     }
 };
 
@@ -125,7 +123,7 @@ struct atom_state : observable_state_t {
     atom_state(auto &&value) : value{ FWD(value) } {}
     ~atom_state() { log(1, "~", id); }
 
-    virtual bool is_up_to_date() const final {
+    virtual bool is_up_to_date(bool reactive) final {
         // We will end up here only if a direct
         // observer was not able to determine whether
         // it was up to date by looking at its own state.
@@ -140,6 +138,17 @@ struct atom_state : observable_state_t {
         return true;
     }
 };
+
+auto &get(auto &observable) {
+    if (active_observers.empty()) return observable.internal_get();
+
+    auto [observer, observables, reactive] = active_observers.back();
+    auto &value = observable.internal_get(reactive);
+    observables->insert(observable.state);
+    observable.state->observe(observer, reactive);
+
+    return value;
+}
 
 template<typename T, template<typename> class state_t = atom_state>
 struct atom;
@@ -188,18 +197,7 @@ public:
         return state->value;
     }
 
-    auto &get() const {
-        if (active_observers.empty()) return internal_get();
-
-        auto [observer, observables, reactive] = active_observers.back();
-        auto &value = internal_get(reactive);
-        observables->insert(state);
-	state->observe(observer, reactive);
-
-        return value;
-    }
-
-    auto &operator()() const { return get(); }
+    auto &operator()() const { return get(*this); }
 
     auto observers() const {
         return state->observers;
@@ -336,9 +334,12 @@ public:
                     else
                         log(1, id, ": err - on_observers_changed");
             }
+	    // TODO: check if the opposite is already established:
+	    //       if we become reactive, does that mean that all
+	    //       observables were already reactive?
         }
 
-        virtual bool is_up_to_date() const final {
+        virtual bool is_up_to_date(bool reactive) final {
             if (!value) return false;
             if (maybe_changed) return false;
             if (stale_count != 0) return false;
@@ -353,10 +354,19 @@ public:
 
             // TODO: check correctness of stale_count check
             // TODO: check correctness of this for-loop
+            const auto observer = this->weak_from_this();
             for (auto &observable : observables)
                 if (auto p = observable.lock()) {
-                    if (!p->is_up_to_date())
+                    if (!p->is_up_to_date(reactive))
+			// TODO: this hierarchy is still traversed twice in case an unobserved
+			//       atom was changed. Create a test for this
                         return false;
+		    else if (reactive) {
+			// if this subtree was up to date and we are currently reactive,
+			// mark it as reactive, such that the next time the subtree is
+			// checked, it immediately returns true
+			p->observe(observer, reactive);
+		    }
                 } else
                     log(1, "err - is_up_to_date");
 
@@ -432,24 +442,13 @@ public:
     // TODO: reactive == true should not be accessible publicly,
     //       because there's no way to unsubscribe
     auto &internal_get(bool reactive = false) const {
-        if (!state->is_up_to_date())
+        if (!state->is_up_to_date(reactive))
             state->recompute(reactive);
 
         return *state->value;
     }
 
-    auto &get() const {
-        if (active_observers.empty()) return internal_get();
-
-        auto [observer, observables, reactive] = active_observers.back();
-        auto &value = internal_get(reactive);
-        observables->insert(state);
-	state->observe(observer, reactive);
-
-        return value;
-    }
-
-    auto &operator()() const { return get(); }
+    auto &operator()() const { return get(*this); }
 
     auto observers() const { return state->observers; }
 };
