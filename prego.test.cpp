@@ -68,10 +68,10 @@ auto sandbox() {
 auto test_atom() {
     auto a = atom{ 42 };
 
-    assert_eq(a.get(), 42, "state should be accessible directly");
+    assert_eq(a(), 42, "state should be accessible directly");
 
     a.set(1729);
-    assert_eq(a.get(), 1729, "mutations should be allowed and observable");
+    assert_eq(a(), 1729, "mutations should be allowed and observable");
 }
 
 auto test_calc() {
@@ -79,10 +79,10 @@ auto test_calc() {
 
     auto b = calc{ [=](auto get) { return 2 * get(a); } };
 
-    assert_eq(b.get(), 2 * 42, "computed state should be accessible directly");
+    assert_eq(b(), 2 * 42, "computed state should be accessible directly");
 
     a.set(1729);
-    assert_eq(b.get(), 2 * 1729, "mutations should be allowed and observable through computed state");
+    assert_eq(b(), 2 * 1729, "mutations should be allowed and observable through computed state");
 }
 
 auto test_lazy_observing() {
@@ -96,17 +96,17 @@ auto test_lazy_observing() {
     } };
 
     assert_eq(x, false, "computed state should not compute when not requested");
-    b.get();
+    b();
     assert_eq(x, true, "computed state should compute the first time when requested");
 
     x = false;
-    b.get();
+    b();
     assert_eq(x, false, "computed state should not recompute when dependencies have not changed");
 
     x = false;
     a.set(1729);
     assert_eq(x, false, "computed state should not be reactive if not reactively observed");
-    b.get();
+    b();
     assert_eq(x, true, "computed state should recompute when dependencies have changed");
 }
 
@@ -483,8 +483,8 @@ auto test_oo() {
         auto john = Person{ "John"s, "Doe"s };
         auto jane = Person{ "Jane", "Doe" };
 
-        // assert_eq(john.full_name.get(), "John Doe", "John and Jane should not share state");
-        // assert_eq(jane.full_name.get(), "Jane Doe", "John and Jane should not share state");
+        // assert_eq(john.full_name(), "John Doe", "John and Jane should not share state");
+        // assert_eq(jane.full_name(), "Jane Doe", "John and Jane should not share state");
     }
 
     {
@@ -526,11 +526,11 @@ auto test_simple_syntax() {
 template<typename T>
 struct atom_state_mock : prego::observable_state_t {
     T value;
-    mutable int is_up_to_date_counter = 0;
+    int is_up_to_date_counter = 0;
 
     atom_state_mock(auto &&value) : value{ FWD(value) } {}
 
-    virtual bool is_up_to_date() const final {
+    virtual bool is_up_to_date(bool reactive) final {
 	++is_up_to_date_counter;
         return true;
     }
@@ -573,7 +573,7 @@ auto test_graph_traversal_efficiency() {
 }
 
 auto test() {
-    /*test_atom();
+    test_atom();
     test_autorun();
     test_scope_manager();
     test_calc();
@@ -586,7 +586,7 @@ auto test() {
     // test_immovable_types();
     test_atom_syntaxes();
     test_calc_syntaxes();
-    test_simple_syntax();*/
+    test_simple_syntax();
     test_graph_traversal_efficiency();
 
     if (all_tests_passed)
