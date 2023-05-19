@@ -572,12 +572,33 @@ auto test_graph_traversal_efficiency() {
     assert_eq(a.state->is_up_to_date_counter, 0, "b should not need to check a for determining whether it is up to date, because it was reactive after all");
 }
 
+auto test_mixed_observing() {
+    atom x = 42;
+    calc y = [=] { return x(); };
+    calc z = [=] { return y(); };
+
+    auto b = false;
+    autorun([=, &b] { b = true; z(); });
+    assert_eq(b, true, "autorun should execute immediately");
+
+    b = false;
+    x = 1729;
+    assert_eq(b, true, "autorun should react to x");
+
+    z();
+
+    b = false;
+    x = 42;
+    assert_eq(b, true, "autorun should react to x");
+}
+
 auto test() {
     test_atom();
     test_autorun();
     test_scope_manager();
     test_calc();
     test_dynamic_reactions();
+    test_mixed_observing();
     test_lazy_observing();
     test_auto_unobserve();
     test_lifetimes();
