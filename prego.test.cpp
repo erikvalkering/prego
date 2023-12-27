@@ -537,7 +537,7 @@ struct atom_state_mock : prego::observable_state_t {
 };
 
 auto test_graph_traversal_efficiency() {
-    atom<int, atom_state_mock> a{42};
+    atom<int, atom_state_mock> a = 42;
     a();
     assert_eq(a.state->is_up_to_date_counter, 0, "accessing a should directly return the value, without checking if it's up to date (because it always is)");
 
@@ -559,18 +559,60 @@ auto test_graph_traversal_efficiency() {
     a.state->is_up_to_date_counter = 0;
     f = true;
     assert_eq(a.state->is_up_to_date_counter, 1, "b should only check a once for determining whether it is up to date, after that, it becomes reactive and doesn't need to check a anymore");
+}
 
-    calc g = [=] { if (    f()) b(); return 0; };
-    calc h = [=] { if (not f()) b(); return 0; };
+auto test_graph_traversal_efficiency_bottom_up() {
+    atom<int, atom_state_mock> a = 42;
+    calc b = [=] { return a(); };
+
+    atom f = true;
+    calc g = [=] { return f() ? b() : 0; };
+    calc h = [=] { return f() ? 0 : b(); };
+    
+    // Note: this autorun is only to ensure that g and h are observed.
+    //   We don't really care whether the autorun itself gets
+    //   re-evaluated or not. So, if g or h after being
+    //   re-evaluated did not change, it's not a problem that this
+    //   won't propagate upwards.
     autorun([=] { g(); h(); });
+
     // TODO: two tests:
-    // 1. does the fact that g and h always return 0 affect their rewiring
     // 2. making b unreactive wrt g, does that require a full is_up_to_date traversal for b through h?
 
+    // Here we are testing what happens if g and h are being observed (through autorun),
+    // but initially only g observes b.
+    // After changing f to false, depending on the order of registration,
+    // b might no longer become observed, and therefore not reactive anymore.
+    // Because of that, if h is evaluated after g, it will start depending on
+    // b, but cannot immediately determine it is up to date, due to it not
+    // being reactive anymore.
+    // We actually want to make sure that b is still up-to-date,
+    // even if at some intermediate state, it is not being observed.
     a.state->is_up_to_date_counter = 0;
     f = false;
     assert_eq(a.state->is_up_to_date_counter, 0, "b should not need to check a for determining whether it is up to date, because it was reactive after all");
 }
+
+/*auto test_graph_traversal_efficiency_top_down() {
+    atom<int, atom_state_mock> a = 42;
+    calc b = [=] { return a(); };
+
+    atom f1 = true;
+    calc g = [=] { return f1() ? b() : 0; };
+    calc h = [=] { return f1() ? 0 : b(); }
+
+    calc i = [=] { return f2() ? g() : h(); };
+
+    atom f2 = true;
+    autorun([=] { f2() ? g() : b(); } });
+
+    f1 = false;
+    a.state->is_up_to_date_counter = 0;
+
+    f2 = false;
+    assert_eq(a.state->is_up_to_date_counter, 0, "b should not need to check a for determining whether it is up to date, because it was reactive after all");
+}
+*/
 
 auto test_mixed_observing() {
     atom x = 42;
@@ -609,6 +651,8 @@ auto test() {
     test_calc_syntaxes();
     test_simple_syntax();
     test_graph_traversal_efficiency();
+    test_graph_traversal_efficiency_bottom_up();
+    test_graph_traversal_efficiency_top_down();
 
     if (all_tests_passed)
         std::cout << "all tests passed\n";
