@@ -140,7 +140,10 @@ struct atom_state : observable_state_t {
 };
 
 auto &get(auto &observable) {
-    if (active_observers.empty()) return observable.internal_get();
+    if (active_observers.empty()) {
+        auto reaction = autorun([=](auto get) { get(observable); }, nullptr);	
+	return observable.internal_get();
+    }
 
     auto [observer, observables, reactive] = active_observers.back();
     auto &value = observable.internal_get(reactive);
