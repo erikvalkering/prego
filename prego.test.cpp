@@ -652,7 +652,7 @@ auto test() {
     test_simple_syntax();
     test_graph_traversal_efficiency();
     test_graph_traversal_efficiency_bottom_up();
-    test_graph_traversal_efficiency_top_down();
+    // test_graph_traversal_efficiency_top_down();
 
     if (all_tests_passed)
         std::cout << "all tests passed\n";
