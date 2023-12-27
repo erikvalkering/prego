@@ -536,7 +536,7 @@ struct atom_state_mock : prego::observable_state_t {
     }
 };
 
-auto test_graph_traversal_efficiency() {
+auto test_graph_traversal_efficiency_basics() {
     atom<int, atom_state_mock> a = 42;
     a();
     assert_eq(a.state->is_up_to_date_counter, 0, "accessing a should directly return the value, without checking if it's up to date (because it always is)");
@@ -544,24 +544,25 @@ auto test_graph_traversal_efficiency() {
     calc b = [=] { return a(); };
     b();
     assert_eq(a.state->is_up_to_date_counter, 0, "b is initially not calculated yet, so we know it is not up to date and don't need to check a whether it is up to date");
+}
+
+auto test_graph_traversal_efficiency_lazy() {
+    atom<int, atom_state_mock> a = 42;
+    calc b = [=] { return a(); };
 
     calc c = [=] { return b(); };
     calc d = [=] { return b(); };
-    calc e = [=] { c(); return d(); };
+    calc e = [=] { c(); d(); return 0; };
 
     a.state->is_up_to_date_counter = 0;
     e();
+    assert_eq(a.state->is_up_to_date_counter, 0, "b is initially not calculated yet, so we know it is not up to date and don't need to check a whether it is up to date");
+
+    e();
     assert_eq(a.state->is_up_to_date_counter, 1, "b should only check a once for determining whether it is up to date");
-
-    atom f = false;
-    autorun([=] { if (f()) e(); });
-
-    a.state->is_up_to_date_counter = 0;
-    f = true;
-    assert_eq(a.state->is_up_to_date_counter, 1, "b should only check a once for determining whether it is up to date, after that, it becomes reactive and doesn't need to check a anymore");
 }
 
-auto test_graph_traversal_efficiency_bottom_up() {
+auto test_graph_traversal_efficiency_reactive_bottom_up() {
     atom<int, atom_state_mock> a = 42;
     calc b = [=] { return a(); };
 
@@ -593,7 +594,7 @@ auto test_graph_traversal_efficiency_bottom_up() {
     assert_eq(a.state->is_up_to_date_counter, 0, "b should not need to check a for determining whether it is up to date, because it was reactive after all");
 }
 
-/*auto test_graph_traversal_efficiency_top_down() {
+/*auto test_graph_traversal_efficiency_reactive_top_down() {
     atom<int, atom_state_mock> a = 42;
     calc b = [=] { return a(); };
 
@@ -650,9 +651,10 @@ auto test() {
     test_atom_syntaxes();
     test_calc_syntaxes();
     test_simple_syntax();
-    test_graph_traversal_efficiency();
-    test_graph_traversal_efficiency_bottom_up();
-    // test_graph_traversal_efficiency_top_down();
+    test_graph_traversal_efficiency_basics();
+    test_graph_traversal_efficiency_lazy();
+    test_graph_traversal_efficiency_reactive_bottom_up();
+    // test_graph_traversal_efficiency_reactive_top_down();
 
     if (all_tests_passed)
         std::cout << "all tests passed\n";
