@@ -348,13 +348,6 @@ public:
             if (stale_count != 0) return false;
             if (is_reactive()) return true;
 
-            // TODO: like this we get a lot of redundant is_up_to_date() checks
-            //       for non-reactive branches. Each time we visit a previously
-            //       calculated observable, we need to redetermine this.
-            //       Maybe pass a set with visited observables, which we can use
-            //       as an additional criterion.
-            // TODO: implement two-pass algorithm like with stale_count
-
             // TODO: check correctness of stale_count check
             // TODO: check correctness of this for-loop
             const auto observer = this->weak_from_this();
