@@ -594,6 +594,20 @@ auto test_graph_traversal_efficiency_reactive_bottom_up() {
     assert_eq(a.state->is_up_to_date_counter, 0, "b should not need to check a for determining whether it is up to date, because it was reactive after all");
 }
 
+auto test_graph_traversal_efficiency_reactive_bottom_up_top_down() {
+    atom<int, atom_state_mock> a = 42;
+    calc b = [=] { return a(); };
+
+    atom f = true;
+    calc g = [=] { return f() ? b(), true : false; };
+    
+    autorun([=] { if (!g()) b(); });
+
+    a.state->is_up_to_date_counter = 0;
+    f = false;
+    assert_eq(a.state->is_up_to_date_counter, 0, "b should not need to check a for determining whether it is up to date, because it was reactive after all");
+}
+
 /*auto test_graph_traversal_efficiency_reactive_top_down() {
     atom<int, atom_state_mock> a = 42;
     calc b = [=] { return a(); };
@@ -654,6 +668,7 @@ auto test() {
     test_graph_traversal_efficiency_basics();
     test_graph_traversal_efficiency_lazy();
     test_graph_traversal_efficiency_reactive_bottom_up();
+    test_graph_traversal_efficiency_reactive_bottom_up_top_down();
     // test_graph_traversal_efficiency_reactive_top_down();
 
     if (all_tests_passed)
