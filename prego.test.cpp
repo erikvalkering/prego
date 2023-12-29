@@ -224,7 +224,7 @@ auto test_dynamic_reactions() {
     assert_eq(x, true, "full_name should be queried through display_name and recompute because it was previously changed");
     assert_eq(y, true, "display_name should recompute, because nick_name changed, as well as full_name");
     assert_eq(z, false, "autorun should not react, because display_name did not change");
-    // TODO: rename autorun to observe or observer or reaction or effect? or reactive?
+    // TODO: rename autorun to observe or observer or reaction or effect? or reactive? or watch?
 
     enabled.set(false);
     x = false;
