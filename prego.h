@@ -1,8 +1,10 @@
+#include <algorithm>
 #include <cassert>
 #include <concepts>
 #include <iostream>
 #include <map>
 #include <memory>
+#include <ranges>
 #include <optional>
 #include <set>
 #include <utility>
@@ -65,12 +67,9 @@ struct observable_state_t {
     virtual bool is_up_to_date(bool reactive) = 0;
 
     auto is_reactive() const {
-        for (auto &[_, reactive] : observers)
-            if (reactive) return true;
-
-        return false;
-
-        // return std::ranges::any_of(observers | std::views::values);
+	auto reactive = observers | std::views::values;
+        return std::ranges::find(reactive, true)
+	    != std::ranges::end(reactive);
     }
 
     void observe(const std::weak_ptr<observer_t> &observer, const bool reactive) {
