@@ -59,6 +59,11 @@ struct observer_t {
 
 char id_counter = 'a';
 
+inline constexpr auto contains = [](auto &&rng, auto value) {
+    return std::ranges::find(rng, value)
+	!= std::ranges::end(rng);
+};
+
 struct observable_state_t {
     std::string id = { 1, id_counter++ };
     std::map<std::weak_ptr<observer_t>, bool, std::owner_less<>> observers = {};
@@ -67,9 +72,7 @@ struct observable_state_t {
     virtual bool is_up_to_date(bool reactive) = 0;
 
     auto is_reactive() const {
-	auto reactive = observers | std::views::values;
-        return std::ranges::find(reactive, true)
-	    != std::ranges::end(reactive);
+        return contains(observers | std::views::values, true);
     }
 
     void observe(const std::weak_ptr<observer_t> &observer, const bool reactive) {
