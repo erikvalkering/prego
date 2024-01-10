@@ -79,12 +79,19 @@ struct observable_state_t {
         const auto observer_id = std::dynamic_pointer_cast<observable_state_t>(observer.lock())->id;
         log(1, id, ".observe(", observer_id, ", ", reactive, ")");
         if (reactive != std::exchange(observers[observer], reactive))
+	    // TODO: Only if reactive == false, on_observers_changed() could potentially do something
+	    // (if this was the last remaining reactive observer).
+	    // TODO: Also, on_reactive_changed() might be a better name
             on_observers_changed();
     }
 
     void unobserve(const std::weak_ptr<observer_t> &observer) {
         assert(observers.contains(observer));
         observers.erase(observer);
+	// TODO: if we repeatedly call unobserve(), and this node remains unreactive,
+	// the on_observers_changed will do unneccesary repeated work
+	// Better would be to determine if the is_reactive() condition changed,
+	// and only call if it did.
         on_observers_changed();
     }
 };
