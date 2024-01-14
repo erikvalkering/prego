@@ -271,9 +271,9 @@ auto get_value(invocable auto &f, auto observer, auto &observables, bool reactiv
 }
 
 template<typename F>
-struct calc_state_t : observable_state_t
-                    , observer_t
-                    , std::enable_shared_from_this<state_t> {
+struct calc_state : observable_state_t
+                  , observer_t
+                  , std::enable_shared_from_this<state_t> {
 private:
     using T = decltype(get_result_t(std::declval<F>()));
 
@@ -444,7 +444,7 @@ public:
 template<typename F>
 struct calc {
 public
-    using state_t = calc_state_t<F>;
+    using state_t = calc_state<F>;
     std::shared_ptr<state_t> state;
     friend auto autorun(auto f, scope_manager_t *);
 
