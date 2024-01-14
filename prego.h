@@ -175,7 +175,7 @@ struct atom;
 template<typename T>
 atom(T &&) -> atom<T>;
 
-template<typename T, template<typename > class state_t>
+template<typename T, template<typename> class state_t>
 struct atom {
     std::shared_ptr<state_t<T>> state;
 
