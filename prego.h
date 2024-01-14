@@ -69,8 +69,8 @@ struct observable_state_t {
     std::map<std::weak_ptr<observer_t>, bool, std::owner_less<>> observers = {};
 
     // hooks
-    virtual void before_observe() {}
     virtual void before_is_reactive() {}
+    virtual void before_observe() {}
     virtual void before_is_up_to_date() {}
 
     virtual void on_observers_changed() {}
