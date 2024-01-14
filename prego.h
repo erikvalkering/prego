@@ -69,9 +69,9 @@ struct observable_state_t {
     std::map<std::weak_ptr<observer_t>, bool, std::owner_less<>> observers = {};
 
     // hooks
-    virtual void before_is_reactive() {}
-    virtual void before_observe() {}
-    virtual void before_is_up_to_date() {}
+    virtual void before_is_reactive() const {}
+    virtual void before_observe() const {}
+    virtual void before_is_up_to_date() const {}
 
     virtual void on_observers_changed() {}
     virtual bool is_up_to_date(bool reactive) = 0;
@@ -294,7 +294,7 @@ public:
         }
     }
 
-    virtual void notify(const notification_t notification) final {
+    virtual void notify(const notification_t notification) override final {
         log(1, id, "(reactive=", is_reactive(), "): notify: ", notification);
         switch (notification) {
             default: assert(false);
@@ -338,7 +338,7 @@ public:
         }
     }
 
-    virtual void on_observers_changed() final {
+    virtual void on_observers_changed() override final {
         if (!is_reactive()) {
             const auto observer = this->weak_from_this();
             for (auto &observable : observables)
