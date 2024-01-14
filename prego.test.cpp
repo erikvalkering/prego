@@ -524,19 +524,19 @@ auto test_simple_syntax() {
 
 template<typename T>
 struct atom_state_mock : prego::atom_state {
-    int is_up_to_date_counter = 0;
-    int observe_counter = 0;
-    int is_reactive_counter = 0;
+    mutable int is_up_to_date_counter = 0;
+    mutable int observe_counter = 0;
+    mutable int is_reactive_counter = 0;
 
-    virtual void before_observe() override final {
+    virtual void before_observe() const override final {
 	++observe_counter;
     }
 
-    virtual void before_is_reactive() override final {
+    virtual void before_is_reactive() const override final {
 	++is_reactive_counter;
     }
 
-    virtual void before_is_up_to_date() override final {
+    virtual void before_is_up_to_date() const override final {
 	++is_up_to_date_counter;
     }
 };
