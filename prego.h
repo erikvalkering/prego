@@ -68,6 +68,8 @@ struct observable_state_t {
     std::string id = { 1, id_counter++ };
     std::map<std::weak_ptr<observer_t>, bool, std::owner_less<>> observers = {};
 
+    virtual void before_observe() {}
+    virtual void before_is_reactive() {}
     virtual void on_observers_changed() {}
     virtual bool is_up_to_date(bool reactive) = 0;
 
@@ -76,6 +78,8 @@ struct observable_state_t {
     }
 
     void observe(const std::weak_ptr<observer_t> &observer, const bool reactive) {
+	before_observe();
+
         const auto observer_id = std::dynamic_pointer_cast<observable_state_t>(observer.lock())->id;
         log(1, id, ".observe(", observer_id, ", ", reactive, ")");
         if (reactive != std::exchange(observers[observer], reactive))

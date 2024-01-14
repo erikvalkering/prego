@@ -526,10 +526,20 @@ template<typename T>
 struct atom_state_mock : prego::observable_state_t {
     T value;
     int is_up_to_date_counter = 0;
+    int observe_counter = 0;
+    int is_reactive_counter = 0;
 
     atom_state_mock(auto &&value) : value{ FWD(value) } {}
 
-    virtual bool is_up_to_date(bool reactive) final {
+    virtual void before_observe() override final {
+	++observe_counter;
+    }
+
+    virtual void before_is_reactive() override final {
+	++is_reactive_counter;
+    }
+
+    virtual bool is_up_to_date(bool reactive) override final {
 	++is_up_to_date_counter;
         return true;
     }
@@ -628,6 +638,53 @@ auto test_graph_traversal_efficiency_reactive_bottom_up_top_down() {
 }
 */
 
+auto test_unobserve_efficiency() {
+    atom<int, atom_state_mock> a = 42;
+   
+    calc b = [=] { return a(); };
+
+    {
+        calc c = [=] { return b(); };
+	c();
+
+	a.state->observe_counter = 0;
+    }
+
+    assert_eq(a.state->observe_counter, 0, "b is already unreactive, so doesn't need to notify a about anything");
+}
+
+auto test_observe_efficiency_reactive() {
+    atom<int, atom_state_mock> a = 42;
+
+    calc b = [=] { return a(); };
+    autorun([=] { b(); });
+
+    b.state->is_reactive_counter = 0;
+
+    calc c = [=] { return b(); };
+    c();
+    assert_eq(b.state->is_reactive_counter, 0, "b is already reactive, so adding a non-reactive observer should not require redetermining reactivity of b");
+
+    autorun([=] { b(); });
+    assert_eq(b.state->is_reactive_counter, 0, "b is already reactive, so adding a reactive observer should not require redetermining reactivity of b");
+}
+
+auto test_observe_efficiency_unreactive() {
+    atom<int, atom_state_mock> a = 42;
+
+    calc b = [=] { return a(); };
+    b();
+
+    b.state->is_reactive_counter = 0;
+
+    calc c = [=] { return b(); };
+    c();
+    assert_eq(b.state->is_reactive_counter, 0, "b is not reactive, so adding a non-reactive observer should not require redetermining reactivity of b");
+
+    autorun([=] { b(); });
+    assert_eq(b.state->is_reactive_counter, 0, "b is not reactive, so adding a reactive observer should not require redetermining reactivity of b");
+}
+
 auto test_mixed_observing() {
     atom x = 42;
     calc y = [=] { return x(); };
@@ -669,6 +726,9 @@ auto test() {
     test_graph_traversal_efficiency_reactive_bottom_up();
     test_graph_traversal_efficiency_reactive_bottom_up_top_down();
     // test_graph_traversal_efficiency_reactive_top_down();
+    test_unobserve_efficiency();
+    test_observe_efficiency_unreactive();
+    test_observe_efficiency_reactive();
 
     if (all_tests_passed)
         std::cout << "all tests passed\n";
