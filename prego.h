@@ -270,7 +270,7 @@ auto get_value(invocable auto &f, auto observer, auto &observables, bool reactiv
 template<typename F>
 struct calc_state : observable_state_t
                   , observer_t
-                  , std::enable_shared_from_this<state_t> {
+                  , std::enable_shared_from_this<calc_state<F>> {
 private:
     using T = decltype(get_result_t(std::declval<F>()));
 
@@ -281,8 +281,8 @@ public:
     int stale_count = 0;
     bool maybe_changed = false;
 
-    explicit state_t(auto &&f) : f{ FWD(f) } {}
-    ~state_t() {
+    explicit calc_state(auto &&f) : f{ FWD(f) } {}
+    ~calc_state() {
         log(1, "~calc::state_t(", id, ")");
         const auto observer = this->weak_from_this();
         for (auto &observable : observables) {
@@ -417,7 +417,7 @@ public:
             if (auto p = observable.lock())
                 p->observe(observer, false);
             else
-               log(1, "err - compute")
+               log(1, "err - compute");
 	}
 
 	return value;
@@ -451,7 +451,7 @@ calc(F &&) -> calc<calc_state, F>;
 // TODO: change into class instead of struct
 template<template<typename F> class state_t, typename F>
 struct calc {
-public
+public:
     std::shared_ptr<state_t<F>> state;
     friend auto autorun(auto f, scope_manager_t *);
 
