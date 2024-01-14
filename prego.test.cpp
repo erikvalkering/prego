@@ -523,13 +523,10 @@ auto test_simple_syntax() {
 }
 
 template<typename T>
-struct atom_state_mock : prego::observable_state_t {
-    T value;
+struct atom_state_mock : prego::atom_state {
     int is_up_to_date_counter = 0;
     int observe_counter = 0;
     int is_reactive_counter = 0;
-
-    atom_state_mock(auto &&value) : value{ FWD(value) } {}
 
     virtual void before_observe() override final {
 	++observe_counter;
@@ -539,9 +536,8 @@ struct atom_state_mock : prego::observable_state_t {
 	++is_reactive_counter;
     }
 
-    virtual bool is_up_to_date(bool reactive) override final {
+    virtual void before_is_up_to_date() override final {
 	++is_up_to_date_counter;
-        return true;
     }
 };
 

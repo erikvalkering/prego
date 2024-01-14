@@ -71,6 +71,7 @@ struct observable_state_t {
     // hooks
     virtual void before_observe() {}
     virtual void before_is_reactive() {}
+    virtual void before_is_up_to_date() {}
 
     virtual void on_observers_changed() {}
     virtual bool is_up_to_date(bool reactive) = 0;
@@ -139,7 +140,9 @@ struct atom_state : observable_state_t {
     atom_state(auto &&value) : value{ FWD(value) } {}
     ~atom_state() { log(1, "~", id); }
 
-    virtual bool is_up_to_date(bool reactive) final {
+    virtual bool is_up_to_date(bool reactive) override final {
+	before_is_up_to_date();
+
         // We will end up here only if a direct
         // observer was not able to determine whether
         // it was up to date by looking at its own state.
@@ -360,7 +363,9 @@ public:
         //       observables were already reactive?
     }
 
-    virtual bool is_up_to_date(bool reactive) final {
+    virtual bool is_up_to_date(bool reactive) override final {
+	before_is_up_to_date();
+
         if (!value) return false;
         if (maybe_changed) return false;
         if (stale_count != 0) return false;
