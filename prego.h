@@ -68,12 +68,15 @@ struct observable_state_t {
     std::string id = { 1, id_counter++ };
     std::map<std::weak_ptr<observer_t>, bool, std::owner_less<>> observers = {};
 
+    // hooks
     virtual void before_observe() {}
     virtual void before_is_reactive() {}
+
     virtual void on_observers_changed() {}
     virtual bool is_up_to_date(bool reactive) = 0;
 
     auto is_reactive() const {
+	before_is_reactive();
         return contains(observers | std::views::values, true);
     }
 
