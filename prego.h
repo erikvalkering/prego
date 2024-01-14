@@ -226,12 +226,6 @@ public:
     }
 };
 
-template<typename F>
-struct calc;
-
-template<typename F>
-calc(F &&) -> calc<F>;
-
 inline constexpr auto noop_get = [](const auto &o) { return o.internal_get(); };
 using noop_get_t = decltype(noop_get);
 
@@ -445,12 +439,20 @@ public:
     }
 };
 
-// TODO: change into class instead of struct
+template<template<typename F> class state_t, typename F>
+struct calc;
+
+template<template<typename F> class state_t, typename F>
+calc(F &&) -> calc<state_t, F>;
+
 template<typename F>
+calc(F &&) -> calc<calc_state, F>;
+
+// TODO: change into class instead of struct
+template<template<typename F> class state_t, typename F>
 struct calc {
 public
-    using state_t = calc_state<F>;
-    std::shared_ptr<state_t> state;
+    std::shared_ptr<state_t<F>> state;
     friend auto autorun(auto f, scope_manager_t *);
 
 public:
@@ -461,7 +463,7 @@ public:
     calc &operator=(calc &&) = default;
 
     calc(convertible_to<F> auto &&f)
-        : state{ std::make_shared<state_t>(FWD(f)) } {}
+        : state{ std::make_shared<state_t<F>>(FWD(f)) } {}
 
     // TODO: reactive == true should not be accessible publicly,
     //       because there's no way to unsubscribe
