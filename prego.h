@@ -173,12 +173,6 @@ auto &get(auto &observable) {
 }
 
 template<typename T, template<typename> class state_t = atom_state>
-struct atom;
-
-template<typename T>
-atom(T &&) -> atom<T>;
-
-template<typename T, template<typename> class state_t>
 struct atom {
     std::shared_ptr<state_t<T>> state;
 
@@ -225,6 +219,9 @@ public:
         return state->observers;
     }
 };
+
+template<typename T>
+atom(T &&) -> atom<T>;
 
 inline constexpr auto noop_get = [](const auto &o) { return o.internal_get(); };
 using noop_get_t = decltype(noop_get);
