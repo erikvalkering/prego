@@ -436,17 +436,8 @@ public:
     }
 };
 
-template<template<typename F> class state_t, typename F>
-struct calc;
-
-template<template<typename F> class state_t, typename F>
-calc(F &&) -> calc<state_t, F>;
-
-template<typename F>
-calc(F &&) -> calc<calc_state, F>;
-
 // TODO: change into class instead of struct
-template<template<typename F> class state_t, typename F>
+template<typename F>
 struct calc {
 public:
     std::shared_ptr<state_t<F>> state;
@@ -475,6 +466,9 @@ public:
 
     auto observers() const { return state->observers; }
 };
+
+template<typename F>
+calc(F &&) -> calc<F>;
 
 auto with_return(invocable_with_get auto f) {
     return [=](auto get) { f(get); return 0; };
