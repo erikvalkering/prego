@@ -113,13 +113,13 @@ auto active_observers = std::vector<
 using scope_manager_t = std::vector<std::shared_ptr<observable_state_t>>;
 auto global_scope_manager = scope_manager_t{};
 
-auto notify_all(auto id, auto &observers, const notification_t notification) {
-    // log(1, "notify ", observers.size(), " observers");
-    for (auto &[observer, _] : observers) {
+auto notify_observers(observable_state_t &state, const notification_t notification) {
+    // log(1, "notify ", state.observers.size(), " observers");
+    for (auto &observer : state.observers | std::views::keys) {
         if (auto p = observer.lock()) {
             p->notify(notification);
         } else {
-            log(1, id, ": err - notify_all");
+            log(1, state.id, ": err - notify_observers");
         }
     }
 }
@@ -198,10 +198,10 @@ public:
         log(1, state->id, ": changed");
 
         // First sweep: mark all as stale
-        notify_all(state->id, state->observers, notification_t::stale);
+        notify_observers(state, notification_t::stale);
 
         // Second sweep: update observers
-        notify_all(state->id, state->observers, notification_t::changed);
+        notify_observers(state, notification_t::changed);
     }
 
     auto &operator=(auto &&value) {
@@ -301,7 +301,7 @@ public:
                 // we were visited for the first time
                 // and only if we are reactive
                 if (stale_count++ == 0 and is_reactive())
-                    notify_all(id, observers, notification);
+                    notify_observers(*this, notification);
 
                 break;
             }
@@ -323,7 +323,7 @@ public:
                 // If all observables are up to date
                 // and unchanged, propagate and early-exit
                 if (!maybe_changed) {
-                    notify_all(id, observers, notification_t::unchanged);
+                    notify_observers(*this, notification_t::unchanged);
                     break;
                 }
 
@@ -432,7 +432,7 @@ public:
         log(1, id, ": changed: ", changed);
 
         // Finally notify all the observers that we are up to date
-        notify_all(id, observers, changed ? notification_t::changed : notification_t::unchanged);
+        notify_observers(*this, changed ? notification_t::changed : notification_t::unchanged);
     }
 };
 
