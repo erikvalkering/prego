@@ -136,10 +136,6 @@ concept convertible_to =
     std::is_convertible_v<From, To>
     && requires { static_cast<To>(std::declval<From>()); };
 
-// TODO: define concept
-template<typename T>
-concept observable = false;
-
 template<typename T>
 struct atom_state : observable_t {
     T value;
