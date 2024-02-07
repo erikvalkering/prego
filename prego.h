@@ -64,6 +64,8 @@ inline constexpr auto contains = [](auto &&rng, auto value) {
 	!= std::ranges::end(rng);
 };
 
+auto get_id(const std::weak_ptr<observer_t> &observer) -> std::string;
+
 struct observable_state_t {
     std::string id = { 1, id_counter++ };
     std::map<std::weak_ptr<observer_t>, bool, std::owner_less<>> observers = {};
@@ -84,8 +86,7 @@ struct observable_state_t {
     void observe(const std::weak_ptr<observer_t> &observer, const bool reactive) {
 	before_observe();
 
-        const auto observer_id = std::dynamic_pointer_cast<observable_state_t>(observer.lock())->id;
-        log(1, id, ".observe(", observer_id, ", ", reactive, ")");
+        log(1, id, ".observe(", get_id(observer), ", ", reactive, ")");
         if (reactive != std::exchange(observers[observer], reactive))
 	    // TODO: Only if reactive == false, on_observers_changed() could potentially do something
 	    // (if this was the last remaining reactive observer).
@@ -94,6 +95,8 @@ struct observable_state_t {
     }
 
     void unobserve(const std::weak_ptr<observer_t> &observer) {
+        log(1, id, ".unobserve(", get_id(observer), ")");
+
         assert(observers.contains(observer));
         observers.erase(observer);
 	// TODO: if we repeatedly call unobserve(), and this node remains unreactive,
@@ -122,6 +125,10 @@ auto notify_observers(observable_state_t &state, const notification_t notificati
             log(1, state.id, ": err - notify_observers");
         }
     }
+}
+
+auto get_id(const std::weak_ptr<observer_t> &observer) -> std::string {
+    return std::dynamic_pointer_cast<observable_state_t>(observer.lock())->id;
 }
 
 template<typename From, typename To>
@@ -284,7 +291,6 @@ public:
         const auto observer = this->weak_from_this();
         for (auto &observable : observables) {
             if (auto p = observable.lock()) {
-                log(1, p->id, ".unobserve(", id, ")");
                 p->unobserve(observer);
             } else
                 log(1, ": err - ~calc::state_t");
