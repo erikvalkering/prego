@@ -16,8 +16,8 @@ namespace prego {
 
 auto to_string(auto x) { return x; }
 
-auto log_(int id, auto... args) {
-    switch (id) {
+auto log_(int level, auto... args) {
+    switch (level) {
         default: break;
         case 0:
         case 1:
@@ -31,7 +31,7 @@ auto log_(int id, auto... args) {
         }
     }
 
-    std::cout << std::boolalpha << id << ": ";
+    std::cout << std::boolalpha << level << ": ";
     ((std::cout << to_string(args)), ...);
     std::cout << std::endl;
 }
