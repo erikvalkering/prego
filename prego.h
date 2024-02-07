@@ -57,17 +57,21 @@ struct observer_t {
     virtual void notify(const notification_t) = 0;
 };
 
-char id_counter = 'a';
+struct id_mixin {
+    static char id_counter = 'a';
+    std::string id = { 1, id_counter++ };
+};
+
+auto get_id(const std::weak_ptr<observer_t> &) -> std::string_view;
+auto get_id(const observable_t &) -> std::string_view;
 
 inline constexpr auto contains = [](auto &&rng, auto value) {
     return std::ranges::find(rng, value)
 	!= std::ranges::end(rng);
 };
 
-auto get_id(const std::weak_ptr<observer_t> &observer) -> std::string;
 
-struct observable_t {
-    std::string id = { 1, id_counter++ };
+struct observable_t : id_mixin {
     std::map<std::weak_ptr<observer_t>, bool, std::owner_less<>> observers = {};
 
     // hooks
@@ -127,8 +131,12 @@ auto notify_observers(observable_t &state, const notification_t notification) {
     }
 }
 
-auto get_id(const std::weak_ptr<observer_t> &observer) -> std::string {
-    return std::dynamic_pointer_cast<observable_t>(observer.lock())->id;
+auto get_id(const std::weak_ptr<observer_t> &observer) -> std::string_view {
+    return get_id(std::dynamic_pointer_cast<observable_t>(observer.lock()));
+}
+
+auto get_id(const observable_t &observable) -> std::string_view {
+    return dynamic_cast<const id_mixin &>(observable).id;
 }
 
 template<typename From, typename To>
@@ -195,10 +203,10 @@ public:
 
     auto set(auto &&value) {
         log(1, "");
-        log(1, state->id, ".set(", value, ") [", state->value, "]");
+        log(1, get_id(*state), ".set(", value, ") [", state->value, "]");
         const auto old_value = std::exchange(state->value, FWD(value));
         if (state->value == old_value) return;
-        log(1, state->id, ": changed");
+        log(1, get_id(*state), ": changed");
 
         // First sweep: mark all as stale
         notify_observers(state, notification_t::stale);
