@@ -66,7 +66,7 @@ inline constexpr auto contains = [](auto &&rng, auto value) {
 
 auto get_id(const std::weak_ptr<observer_t> &observer) -> std::string;
 
-struct observable_state_t {
+struct observable_t {
     std::string id = { 1, id_counter++ };
     std::map<std::weak_ptr<observer_t>, bool, std::owner_less<>> observers = {};
 
@@ -107,16 +107,16 @@ struct observable_state_t {
     }
 };
 
-using observables_t = std::set<std::weak_ptr<observable_state_t>, std::owner_less<>>;
+using observables_t = std::set<std::weak_ptr<observable_t>, std::owner_less<>>;
 
 auto active_observers = std::vector<
     std::tuple<std::weak_ptr<observer_t>, observables_t *, bool>
 >{};
 
-using scope_manager_t = std::vector<std::shared_ptr<observable_state_t>>;
+using scope_manager_t = std::vector<std::shared_ptr<observable_t>>;
 auto global_scope_manager = scope_manager_t{};
 
-auto notify_observers(observable_state_t &state, const notification_t notification) {
+auto notify_observers(observable_t &state, const notification_t notification) {
     // log(1, "notify ", state.observers.size(), " observers");
     for (auto &observer : state.observers | std::views::keys) {
         if (auto p = observer.lock()) {
@@ -128,7 +128,7 @@ auto notify_observers(observable_state_t &state, const notification_t notificati
 }
 
 auto get_id(const std::weak_ptr<observer_t> &observer) -> std::string {
-    return std::dynamic_pointer_cast<observable_state_t>(observer.lock())->id;
+    return std::dynamic_pointer_cast<observable_t>(observer.lock())->id;
 }
 
 template<typename From, typename To>
@@ -141,7 +141,7 @@ template<typename T>
 concept observable = false;
 
 template<typename T>
-struct atom_state : observable_state_t {
+struct atom_state : observable_t {
     T value;
 
     atom_state(auto &&value) : value{ FWD(value) } {}
@@ -272,7 +272,7 @@ auto get_value(invocable auto &f, auto observer, auto &observables, bool reactiv
 }
 
 template<typename F>
-struct calc_state : observable_state_t
+struct calc_state : observable_t
                   , observer_t
                   , std::enable_shared_from_this<calc_state<F>> {
 private:
