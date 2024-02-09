@@ -169,6 +169,10 @@ struct atom_state : observable_t {
     }
 };
 
+auto &get_value(auto &state) {
+    return state.value;
+}
+
 auto &get(auto &observable) {
     if (active_observers.empty()) {
         auto reaction = autorun([=](auto get) { get(observable); }, nullptr);	
@@ -199,13 +203,13 @@ public:
 
     template<convertible_to<T> U>
     atom(atom<U> &&src)
-        : atom{ std::move(src.state->value) } {}
+        : atom{ std::move(get_value(*src.state)) } {}
 
     auto set(auto &&value) {
         log(1, "");
-        log(1, get_id(*state), ".set(", value, ") [", state->value, "]");
-        const auto old_value = std::exchange(state->value, FWD(value));
-        if (state->value == old_value) return;
+        log(1, get_id(*state), ".set(", value, ") [", get_value(*state), "]");
+        const auto old_value = std::exchange(get_value(*state), FWD(value));
+        if (get_value(*state) == old_value) return;
         log(1, get_id(*state), ": changed");
 
         // First sweep: mark all as stale
@@ -221,7 +225,7 @@ public:
     }
 
     auto &internal_get(bool reactive = false) const {
-        return state->value;
+        return get_value(*state);
     }
 
     auto &operator()() const { return get(*this); }
