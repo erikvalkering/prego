@@ -592,8 +592,7 @@ auto test_simple_syntax() {
   x = 1729;
 }
 
-template<typename T>
-struct atom_state_mock : prego::atom_state {
+template <typename T> struct atom_state_mock : prego::atom_state<T> {
   mutable int is_up_to_date_counter = 0;
   mutable int observe_counter = 0;
   mutable int is_reactive_counter = 0;
