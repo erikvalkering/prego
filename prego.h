@@ -95,7 +95,7 @@ struct observable_t : id_mixin {
   void observe(const std::weak_ptr<observer_t> &observer, const bool reactive) {
     before_observe();
 
-    log(1, id, ".observe(", get_id(observer), ", ", reactive, ")");
+    log(1, get_id(*this), ".observe(", get_id(observer), ", ", reactive, ")");
     if (reactive != std::exchange(observers[observer], reactive))
       // TODO: Only if reactive == false, on_observers_changed() could
       // potentially do something (if this was the last remaining reactive
@@ -105,7 +105,7 @@ struct observable_t : id_mixin {
   }
 
   void unobserve(const std::weak_ptr<observer_t> &observer) {
-    log(1, id, ".unobserve(", get_id(observer), ")");
+    log(1, get_id(*this), ".unobserve(", get_id(observer), ")");
 
     assert(observers.contains(observer));
     observers.erase(observer);
@@ -132,7 +132,7 @@ inline auto notify_observers(observable_t &state,
     if (auto p = observer.lock()) {
       p->notify(notification);
     } else {
-      log(1, state.id, ": err - notify_observers");
+      log(1, get_id(state), ": err - notify_observers");
     }
   }
 }
@@ -154,7 +154,7 @@ template <typename T> struct atom_state : observable_t {
   T value;
 
   atom_state(auto &&value) : value{FWD(value)} {}
-  ~atom_state() { log(1, "~", id); }
+  ~atom_state() { log(1, "~", get_id(*this)); }
 
   virtual bool is_up_to_date(bool reactive) override final {
     before_is_up_to_date();
@@ -169,7 +169,7 @@ template <typename T> struct atom_state : observable_t {
     // did not change with respect to the previous time
     // that the observer was computed, and
     // must therefore be considered up-to-date.
-    log(6, id, ".is_up_to_date() [true]");
+    log(6, get_id(*this), ".is_up_to_date() [true]");
     return true;
   }
 };
@@ -295,7 +295,7 @@ public:
 
   explicit calc_state(auto &&f) : f{FWD(f)} {}
   ~calc_state() {
-    log(1, "~calc::state_t(", id, ")");
+    log(1, "~calc::state_t(", get_id(*this), ")");
     const auto observer = this->weak_from_this();
     for (auto &observable : observables) {
       if (auto p = observable.lock()) {
@@ -306,7 +306,8 @@ public:
   }
 
   virtual void notify(const notification_t notification) override final {
-    log(1, id, "(reactive=", is_reactive(), "): notify: ", notification);
+    log(1, get_id(*this), "(reactive=", is_reactive(),
+        "): notify: ", notification);
     switch (notification) {
     default:
       assert(false);
@@ -326,7 +327,7 @@ public:
       // If an observable was changed,
       // we need to recompute as well
       maybe_changed |= notification == notification_t::changed;
-      log(1, id, ": maybe_changed: ", maybe_changed);
+      log(1, get_id(*this), ": maybe_changed: ", maybe_changed);
 
       // Only continue when all observables have been updated
       if (--stale_count != 0)
@@ -359,7 +360,7 @@ public:
         if (auto p = observable.lock())
           p->observe(observer, false);
         else
-          log(1, id, ": err - on_observers_changed");
+          log(1, get_id(*this), ": err - on_observers_changed");
     } else {
       auto is_reactive = [](auto &o) { return o.lock()->is_reactive(); };
       auto reactive = observables | std::views::transform(is_reactive);
@@ -404,7 +405,7 @@ public:
   }
 
   auto compute(bool reactive) {
-    log(1, id, ": compute");
+    log(1, get_id(*this), ": compute");
 
     // Continue reactively if we are either called
     // reactively (via observable::set()) or if we
@@ -450,7 +451,7 @@ public:
     stale_count = 0;
     maybe_changed = false;
 
-    log(1, id, ": changed: ", changed);
+    log(1, get_id(*this), ": changed: ", changed);
 
     // Finally notify all the observers that we are up to date
     notify_observers(*this, changed ? notification_t::changed
