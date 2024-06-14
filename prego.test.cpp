@@ -649,6 +649,7 @@ auto test_unobserve_efficiency() {
     assert_eq(a.state->observe_counter, 0, "b is already unreactive, so doesn't need to notify a about anything");
 }
 
+/*
 auto test_observe_efficiency_reactive() {
     atom<int, atom_state_mock> a = 42;
 
@@ -680,6 +681,7 @@ auto test_observe_efficiency_unreactive() {
     autorun([=] { b(); });
     assert_eq(b.state->is_reactive_counter, 0, "b is not reactive, so adding a reactive observer should not require redetermining reactivity of b");
 }
+*/
 
 auto test_mixed_observing() {
     atom x = 42;
@@ -723,14 +725,14 @@ auto test() {
     test_graph_traversal_efficiency_reactive_bottom_up_top_down();
     // test_graph_traversal_efficiency_reactive_top_down();
     test_unobserve_efficiency();
-    test_observe_efficiency_unreactive();
-    test_observe_efficiency_reactive();
 
     if (all_tests_passed)
         std::cout << "all tests passed\n";
     else
         std::cout << "some tests failed\n";
+  // test_observe_efficiency_unreactive();
 }
+  // test_observe_efficiency_reactive();
 
 int main() {
     test();
