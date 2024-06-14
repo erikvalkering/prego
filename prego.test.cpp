@@ -597,6 +597,8 @@ template <typename T> struct atom_state_mock : prego::atom_state<T> {
   mutable int observe_counter = 0;
   mutable int is_reactive_counter = 0;
 
+  using prego::atom_state<T>::atom_state;
+
   virtual void before_observe() const override final { ++observe_counter; }
 
   virtual void before_is_reactive() const override final {
