@@ -57,9 +57,11 @@ struct observer_t {
 };
 
 struct id_mixin {
-    static char id_counter = 'a';
-    std::string id = { 1, id_counter++ };
+  static char id_counter;
+  std::string id = {1, id_counter++};
 };
+
+inline char id_mixin::id_counter = 'a';
 
 auto get_id(const std::weak_ptr<observer_t> &) -> std::string_view;
 auto get_id(const observable_t &) -> std::string_view;
