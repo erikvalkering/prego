@@ -43,13 +43,17 @@ enum class notification_t {
     unchanged,
 };
 
-auto to_string(const notification_t notification) {
-    switch (notification) {
-        default: throw 0;
-        case notification_t::stale: return "stale";
-        case notification_t::changed: return "changed";
-        case notification_t::unchanged: return "unchanged";
-    }
+inline auto to_string(const notification_t notification) {
+  switch (notification) {
+  default:
+    throw 0;
+  case notification_t::stale:
+    return "stale";
+  case notification_t::changed:
+    return "changed";
+  case notification_t::unchanged:
+    return "unchanged";
+  }
 }
 
 struct observer_t {
