@@ -105,7 +105,7 @@ struct observable_t : id_mixin {
   }
 
   void unobserve(const std::weak_ptr<observer_t> &observer) {
-    log(1, get_id(*this), ".unobserve(", get_id(observer), ")");
+    log(1, get_id(*this), ".unobserve(<observer>)");
 
     assert(observers.contains(observer));
     observers.erase(observer);
