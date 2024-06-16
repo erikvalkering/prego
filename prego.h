@@ -364,8 +364,7 @@ public:
           log(1, get_id(*this), ": err - on_observers_changed");
     } else {
       auto is_reactive = [](auto &o) { return o.lock()->is_reactive(); };
-      auto reactive = observables | std::views::transform(is_reactive);
-      assert(!contains(reactive, false));
+      assert(std::ranges::all_of(observables, is_reactive));
     }
     // TODO: check if the opposite is already established:
     //       if we become reactive, does that mean that all
