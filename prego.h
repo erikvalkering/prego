@@ -62,15 +62,14 @@ struct observer_t {
 };
 
 struct id_mixin {
-  static char id_counter;
-  std::string id = {1, id_counter++};
+  static inline int id_counter = 0;
+  std::string id = std::to_string(id_counter++);
+  ~id_mixin() { --id_counter; }
 };
 
-inline char id_mixin::id_counter = 'a';
-
 struct observable_t;
-auto get_id(const std::weak_ptr<observer_t> &) -> std::string_view;
-auto get_id(const observable_t &) -> std::string_view;
+auto get_id(const std::weak_ptr<observer_t> &) -> std::string;
+auto get_id(const observable_t &) -> std::string;
 
 inline constexpr auto contains = [](auto &&rng, auto value) {
   return std::ranges::find(rng, value) != std::ranges::end(rng);
@@ -137,12 +136,11 @@ inline auto notify_observers(observable_t &state,
   }
 }
 
-inline auto
-get_id(const std::weak_ptr<observer_t> &observer) -> std::string_view {
+inline auto get_id(const std::weak_ptr<observer_t> &observer) -> std::string {
   return get_id(*std::dynamic_pointer_cast<observable_t>(observer.lock()));
 }
 
-inline auto get_id(const observable_t &observable) -> std::string_view {
+inline auto get_id(const observable_t &observable) -> std::string {
   return dynamic_cast<const id_mixin &>(observable).id;
 }
 
