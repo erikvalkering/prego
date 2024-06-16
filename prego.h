@@ -363,6 +363,7 @@ public:
         else
           log(1, get_id(*this), ": err - on_observers_changed");
     } else {
+      // Assert that if we are reactive, all observables are also reactive.
       auto is_reactive = [](auto &o) { return o.lock()->is_reactive(); };
       assert(std::ranges::all_of(observables, is_reactive));
     }
