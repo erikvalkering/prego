@@ -109,11 +109,18 @@ struct observable_t : id_mixin {
     log(1, get_id(*this), ".unobserve(<observer>)");
 
     assert(observers.contains(observer));
-    observers.erase(observer);
+    const auto node = observers.extract(observer);
+
+    // If the observer was not reactive, removing it won't affect the overall
+    // reactive state of this observable, so we can early-exit.
+    if (!node.mapped())
+      return;
+
     // TODO: if we repeatedly call unobserve(), and this node remains
     // unreactive, the on_observers_changed will do unneccesary repeated work
     // Better would be to determine if the is_reactive() condition changed,
     // and only call if it did.
+
     // Now propagate the (potentially) new reactive state
     on_observers_changed();
   }
