@@ -103,6 +103,8 @@ struct observable_t : id_mixin {
       on_observers_changed();
   }
 
+  // Called when an observer (e.g. a calc_state) gets destroyed
+  // and needs to remove itself from the observable.
   void unobserve(const std::weak_ptr<observer_t> &observer) {
     log(1, get_id(*this), ".unobserve(<observer>)");
 
@@ -112,6 +114,7 @@ struct observable_t : id_mixin {
     // unreactive, the on_observers_changed will do unneccesary repeated work
     // Better would be to determine if the is_reactive() condition changed,
     // and only call if it did.
+    // Now propagate the (potentially) new reactive state
     on_observers_changed();
   }
 };
