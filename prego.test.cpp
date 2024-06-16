@@ -738,6 +738,10 @@ auto test_unobserve_efficiency() {
     a.state->observe_counter = 0;
   }
 
+  // We are making sure that calls to unobserve() don't trigger
+  // unnecessary reactive state propagation (through observe()).
+  // In this case, because c is not reactive, and therefore neither
+  // is b, destroying c should not trigger propagation.
   assert_eq(
       a.state->observe_counter, 0,
       "b is already unreactive, so doesn't need to notify a about anything");
