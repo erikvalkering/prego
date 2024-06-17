@@ -427,9 +427,14 @@ public:
     auto value = get_value(f, observer, observables, reactive);
 
     // Set any previously-observed observables to
-    // non-reactive. NOTE: they should not be
-    // removed, because they might become reactive
-    // again, and we don't want to loose their cache.
+    // non-reactive.
+    // NOTE: they should *not* be removed, for two reasons:
+    // - they might become reactive again, and we don't
+    //   want to loose their cache
+    // - they might be lazily observed again,
+    //   in which case the is_up_to_date() function
+    //   will traverse the observables to figure out
+    //   if it is still up to date.
     for (auto &observable : previous_observables) {
       if (observables.contains(observable))
         continue;
