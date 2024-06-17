@@ -726,25 +726,54 @@ for determining whether it is up to date, because it was reactive after all");
 }
 */
 
+// This unit test makes sure that calls to unobserve() don't trigger
+// unnecessary reactive state propagation (through observe()).
 auto test_unobserve_efficiency() {
   atom<int, atom_state_mock> a = 42;
 
   calc b = [=] { return a(); };
 
   {
+    auto autorun_1 = autorun([=] { b(); }, nullptr);
+
+    {
+      auto autorun_2 = autorun([=] { b(); }, nullptr);
+
+      {
+        calc c = [=] { return b(); };
+        c();
+
+        a.state->observe_counter = 0;
+      }
+
+      assert_eq(a.state->observe_counter, 0,
+                "[true, true, false] => [true, true] => no propagation");
+
+      a.state->observe_counter = 0;
+    }
+
+    assert_eq(a.state->observe_counter, 0,
+              "[true, true] => [true] => no propagation");
+  }
+
+  assert_eq(a.state->observe_counter, 1, "[true] => [] => propagation");
+
+  {
     calc c = [=] { return b(); };
     c();
+
+    {
+      auto autorun_1 = autorun([=] { b(); }, nullptr);
+      a.state->observe_counter = 0;
+    }
+
+    assert_eq(a.state->observe_counter, 1,
+              "[false, true] => [false] => propagation");
 
     a.state->observe_counter = 0;
   }
 
-  // We are making sure that calls to unobserve() don't trigger
-  // unnecessary reactive state propagation (through observe()).
-  // In this case, because c is not reactive, and therefore neither
-  // is b, destroying c should not trigger propagation.
-  assert_eq(
-      a.state->observe_counter, 0,
-      "b is already unreactive, so doesn't need to notify a about anything");
+  assert_eq(a.state->observe_counter, 0, "[false] => [] => no propagation");
 }
 
 /*
