@@ -113,11 +113,6 @@ struct observable_t : id_mixin {
     if (!node.mapped())
       return;
 
-    // TODO: if we repeatedly call unobserve(), and this node remains
-    // unreactive, the on_observers_changed will do unneccesary repeated work
-    // Better would be to determine if the is_reactive() condition changed,
-    // and only call if it did.
-
     // Now propagate the (potentially) new reactive state
     on_observers_changed();
   }
