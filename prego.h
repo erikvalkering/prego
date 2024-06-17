@@ -359,6 +359,7 @@ public:
   }
 
   virtual void on_observers_changed() override final {
+    // TODO: can we move is_reactive() check to caller?
     if (!is_reactive()) {
       const auto observer = this->weak_from_this();
       for (auto &observable : observables)
