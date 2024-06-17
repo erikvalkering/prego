@@ -71,10 +71,6 @@ struct observable_t;
 auto get_id(const std::weak_ptr<observer_t> &) -> std::string;
 auto get_id(const observable_t &) -> std::string;
 
-inline constexpr auto contains = [](auto &&rng, auto value) {
-  return std::ranges::find(rng, value) != std::ranges::end(rng);
-};
-
 struct observable_t : id_mixin {
   std::map<std::weak_ptr<observer_t>, bool, std::owner_less<>> observers = {};
 
@@ -88,7 +84,8 @@ struct observable_t : id_mixin {
 
   auto is_reactive() const {
     before_is_reactive();
-    return contains(observers | std::views::values, true);
+    auto is_true = [](auto x) { return x; };
+    return std::ranges::any_of(observers | std::views::values, is_true);
   }
 
   void observe(const std::weak_ptr<observer_t> &observer, const bool reactive) {
