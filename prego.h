@@ -397,7 +397,7 @@ public:
           // if this subtree was up to date and we are currently reactive,
           // mark it as reactive, such that the next time the subtree is
           // checked, it immediately returns true
-          p->observe(observer, reactive);
+          p->observe(observer, true);
         }
       } else
         log(1, "err - is_up_to_date");
