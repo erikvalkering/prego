@@ -178,6 +178,9 @@ auto &get_value(auto &state) { return state.value; }
 
 auto &get(auto &observable) {
   if (active_observers.empty()) {
+    // We temporarily create an autorun to force this entire
+    // subgraph to become reactive. A side effect of being reactive
+    // is that we can cheaply check whether nodes are up to date.
     auto reaction = autorun([=](auto get) { get(observable); }, nullptr);
     return observable.internal_get();
   }
