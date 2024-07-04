@@ -76,8 +76,9 @@ struct observable_t : id_mixin {
 
   // hooks
   virtual void before_is_reactive() const {}
-  virtual void before_observe() const {}
-  virtual void before_is_up_to_date() const {}
+  virtual void before_observe(const std::weak_ptr<observer_t> &observer,
+                              bool reactive) const {}
+  virtual void before_is_up_to_date(bool reactive) const {}
 
   virtual void on_observers_changed() {}
   virtual bool is_up_to_date(bool reactive) = 0;
@@ -89,15 +90,16 @@ struct observable_t : id_mixin {
   }
 
   void observe(const std::weak_ptr<observer_t> &observer, const bool reactive) {
-    before_observe();
+    before_observe(observer, reactive);
 
     log(1, get_id(*this), ".observe(", get_id(observer), ", ", reactive, ")");
-    if (reactive != std::exchange(observers[observer], reactive))
+    if (reactive != std::exchange(observers[observer], reactive)) {
       // TODO: Only if reactive == false, on_observers_changed() could
       // potentially do something (if this was the last remaining reactive
       // observer).
       // TODO: Also, on_reactive_changed() might be a better name
       on_observers_changed();
+    }
   }
 
   // Called when an observer (e.g. a calc_state) gets destroyed
@@ -157,7 +159,7 @@ template <typename T> struct atom_state : observable_t {
   ~atom_state() { log(1, "~", get_id(*this)); }
 
   virtual bool is_up_to_date(bool reactive) override final {
-    before_is_up_to_date();
+    before_is_up_to_date(reactive);
 
     // We will end up here only if a direct
     // observer was not able to determine whether
@@ -376,7 +378,7 @@ public:
   }
 
   virtual bool is_up_to_date(bool reactive) override final {
-    before_is_up_to_date();
+    before_is_up_to_date(reactive);
 
     if (!value)
       return false;
