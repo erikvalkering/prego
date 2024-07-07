@@ -31,11 +31,10 @@ auto all_tests_passed = true;
   {                                                                            \
     auto $$ = x;                                                               \
     if ($$ != y) {                                                             \
-      std::cout << "ASSERTION FAILED(" << __FUNCTION__ << "@" << __LINE__      \
-                << ")\n"                                                       \
-                << std::boolalpha << "\t" << #x << " == " << y << "\n"         \
-                << "\t" << $$ << " != " << y << "\n"                           \
-                << "\t" << join(__VA_ARGS__) << "\n";                          \
+      fmt::println("ASSERTION FAILED({}@{})", __FUNCTION__, __LINE__);         \
+      fmt::println("\t{} == {}", #x, #y);                                      \
+      fmt::println("\t{} != {}", $$, y);                                       \
+      fmt::println("\t{}", join(__VA_ARGS__));                                 \
       all_tests_passed = false;                                                \
     }                                                                          \
   }
