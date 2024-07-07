@@ -1,6 +1,19 @@
 #include "prego.h"
 
+#include <fmt/core.h>
+#include <fmt/ranges.h>
+
 #include <string>
+#include <vector>
+
+template <> struct fmt::formatter<std::vector<bool>> {
+  constexpr auto parse(format_parse_context &ctx) { return ctx.begin(); }
+
+  template <typename FormatContext>
+  auto format(const std::vector<bool> &v, FormatContext &ctx) const {
+    return fmt::format_to(ctx.out(), "[{}]", fmt::join(v, ", "));
+  }
+};
 
 using namespace std::string_literals;
 
