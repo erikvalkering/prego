@@ -371,7 +371,7 @@ public:
       // TODO: check if the opposite is already established:
       //       if we become reactive, does that mean that all
       //       observables were already reactive?
-      // Assert that if we are reactive, all observables are also reactive.
+      // Assert that if we are reactive, all observables are also reactiveive.
       auto is_reactive = [](auto &o) { return o.lock()->is_reactive(); };
       assert(std::ranges::all_of(observables, is_reactive));
     }
