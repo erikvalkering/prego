@@ -67,6 +67,23 @@ struct id_mixin {
   ~id_mixin() { --id_counter; }
 };
 
+struct hooks_mixin {
+  mutable int is_up_to_date_counter = 0;
+  mutable int observe_counter = 0;
+  mutable std::vector<bool> observe_calls;
+  mutable int is_reactive_counter = 0;
+
+  void before_observe(const std::weak_ptr<prego::observer_t> &observer,
+                      bool reactive) const {
+    ++observe_counter;
+    observe_calls.push_back(reactive);
+  }
+
+  void before_is_reactive() const { ++is_reactive_counter; }
+
+  void before_is_up_to_date(bool reactive) const { ++is_up_to_date_counter; }
+};
+
 struct observable_t;
 auto get_id(const std::weak_ptr<observer_t> &) -> std::string;
 auto get_id(const observable_t &) -> std::string;
@@ -129,15 +146,9 @@ public:
   }
 };
 
-struct observable_t : id_mixin {
+struct observable_t : id_mixin, hooks_mixin {
   insertion_order_map<std::weak_ptr<observer_t>, bool, std::owner_less<>>
       observers = {};
-
-  // hooks
-  virtual void before_is_reactive() const {}
-  virtual void before_observe(const std::weak_ptr<observer_t> &observer,
-                              bool reactive) const {}
-  virtual void before_is_up_to_date(bool reactive) const {}
 
   virtual void on_observers_changed() {}
   virtual bool is_up_to_date(bool reactive) = 0;
@@ -255,9 +266,9 @@ auto &get(auto &observable) {
   return value;
 }
 
-template <typename T, template <typename> class state_t = atom_state>
-struct atom {
-  std::shared_ptr<state_t<T>> state;
+template <typename T> struct atom {
+  using state_t = atom_state<T>;
+  std::shared_ptr<state_t> state;
 
 public:
   atom(const atom &) = default;
@@ -267,7 +278,7 @@ public:
   atom &operator=(atom &&) = default;
 
   atom(convertible_to<T> auto &&value)
-      : state{std::make_shared<state_t<T>>(FWD(value))} {}
+      : state{std::make_shared<state_t>(FWD(value))} {}
 
   template <convertible_to<T> U>
   atom(atom<U> &&src) : atom{std::move(get_value(*src.state))} {}
