@@ -71,8 +71,27 @@ struct observable_t;
 auto get_id(const std::weak_ptr<observer_t> &) -> std::string;
 auto get_id(const observable_t &) -> std::string;
 
+using observers_t =
+    std::map<std::weak_ptr<observer_t>, bool, std::owner_less<>>;
+
+inline decltype(auto) get_reactive(observers_t &observers,
+                                   const std::weak_ptr<observer_t> &observer) {
+  return observers[observer];
+}
+
+inline decltype(auto) contains(observers_t &observers,
+                               const std::weak_ptr<observer_t> &observer) {
+  return observers.contains(observer);
+}
+
+inline decltype(auto) extract(observers_t &observers,
+                              const std::weak_ptr<observer_t> &observer) {
+  const auto node = observers.extract(observer);
+  return std::pair{node.key(), node.mapped()};
+}
+
 struct observable_t : id_mixin {
-  std::map<std::weak_ptr<observer_t>, bool, std::owner_less<>> observers = {};
+  observers_t observers = {};
 
   // hooks
   virtual void before_is_reactive() const {}
@@ -93,7 +112,8 @@ struct observable_t : id_mixin {
     before_observe(observer, reactive);
 
     log(1, get_id(*this), ".observe(", get_id(observer), ", ", reactive, ")");
-    if (reactive != std::exchange(observers[observer], reactive)) {
+    if (reactive !=
+        std::exchange(get_reactive(observers, observer), reactive)) {
       // TODO: Only if reactive == false, on_observers_changed() could
       // potentially do something (if this was the last remaining reactive
       // observer).
@@ -107,12 +127,12 @@ struct observable_t : id_mixin {
   void unobserve(const std::weak_ptr<observer_t> &observer) {
     log(1, get_id(*this), ".unobserve(<observer>)");
 
-    assert(observers.contains(observer));
-    const auto node = observers.extract(observer);
+    assert(contains(observers, observer));
+    const auto [_, reactive] = extract(observers, observer);
 
     // If the observer was not reactive, removing it won't affect the overall
     // reactive state of this observable, so we can early-exit.
-    if (!node.mapped())
+    if (!reactive)
       return;
 
     // Now propagate the (potentially) new reactive state
