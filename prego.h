@@ -1,7 +1,6 @@
 #include <algorithm>
 #include <cassert>
 #include <iostream>
-#include <map>
 #include <memory>
 #include <optional>
 #include <ranges>
@@ -71,23 +70,42 @@ struct observable_t;
 auto get_id(const std::weak_ptr<observer_t> &) -> std::string;
 auto get_id(const observable_t &) -> std::string;
 
-using observers_t =
-    std::map<std::weak_ptr<observer_t>, bool, std::owner_less<>>;
+using observers_t = std::vector<std::pair<std::weak_ptr<observer_t>, bool>>;
 
-inline decltype(auto) get_reactive(observers_t &observers,
-                                   const std::weak_ptr<observer_t> &observer) {
-  return observers[observer];
+inline auto find_observer(observers_t &observers,
+                          const std::weak_ptr<observer_t> &observer) {
+  return std::ranges::find_if(
+      observers,
+      [&](auto &o) {
+        auto cmp = std::owner_less{};
+        return not cmp(o, observer) and not cmp(observer, o);
+      },
+      &observers_t::value_type::first);
+}
+
+inline auto &get_reactive(observers_t &observers,
+                          const std::weak_ptr<observer_t> &observer) {
+  auto it = find_observer(observers, observer);
+  if (it != observers.end()) {
+    return it->second;
+  }
+
+  return observers.emplace_back(observer, false).second;
 }
 
 inline decltype(auto) contains(observers_t &observers,
                                const std::weak_ptr<observer_t> &observer) {
-  return observers.contains(observer);
+  return find_observer(observers, observer) != observers.end();
 }
 
 inline decltype(auto) extract(observers_t &observers,
                               const std::weak_ptr<observer_t> &observer) {
-  const auto node = observers.extract(observer);
-  return std::pair{node.key(), node.mapped()};
+  auto it = find_observer(observers, observer);
+  assert(it != observers.end());
+  auto result = std::move(*it);
+  observers.erase(it);
+
+  return result;
 }
 
 struct observable_t : id_mixin {
