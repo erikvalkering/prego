@@ -167,7 +167,7 @@ struct observable_t : id_mixin {
     log(1, get_id(*this), ".unobserve(<observer>)");
 
     assert(observers.contains(observer));
-    auto node = observers.extract(observer);
+    const auto node = observers.extract(observer);
     assert(not node.empty());
 
     // If the observer was not reactive, removing it won't affect the overall
