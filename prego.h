@@ -71,23 +71,25 @@ struct observable_t;
 auto get_id(const std::weak_ptr<observer_t> &) -> std::string;
 auto get_id(const observable_t &) -> std::string;
 
-using observers_t = std::vector<std::pair<std::weak_ptr<observer_t>, bool>>;
+using observers_vector_t =
+    std::vector<std::pair<std::weak_ptr<observer_t>, bool>>;
+using observers_map_t =
+    std::map<std::weak_ptr<observer_t>, bool, std::owner_less<>>;
+using observers_t = observers_vector_t;
 
-inline auto find_observer(
-    std::vector<std::pair<std::weak_ptr<observer_t>, bool>> &observers,
-    const std::weak_ptr<observer_t> &observer) {
+inline auto find_observer(observers_vector_t &observers,
+                          const std::weak_ptr<observer_t> &observer) {
   return std::ranges::find_if(
       observers,
       [&](auto &o) {
         auto cmp = std::owner_less{};
         return not cmp(o, observer) and not cmp(observer, o);
       },
-      &observers_t::value_type::first);
+      &observers_vector_t::value_type::first);
 }
 
-inline auto &
-get_reactive(std::vector<std::pair<std::weak_ptr<observer_t>, bool>> &observers,
-             const std::weak_ptr<observer_t> &observer) {
+inline auto &get_reactive(observers_vector_t &observers,
+                          const std::weak_ptr<observer_t> &observer) {
   auto it = find_observer(observers, observer);
   if (it != observers.end()) {
     return it->second;
@@ -96,15 +98,13 @@ get_reactive(std::vector<std::pair<std::weak_ptr<observer_t>, bool>> &observers,
   return observers.emplace_back(observer, false).second;
 }
 
-inline decltype(auto)
-contains(std::vector<std::pair<std::weak_ptr<observer_t>, bool>> &observers,
-         const std::weak_ptr<observer_t> &observer) {
+inline decltype(auto) contains(observers_vector_t &observers,
+                               const std::weak_ptr<observer_t> &observer) {
   return find_observer(observers, observer) != observers.end();
 }
 
-inline decltype(auto)
-extract(std::vector<std::pair<std::weak_ptr<observer_t>, bool>> &observers,
-        const std::weak_ptr<observer_t> &observer) {
+inline decltype(auto) extract(observers_vector_t &observers,
+                              const std::weak_ptr<observer_t> &observer) {
   auto it = find_observer(observers, observer);
   assert(it != observers.end());
   auto result = std::move(*it);
@@ -116,22 +116,19 @@ extract(std::vector<std::pair<std::weak_ptr<observer_t>, bool>> &observers,
 // TODO: Fully remove support for map-based observers. We don't need them
 // anymore, but it's convenient to keep them for testing, to show that the
 // ordering of the observers becomes undeterministic.
-inline decltype(auto) get_reactive(
-    std::map<std::weak_ptr<observer_t>, bool, std::owner_less<>> &observers,
-    const std::weak_ptr<observer_t> &observer) {
+inline decltype(auto) get_reactive(observers_map_t &observers,
+                                   const std::weak_ptr<observer_t> &observer) {
   return observers[observer];
 }
 
-inline decltype(auto) contains(
-    std::map<std::weak_ptr<observer_t>, bool, std::owner_less<>> &observers,
-    const std::weak_ptr<observer_t> &observer) {
+inline decltype(auto) contains(observers_map_t &observers,
+                               const std::weak_ptr<observer_t> &observer) {
 
   return observers.contains(observer);
 }
 
-inline decltype(auto)
-extract(std::map<std::weak_ptr<observer_t>, bool, std::owner_less<>> &observers,
-        const std::weak_ptr<observer_t> &observer) {
+inline decltype(auto) extract(observers_map_t &observers,
+                              const std::weak_ptr<observer_t> &observer) {
 
   const auto node = observers.extract(observer);
 
