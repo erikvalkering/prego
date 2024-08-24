@@ -859,10 +859,45 @@ auto test_mixed_observing() {
 }
 
 auto test_deterministic_ordering_observers() {
-  assert_eq(true, false);
-  assert_eq(true, false);
-  assert_eq(true, false);
-  assert_eq(true, false);
+  atom a = 42;
+  atom b = 1729;
+  atom x = true;
+  atom y = true;
+  auto order = ""s;
+  calc c = [=, &order] {
+    order += "c";
+    return x() ? a() : b();
+  };
+  calc d = [=, &order] {
+    order += "d";
+    return y() ? a() : b();
+  };
+  autorun([=] {
+    c();
+    d();
+  });
+
+  assert_eq(order, "cd");
+
+  order = "";
+  a = 0;
+  assert_eq(order, "cd");
+
+  order = "";
+  b = 0;
+  assert_eq(order, "");
+
+  order = "";
+  y = false;
+  assert_eq(order, "d");
+
+  order = "";
+  x = false;
+  assert_eq(order, "c");
+
+  order = "";
+  b = 1;
+  assert_eq(order, "dc");
 }
 
 auto test() {
