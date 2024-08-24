@@ -75,7 +75,6 @@ using observers_vector_t =
     std::vector<std::pair<std::weak_ptr<observer_t>, bool>>;
 using observers_map_t =
     std::map<std::weak_ptr<observer_t>, bool, std::owner_less<>>;
-using observers_t = observers_vector_t;
 
 inline auto find_observer(observers_vector_t &observers,
                           const std::weak_ptr<observer_t> &observer) {
@@ -134,6 +133,8 @@ inline decltype(auto) extract(observers_map_t &observers,
 
   return std::pair{node.key(), node.mapped()};
 }
+
+using observers_t = observers_vector_t;
 
 struct observable_t : id_mixin {
   observers_t observers = {};
