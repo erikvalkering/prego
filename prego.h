@@ -71,73 +71,67 @@ struct observable_t;
 auto get_id(const std::weak_ptr<observer_t> &) -> std::string;
 auto get_id(const observable_t &) -> std::string;
 
-using observers_vector_t =
-    std::vector<std::pair<std::weak_ptr<observer_t>, bool>>;
-using observers_map_t =
-    std::map<std::weak_ptr<observer_t>, bool, std::owner_less<>>;
+template <typename Key, typename Value, typename Comparator = std::less<Key>>
+class insertion_order_map {
+  std::vector<std::pair<Key, Value>> nodes;
 
-inline auto find_observer(observers_vector_t &observers,
-                          const std::weak_ptr<observer_t> &observer) {
-  return std::ranges::find_if(
-      observers,
-      [&](auto &o) {
-        auto cmp = std::owner_less{};
-        return not cmp(o, observer) and not cmp(observer, o);
-      },
-      &observers_vector_t::value_type::first);
-}
-
-inline auto &get_reactive(observers_vector_t &observers,
-                          const std::weak_ptr<observer_t> &observer) {
-  auto it = find_observer(observers, observer);
-  if (it != observers.end()) {
-    return it->second;
+  inline auto find_node(this auto &&self, const Key &key) {
+    return std::ranges::find_if(
+        FWD(self).nodes,
+        [&](auto &k) {
+          auto cmp = Comparator{};
+          return not cmp(k, key) and not cmp(key, k);
+        },
+        &std::pair<Key, Value>::first);
   }
 
-  return observers.emplace_back(observer, false).second;
-}
+public:
+  auto size() const { return nodes.size(); }
+  decltype(auto) begin(this auto &&self) { return FWD(self).nodes.begin(); }
+  decltype(auto) end(this auto &&self) { return FWD(self).nodes.end(); }
 
-inline decltype(auto) contains(observers_vector_t &observers,
-                               const std::weak_ptr<observer_t> &observer) {
-  return find_observer(observers, observer) != observers.end();
-}
+  inline auto &operator[](const Key &key) {
+    auto it = find_node(key);
+    if (it != nodes.end()) {
+      return it->second;
+    }
 
-inline decltype(auto) extract(observers_vector_t &observers,
-                              const std::weak_ptr<observer_t> &observer) {
-  auto it = find_observer(observers, observer);
-  assert(it != observers.end());
-  auto result = std::move(*it);
-  observers.erase(it);
+    return nodes.emplace_back(key, Value{}).second;
+  }
 
-  return result;
-}
+  inline decltype(auto) contains(const Key &key) const {
+    return find_node(key) != nodes.end();
+  }
 
-// TODO: Fully remove support for map-based observers. We don't need them
-// anymore, but it's convenient to keep them for testing, to show that the
-// ordering of the observers becomes undeterministic.
-inline decltype(auto) get_reactive(observers_map_t &observers,
-                                   const std::weak_ptr<observer_t> &observer) {
-  return observers[observer];
-}
+  inline decltype(auto) extract(const Key &key) {
+    struct node_handle {
+      bool _empty;
+      Key _key;
+      Value _mapped;
 
-inline decltype(auto) contains(observers_map_t &observers,
-                               const std::weak_ptr<observer_t> &observer) {
+      auto empty() const { return _empty; }
+      auto &key() const { return _key; }
+      auto &mapped() const { return _mapped; }
+    };
 
-  return observers.contains(observer);
-}
+    auto it = find_node(key);
+    if (it == nodes.end())
+      return node_handle{true};
 
-inline decltype(auto) extract(observers_map_t &observers,
-                              const std::weak_ptr<observer_t> &observer) {
+    auto result = std::move(*it);
+    nodes.erase(it);
 
-  const auto node = observers.extract(observer);
-
-  return std::pair{node.key(), node.mapped()};
-}
-
-using observers_t = observers_vector_t;
+    return node_handle{
+        false,
+        std::move(it->first),
+        std::move(it->second),
+    };
+  }
+};
 
 struct observable_t : id_mixin {
-  observers_t observers = {};
+  insertion_order_map<std::weak_ptr<observer_t>, bool, std::owner_less<>>
+      observers = {};
 
   // hooks
   virtual void before_is_reactive() const {}
@@ -158,8 +152,7 @@ struct observable_t : id_mixin {
     before_observe(observer, reactive);
 
     log(1, get_id(*this), ".observe(", get_id(observer), ", ", reactive, ")");
-    if (reactive !=
-        std::exchange(get_reactive(observers, observer), reactive)) {
+    if (reactive != std::exchange(observers[observer], reactive)) {
       // TODO: Only if reactive == false, on_observers_changed() could
       // potentially do something (if this was the last remaining reactive
       // observer).
@@ -173,12 +166,13 @@ struct observable_t : id_mixin {
   void unobserve(const std::weak_ptr<observer_t> &observer) {
     log(1, get_id(*this), ".unobserve(<observer>)");
 
-    assert(contains(observers, observer));
-    const auto [_, reactive] = extract(observers, observer);
+    assert(observers.contains(observer));
+    auto node = observers.extract(observer);
+    assert(not node.empty());
 
     // If the observer was not reactive, removing it won't affect the overall
     // reactive state of this observable, so we can early-exit.
-    if (!reactive)
+    if (!node.mapped())
       return;
 
     // Now propagate the (potentially) new reactive state
@@ -461,7 +455,8 @@ public:
     for (auto &observable : observables)
       if (auto p = observable.lock()) {
         if (!p->is_up_to_date(reactive))
-          // TODO: this hierarchy is still traversed twice in case an unobserved
+          // TODO: this hierarchy is still traversed twice in case an
+          // unobserved
           //       atom was changed. Create a test for this
           return false;
         else if (reactive) {
