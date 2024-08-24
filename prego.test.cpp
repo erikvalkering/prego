@@ -858,6 +858,13 @@ auto test_mixed_observing() {
   assert_eq(b, true, "autorun should react to x");
 }
 
+auto test_deterministic_ordering_observers() {
+  assert_eq(true, false);
+  assert_eq(true, false);
+  assert_eq(true, false);
+  assert_eq(true, false);
+}
+
 auto test() {
   test_atom();
   test_autorun();
@@ -882,6 +889,7 @@ auto test() {
   test_unobserve_efficiency();
   // test_observe_efficiency_unreactive();
   // test_observe_efficiency_reactive();
+  test_deterministic_ordering_observers();
 
   if (all_tests_passed)
     std::cout << "all tests passed\n";
