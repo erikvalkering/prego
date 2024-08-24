@@ -15,5 +15,5 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(fmt)
 
 add_executable(prego prego.test.cpp)
-target_compile_features(prego PRIVATE cxx_std_20)
+target_compile_features(prego PRIVATE cxx_std_23)
 target_link_libraries(prego PRIVATE fmt::fmt)
