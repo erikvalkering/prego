@@ -72,8 +72,9 @@ auto get_id(const observable_t &) -> std::string;
 
 using observers_t = std::vector<std::pair<std::weak_ptr<observer_t>, bool>>;
 
-inline auto find_observer(observers_t &observers,
-                          const std::weak_ptr<observer_t> &observer) {
+inline auto find_observer(
+    std::vector<std::pair<std::weak_ptr<observer_t>, bool>> &observers,
+    const std::weak_ptr<observer_t> &observer) {
   return std::ranges::find_if(
       observers,
       [&](auto &o) {
@@ -83,8 +84,9 @@ inline auto find_observer(observers_t &observers,
       &observers_t::value_type::first);
 }
 
-inline auto &get_reactive(observers_t &observers,
-                          const std::weak_ptr<observer_t> &observer) {
+inline auto &
+get_reactive(std::vector<std::pair<std::weak_ptr<observer_t>, bool>> &observers,
+             const std::weak_ptr<observer_t> &observer) {
   auto it = find_observer(observers, observer);
   if (it != observers.end()) {
     return it->second;
@@ -93,13 +95,15 @@ inline auto &get_reactive(observers_t &observers,
   return observers.emplace_back(observer, false).second;
 }
 
-inline decltype(auto) contains(observers_t &observers,
-                               const std::weak_ptr<observer_t> &observer) {
+inline decltype(auto)
+contains(std::vector<std::pair<std::weak_ptr<observer_t>, bool>> &observers,
+         const std::weak_ptr<observer_t> &observer) {
   return find_observer(observers, observer) != observers.end();
 }
 
-inline decltype(auto) extract(observers_t &observers,
-                              const std::weak_ptr<observer_t> &observer) {
+inline decltype(auto)
+extract(std::vector<std::pair<std::weak_ptr<observer_t>, bool>> &observers,
+        const std::weak_ptr<observer_t> &observer) {
   auto it = find_observer(observers, observer);
   assert(it != observers.end());
   auto result = std::move(*it);
