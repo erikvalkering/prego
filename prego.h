@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cassert>
 #include <iostream>
+#include <map>
 #include <memory>
 #include <optional>
 #include <ranges>
@@ -110,6 +111,31 @@ extract(std::vector<std::pair<std::weak_ptr<observer_t>, bool>> &observers,
   observers.erase(it);
 
   return result;
+}
+
+// TODO: Fully remove support for map-based observers. We don't need them
+// anymore, but it's convenient to keep them for testing, to show that the
+// ordering of the observers becomes undeterministic.
+inline decltype(auto) get_reactive(
+    std::map<std::weak_ptr<observer_t>, bool, std::owner_less<>> &observers,
+    const std::weak_ptr<observer_t> &observer) {
+  return observers[observer];
+}
+
+inline decltype(auto) contains(
+    std::map<std::weak_ptr<observer_t>, bool, std::owner_less<>> &observers,
+    const std::weak_ptr<observer_t> &observer) {
+
+  return observers.contains(observer);
+}
+
+inline decltype(auto)
+extract(std::map<std::weak_ptr<observer_t>, bool, std::owner_less<>> &observers,
+        const std::weak_ptr<observer_t> &observer) {
+
+  const auto node = observers.extract(observer);
+
+  return std::pair{node.key(), node.mapped()};
 }
 
 struct observable_t : id_mixin {
