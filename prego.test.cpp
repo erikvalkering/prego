@@ -24,7 +24,18 @@ using prego::atom;
 using prego::autorun;
 using prego::calc;
 using prego::global_scope_manager;
+using prego::insertion_order_map;
 using prego::scope_manager_t;
+
+auto to_vector(auto &&rng) {
+  using T = std::ranges::range_value_t<decltype(rng)>;
+
+  auto r = std::vector<T>{};
+  for (auto &&x : rng)
+    r.push_back(x);
+
+  return r;
+}
 
 auto sandbox() {
   auto first_name = atom{"Anita"s};
@@ -903,8 +914,32 @@ int main() {
     expect(that % order == "dc"s);
   };
 
+  "insertion_order_map"_test = [] {
+    auto m = insertion_order_map<int, int>{};
+    expect(m.size() == 0_i);
+    expect(m.begin() == m.end());
+    expect(m.contains(42) == false);
+    expect(m[42] == 0_i);
+    expect(m.size() == 1_i);
+    expect(m.begin() != m.end());
+    expect(m.contains(42) == true);
+    expect((m[42] = 1729) == 1729_i);
 
+    auto n = m.extract(42);
+    expect(n.empty() == false);
+    expect(n.key() == 42_i);
+    expect(n.mapped() == 1729_i);
+    expect(m.size() == 0_i);
 
+    n = m.extract(42);
+    expect(n.empty() == true);
+    expect(m.size() == 0_i);
 
+    expect((m[42] = 1729) == 1729_i);
+    expect((m[1729] = 42) == 42_i);
+    expect(m.size() == 2_i);
+    expect(m.begin() != m.end());
 
+    expect(that % to_vector(m | std::views::keys) == std::vector{42, 1729});
+  };
 }
