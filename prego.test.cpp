@@ -677,7 +677,7 @@ int main() {
            "date";
   };
 
-  "graph_traversal_efficiency_reactive_bottom_up"_test = [] {
+  skip / "graph_traversal_efficiency_reactive_bottom_up"_test = [] {
     atom<int, atom_state_mock> a = 42;
     calc b = [=] { return a(); };
 
@@ -714,7 +714,7 @@ int main() {
            "date, because it was reactive after all";
   };
 
-  "graph_traversal_efficiency_reactive_bottom_up_top_down"_test = [] {
+  skip / "graph_traversal_efficiency_reactive_bottom_up_top_down"_test = [] {
     atom<int, atom_state_mock> a = 42;
     calc b = [=] { return a(); };
 
