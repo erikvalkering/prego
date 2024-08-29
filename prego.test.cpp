@@ -162,24 +162,21 @@ int main() {
       return 0;
     }};
 
-    expect(x == false)
-        << "computed state should not compute when not requested";
+    expect(not x) << "computed state should not compute when not requested";
     b();
-    expect(x == true)
-        << "computed state should compute the first time when requested";
+    expect(x) << "computed state should compute the first time when requested";
 
     x = false;
     b();
-    expect(x == false)
-        << "computed state should not recompute when dependencies "
-           "have not changed";
+    expect(not x) << "computed state should not recompute when dependencies "
+                     "have not changed";
 
     x = false;
     a.set(1729);
-    expect(x == false) << "computed state should not be reactive if not "
-                          "reactively observed";
+    expect(not x) << "computed state should not be reactive if not "
+                     "reactively observed";
     b();
-    expect(x == true)
+    expect(x)
         << "computed state should recompute when dependencies have changed";
   };
 
@@ -221,27 +218,27 @@ int main() {
         prego::log(1, "autorun = disabled");
     });
 
-    expect(x == true) << "full_name should be computed";
-    expect(y == true) << "display_name should be computed";
-    expect(z == true) << "autorun should execute immediately";
+    expect(x) << "full_name should be computed";
+    expect(y) << "display_name should be computed";
+    expect(z) << "autorun should execute immediately";
 
     x = false;
     y = false;
     z = false;
 
     first_name.set("Jane");
-    expect(x == true) << "full_name should react to change of first_name";
-    expect(y == true) << "display_name should react to change of full_name";
-    expect(z == true) << "autorun should react to change of display_name";
+    expect(x) << "full_name should react to change of first_name";
+    expect(y) << "display_name should react to change of full_name";
+    expect(z) << "autorun should react to change of display_name";
 
     x = false;
     y = false;
     z = false;
 
     nick_name.set("Jane Doe");
-    expect(x == false) << "full_name should not react to change of nick_name";
-    expect(y == true) << "display_name should react to change of nick_name";
-    expect(z == false)
+    expect(not x) << "full_name should not react to change of nick_name";
+    expect(y) << "display_name should react to change of nick_name";
+    expect(not z)
         << "autorun should not react because display_name did not change";
 
     x = false;
@@ -249,35 +246,35 @@ int main() {
     z = false;
 
     first_name.set("John");
-    expect(x == false)
+    expect(not x)
         << "full_name should not react to change of first_name, because "
            "full_name is not being observed";
-    expect(y == false) << "display_name should not react, because it is "
-                          "not observing full_name";
-    expect(z == false) << "autorun should not react, because nothing changed";
+    expect(not y) << "display_name should not react, because it is "
+                     "not observing full_name";
+    expect(not z) << "autorun should not react, because nothing changed";
 
     x = false;
     y = false;
     z = false;
 
     enabled.set(false);
-    expect(x == false) << "full_name should not react to change of enabled";
-    expect(y == false) << "display_name should not react, because "
-                          "nick_name did not change";
-    expect(z == true) << "autorun should react to change of enabled";
+    expect(not x) << "full_name should not react to change of enabled";
+    expect(not y) << "display_name should not react, because "
+                     "nick_name did not change";
+    expect(z) << "autorun should react to change of enabled";
 
     x = false;
     y = false;
     z = false;
 
     nick_name.set("John Doe");
-    expect(x == false)
+    expect(not x)
         << "full_name should not react to change of nick_name, because it "
            "does not observe it";
-    expect(y == false)
+    expect(not y)
         << "display_name should not react to change of nick_name, because "
            "display_name is not being observed right now";
-    expect(z == false)
+    expect(not z)
         << "autorun should not react to change of nick_name, because it is "
            "not being observed right now (through display_name)";
 
@@ -296,26 +293,25 @@ int main() {
     //   It matters, because those observables should
     //   be invalidated even if they are not being observed
     enabled.set(true);
-    expect(x == false) << "full_name should not recompute because it is still "
-                          "not being observed";
-    expect(y == true) << "display_name should recompute, because it is "
-                         "being observed again";
-    expect(z == true)
-        << "autorun should react to change of enabled, as well as "
-           "display_name that was changed";
+    expect(not x) << "full_name should not recompute because it is still "
+                     "not being observed";
+    expect(y) << "display_name should recompute, because it is "
+                 "being observed again";
+    expect(z) << "autorun should react to change of enabled, as well as "
+                 "display_name that was changed";
 
     x = false;
     y = false;
     z = false;
 
     nick_name.set("");
-    expect(x == true)
+    expect(x)
         << "full_name should be queried through display_name and recompute "
            "because it was previously changed";
-    expect(y == true) << "display_name should recompute, because nick_name "
-                         "changed, as well "
-                         "as full_name";
-    expect(z == false)
+    expect(y) << "display_name should recompute, because nick_name "
+                 "changed, as well "
+                 "as full_name";
+    expect(not z)
         << "autorun should not react, because display_name did not change";
     // TODO: rename autorun to observe or observer or reaction or effect? or
     // reactive? or watch?
@@ -326,11 +322,9 @@ int main() {
     z = false;
 
     enabled.set(true);
-    expect(x == false)
-        << "full_name should not recompute because nothing changed";
-    expect(y == false)
-        << "display_name should recompute, because nothing changed";
-    expect(z == true) << "autorun should react to change of enabled";
+    expect(not x) << "full_name should not recompute because nothing changed";
+    expect(not y) << "display_name should recompute, because nothing changed";
+    expect(z) << "autorun should react to change of enabled";
   };
 
   "autorun"_test = [] {
@@ -338,14 +332,14 @@ int main() {
       auto a = atom{42};
       auto x = false;
       autorun([&x](auto get) { x = true; });
-      expect(x == true) << "should execute immediately";
+      expect(x) << "should execute immediately";
 
       x = false;
       a.set(42);
-      expect(x == false) << "should not react on mutations of a";
+      expect(not x) << "should not react on mutations of a";
 
       a.set(1729);
-      expect(x == false) << "should not react on mutations of a";
+      expect(not x) << "should not react on mutations of a";
     }
 
     {
@@ -355,14 +349,14 @@ int main() {
         get(a);
         x = true;
       });
-      expect(x == true) << "should execute immediately";
+      expect(x) << "should execute immediately";
 
       x = false;
       a.set(42);
-      expect(x == false) << "should not react if a did not change";
+      expect(not x) << "should not react if a did not change";
 
       a.set(1729);
-      expect(x == true) << "should react on mutations of a";
+      expect(x) << "should react on mutations of a";
     }
 
     {
@@ -373,112 +367,101 @@ int main() {
         get(a);
         x = true;
       });
-      expect(x == true) << "should execute immediately";
+      expect(x) << "should execute immediately";
 
       x = false;
       a.set(42);
-      expect(x == false) << "should not react if a did not change";
+      expect(not x) << "should not react if a did not change";
       a.set(1729);
-      expect(x == true) << "should react on mutations of a";
+      expect(x) << "should react on mutations of a";
     }
   };
 
-  "scope_manager"_test =
-      [] {
-        auto a = atom{42};
+  "scope_manager"_test = [] {
+    auto a = atom{42};
 
-        auto x = false;
-        auto y = false;
-        auto z = false;
-        auto w = false;
+    auto x = false;
+    auto y = false;
+    auto z = false;
+    auto w = false;
+
+    {
+      {
+        auto scope_manager = scope_manager_t{};
 
         {
-          {
-            auto scope_manager = scope_manager_t{};
-
-            {
-              autorun([=, &x](auto get) {
+          autorun([=, &x](auto get) {
+            get(a);
+            x = true;
+          });
+          autorun(
+              [=, &y](auto get) {
                 get(a);
-                x = true;
-              });
-              autorun(
-                  [=, &y](auto get) {
-                    get(a);
-                    y = true;
-                  },
-                  &scope_manager);
-              auto _ = autorun(
-                  [=, &z](auto get) {
-                    get(a);
-                    z = true;
-                  },
-                  nullptr);
-              std::ignore = autorun(
-                  [=, &w](auto get) {
-                    get(a);
-                    w = true;
-                  },
-                  nullptr);
+                y = true;
+              },
+              &scope_manager);
+          auto _ = autorun(
+              [=, &z](auto get) {
+                get(a);
+                z = true;
+              },
+              nullptr);
+          std::ignore = autorun(
+              [=, &w](auto get) {
+                get(a);
+                w = true;
+              },
+              nullptr);
 
-              expect(x == true) << "sanity check";
-              expect(y == true) << "sanity check";
-              expect(z == true) << "sanity check";
-              expect(w == true) << "sanity check";
-
-              x = false;
-              y = false;
-              z = false;
-              w = false;
-              a.set(1729);
-              expect(x == true)
-                  << "autorun should be kept alive by global_scope_manager";
-              expect(y == true)
-                  << "autorun should be kept alive by local scope_manager";
-              expect(z == true)
-                  << "autorun should be kept alive by local variable";
-              expect(w == false) << "autorun should be destroyed immediately";
-            }
-
-            x = false;
-            y = false;
-            z = false;
-            w = false;
-            a.set(42);
-            expect(x == true)
-                << "autorun should be kept alive by global_scope_manager";
-            expect(y == true)
-                << "autorun should be kept alive by local scope_manager";
-            expect(z == false)
-                << "autorun should be destroyed by local variable";
-            expect(w == false) << "autorun should be destroyed immediately";
-          }
+          expect(x) << "sanity check";
+          expect(y) << "sanity check";
+          expect(z) << "sanity check";
+          expect(w) << "sanity check";
 
           x = false;
           y = false;
           z = false;
           w = false;
           a.set(1729);
-          expect(x == true)
-              << "autorun should be kept alive by global_scope_manager";
-          expect(y == false)
-              << "autorun should be destroyed by local scope_manager";
-          expect(z == false) << "autorun should be destroyed by local variable";
-          expect(w == false) << "autorun should be destroyed immediately";
+          expect(x) << "autorun should be kept alive by global_scope_manager";
+          expect(y) << "autorun should be kept alive by local scope_manager";
+          expect(z) << "autorun should be kept alive by local variable";
+          expect(not w) << "autorun should be destroyed immediately";
         }
 
-        global_scope_manager.clear();
         x = false;
         y = false;
         z = false;
         w = false;
         a.set(42);
-        expect(x == false)
-            << "autorun should be destroyed by global_scope_manager";
-        expect(y == false)
-            << "autorun should be destroyed by local scope_manager";
-        expect(z == false) << "autorun should be destroyed by local variable";
-        expect(w == false) << "autorun should be destroyed immediately";
-      };
+        expect(x) << "autorun should be kept alive by global_scope_manager";
+        expect(y) << "autorun should be kept alive by local scope_manager";
+        expect(not z) << "autorun should be destroyed by local variable";
+        expect(not w) << "autorun should be destroyed immediately";
+      }
+
+      x = false;
+      y = false;
+      z = false;
+      w = false;
+      a.set(1729);
+      expect(x) << "autorun should be kept alive by global_scope_manager";
+      expect(not y) << "autorun should be destroyed by local scope_manager";
+      expect(not z) << "autorun should be destroyed by local variable";
+      expect(not w) << "autorun should be destroyed immediately";
+    }
+
+    global_scope_manager.clear();
+    x = false;
+    y = false;
+    z = false;
+    w = false;
+    a.set(42);
+    expect(not x) << "autorun should be destroyed by global_scope_manager";
+    expect(not y) << "autorun should be destroyed by local scope_manager";
+    expect(not z) << "autorun should be destroyed by local variable";
+    expect(not w) << "autorun should be destroyed immediately";
+  };
 
   "auto_unobserve"_test = [] {
     auto a = atom{42};
@@ -498,7 +481,7 @@ int main() {
 
     x = false;
     a.set(1729);
-    expect(x == false) << "autorun should definitely not be invoked";
+    expect(not x) << "autorun should definitely not be invoked";
     expect(std::size(a.observers()) == 0_i)
         << "autorun should not be referenced anymore";
   };
@@ -513,34 +496,34 @@ int main() {
         {
             autorun([=, x = autorun_lt.track()](auto get) { get(a); });
         }
-        expect(autorun_lt.alive() == true) << "autorun should be kept alive by a";
+        expect(autorun_lt.alive())    << "autorun should be kept alive by a";
     }
-    expect(a_lt.alive() == false) << "a should be destroyed";
-    expect(autorun_lt.alive() == false) << "autorun should be destroyed";
+    expect(not a_lt.alive()) << "a should be destroyed";
+    expect(not autorun_lt.alive()) << "autorun should be destroyed";
 #endif
     auto b_lt = lifetime_tracker{};
     auto c_lt = lifetime_tracker{};
     {
       auto c = [&] {
-        expect(b_lt.alive() == false) << "b should not be alive";
+        expect(not b_lt.alive()) << "b should not be alive";
         auto b = atom{b_lt.track()};
-        expect(b_lt.alive() == true) << "b should be alive";
+        expect(b_lt.alive()) << "b should be alive";
 
         return calc{[=, x = c_lt.track()](auto get) { return get(b); }};
       }();
 
-      expect(b_lt.alive() == true) << "b should be kept alive by c";
+      expect(b_lt.alive()) << "b should be kept alive by c";
     }
-    expect(b_lt.alive() == false) << "b should be destroyed";
-    expect(c_lt.alive() == false) << "c should be destroyed";
+    expect(not b_lt.alive()) << "b should be destroyed";
+    expect(not c_lt.alive()) << "c should be destroyed";
   };
 
   skip / "noncopyable_types"_test = [] {
-    expect(true == false) << "not implemented yet";
+    expect(not true) << "not implemented yet";
   };
 
   skip / "immovable_types"_test = [] {
-    expect(true == false) << "not implemented yet";
+    expect(not true) << "not implemented yet";
   };
 
   "atom_syntaxes"_test = [] {
@@ -859,17 +842,17 @@ int main() {
       b = true;
       z();
     });
-    expect(b == true) << "autorun should execute immediately";
+    expect(b) << "autorun should execute immediately";
 
     b = false;
     x = 1729;
-    expect(b == true) << "autorun should react to x";
+    expect(b) << "autorun should react to x";
 
     z();
 
     b = false;
     x = 42;
-    expect(b == true) << "autorun should react to x";
+    expect(b) << "autorun should react to x";
   };
 
   "deterministic_ordering_observers"_test = [] {
@@ -918,21 +901,21 @@ int main() {
     auto m = insertion_order_map<int, int>{};
     expect(m.size() == 0_i);
     expect(m.begin() == m.end());
-    expect(m.contains(42) == false);
+    expect(not m.contains(42));
     expect(m[42] == 0_i);
     expect(m.size() == 1_i);
     expect(m.begin() != m.end());
-    expect(m.contains(42) == true);
+    expect(m.contains(42));
     expect((m[42] = 1729) == 1729_i);
 
     auto n = m.extract(42);
-    expect(n.empty() == false);
+    expect(not n.empty());
     expect(n.key() == 42_i);
     expect(n.mapped() == 1729_i);
     expect(m.size() == 0_i);
 
     n = m.extract(42);
-    expect(n.empty() == true);
+    expect(n.empty());
     expect(m.size() == 0_i);
 
     expect((m[42] = 1729) == 1729_i);
