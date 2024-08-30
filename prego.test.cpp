@@ -6,6 +6,7 @@
 #include <boost/ut.hpp>
 
 #include <string>
+#include <tuple>
 #include <vector>
 
 template <> struct fmt::formatter<std::vector<bool>> {
@@ -897,32 +898,36 @@ int main() {
     expect(that % order == "dc"s);
   };
 
-  "insertion_order_map"_test = [] {
-    auto m = insertion_order_map<int, int>{};
+  "insertion_order_map"_test = [](auto v) {
+    auto [key0, value0] = v[0];
+    auto [key1, value1] = v[1];
+    using key_t = decltype(key0);
+    using value_t = decltype(value0);
+    auto m = insertion_order_map<key_t, value_t>{};
     expect(m.size() == 0_i);
     expect(m.begin() == m.end());
-    expect(not m.contains(42));
-    expect(m[42] == 0_i);
+    expect(not m.contains(key0));
+    expect(that % m[key0] == value_t{});
     expect(m.size() == 1_i);
     expect(m.begin() != m.end());
-    expect(m.contains(42));
-    expect((m[42] = 1729) == 1729_i);
+    expect(m.contains(key0));
+    expect(that % (m[key0] = value0) == value0);
 
-    auto n = m.extract(42);
+    auto n = m.extract(key0);
     expect(not n.empty());
-    expect(n.key() == 42_i);
-    expect(n.mapped() == 1729_i);
+    expect(that % n.key() == key0);
+    expect(that % n.mapped() == value0);
     expect(m.size() == 0_i);
 
-    n = m.extract(42);
+    n = m.extract(key0);
     expect(n.empty());
     expect(m.size() == 0_i);
 
-    expect((m[42] = 1729) == 1729_i);
-    expect((m[1729] = 42) == 42_i);
+    expect(that % (m[key0] = value0) == value0);
+    expect(that % (m[key1] = value1) == value1);
     expect(m.size() == 2_i);
     expect(m.begin() != m.end());
 
-    expect(that % to_vector(m | std::views::keys) == std::vector{42, 1729});
-  };
+    expect(that % to_vector(m | std::views::keys) == std::vector{key0, key1});
+  } | std::tuple{std::vector{std::pair{42, 1729}, {1729, 42}}};
 }
