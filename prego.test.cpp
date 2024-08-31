@@ -898,6 +898,9 @@ int main() {
     expect(that % order == "dc"s);
   };
 
+  auto x = std::make_shared<int>(42);
+  auto y = std::make_shared<int>(1729);
+
   "insertion_order_map"_test =
       [](auto data) {
         auto [key0, key1, cmp] = data;
@@ -939,6 +942,7 @@ int main() {
         expect(that % eq(keys[1], key1));
       } |
       std::tuple{
-          std::tuple{42, 1729, std::less{}}, std::tuple{42, 1729, std::less{}},
+          std::tuple{42, 1729, std::less{}},
+          std::tuple{std::weak_ptr{x}, std::weak_ptr{y}, std::owner_less{}},
       };
 }
