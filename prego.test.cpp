@@ -898,36 +898,47 @@ int main() {
     expect(that % order == "dc"s);
   };
 
-  "insertion_order_map"_test = [](auto v) {
-    auto [key0, value0] = v[0];
-    auto [key1, value1] = v[1];
-    using key_t = decltype(key0);
-    using value_t = decltype(value0);
-    auto m = insertion_order_map<key_t, value_t>{};
-    expect(m.size() == 0_i);
-    expect(m.begin() == m.end());
-    expect(not m.contains(key0));
-    expect(that % m[key0] == value_t{});
-    expect(m.size() == 1_i);
-    expect(m.begin() != m.end());
-    expect(m.contains(key0));
-    expect(that % (m[key0] = value0) == value0);
+  "insertion_order_map"_test =
+      [](auto data) {
+        auto [key0, key1, cmp] = data;
+        using key_t = decltype(key0);
+        using cmp_t = decltype(cmp);
 
-    auto n = m.extract(key0);
-    expect(not n.empty());
-    expect(that % n.key() == key0);
-    expect(that % n.mapped() == value0);
-    expect(m.size() == 0_i);
+        auto eq = [=](auto lhs, auto rhs) {
+          return not cmp(lhs, rhs) and not cmp(rhs, lhs);
+        };
 
-    n = m.extract(key0);
-    expect(n.empty());
-    expect(m.size() == 0_i);
+        auto m = insertion_order_map<key_t, int, cmp_t>{};
 
-    expect(that % (m[key0] = value0) == value0);
-    expect(that % (m[key1] = value1) == value1);
-    expect(m.size() == 2_i);
-    expect(m.begin() != m.end());
+        expect(m.size() == 0_i);
+        expect(m.begin() == m.end());
+        expect(not m.contains(key0));
+        expect(that % m[key0] == 0);
+        expect(m.size() == 1_i);
+        expect(m.begin() != m.end());
+        expect(m.contains(key0));
+        expect(that % (m[key0] = 42) == 42);
 
-    expect(that % to_vector(m | std::views::keys) == std::vector{key0, key1});
-  } | std::tuple{std::vector{std::pair{42, 1729}, {1729, 42}}};
+        auto n = m.extract(key0);
+        expect(not n.empty());
+        expect(that % eq(n.key(), key0));
+        expect(that % n.mapped() == 42);
+        expect(m.size() == 0_i);
+
+        n = m.extract(key0);
+        expect(n.empty());
+        expect(m.size() == 0_i);
+
+        expect(that % (m[key0] = 42) == 42);
+        expect(that % (m[key1] = 1729) == 1729);
+        expect(m.size() == 2_i);
+        expect(m.begin() != m.end());
+
+        auto keys = to_vector(m | std::views::keys);
+        expect(that % eq(keys[0], key0));
+        expect(that % eq(keys[1], key1));
+      } |
+      std::tuple{
+          std::tuple{42, 1729, std::less{}}, std::tuple{42, 1729, std::less{}},
+      };
 }
