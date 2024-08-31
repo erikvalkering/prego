@@ -71,8 +71,67 @@ struct observable_t;
 auto get_id(const std::weak_ptr<observer_t> &) -> std::string;
 auto get_id(const observable_t &) -> std::string;
 
+template <typename Key, typename Value, typename Comparator = std::less<Key>>
+class insertion_order_map {
+  std::vector<std::pair<Key, Value>> nodes;
+
+  inline auto find_node(this auto &&self, const Key &key) {
+    return std::ranges::find_if(
+        FWD(self).nodes,
+        [&](auto &k) {
+          auto cmp = Comparator{};
+          return not cmp(k, key) and not cmp(key, k);
+        },
+        &std::pair<Key, Value>::first);
+  }
+
+public:
+  auto size() const { return nodes.size(); }
+  decltype(auto) begin(this auto &&self) { return FWD(self).nodes.begin(); }
+  decltype(auto) end(this auto &&self) { return FWD(self).nodes.end(); }
+
+  inline auto &operator[](const Key &key) {
+    auto it = find_node(key);
+    if (it != nodes.end()) {
+      return it->second;
+    }
+
+    return nodes.emplace_back(key, Value{}).second;
+  }
+
+  inline decltype(auto) contains(const Key &key) const {
+    return find_node(key) != nodes.end();
+  }
+
+  inline decltype(auto) extract(const Key &key) {
+    struct node_handle {
+      bool _empty;
+      Key _key;
+      Value _mapped;
+
+      auto empty() const { return _empty; }
+      auto &key() const { return _key; }
+      auto &mapped() const { return _mapped; }
+    };
+
+    auto it = find_node(key);
+    if (it == nodes.end())
+      return node_handle{true};
+
+    auto result = std::move(*it);
+    nodes.erase(it);
+
+    return node_handle{
+        false,
+        std::move(result.first),
+        std::move(result.second),
+    };
+  }
+};
+
 struct observable_t : id_mixin {
-  std::map<std::weak_ptr<observer_t>, bool, std::owner_less<>> observers = {};
+  insertion_order_map<std::weak_ptr<observer_t>, bool, std::owner_less<>>
+      observers = {};
 
   // hooks
   virtual void before_is_reactive() const {}
@@ -109,6 +168,7 @@ struct observable_t : id_mixin {
 
     assert(observers.contains(observer));
     const auto node = observers.extract(observer);
+    assert(not node.empty());
 
     // If the observer was not reactive, removing it won't affect the overall
     // reactive state of this observable, so we can early-exit.
@@ -395,7 +455,8 @@ public:
     for (auto &observable : observables)
       if (auto p = observable.lock()) {
         if (!p->is_up_to_date(reactive))
-          // TODO: this hierarchy is still traversed twice in case an unobserved
+          // TODO: this hierarchy is still traversed twice in case an
+          // unobserved
           //       atom was changed. Create a test for this
           return false;
         else if (reactive) {
