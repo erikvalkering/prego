@@ -123,8 +123,8 @@ public:
 
     return node_handle{
         false,
-        std::move(it->first),
-        std::move(it->second),
+        std::move(result.first),
+        std::move(result.second),
     };
   }
 };
