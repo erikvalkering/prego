@@ -29,3 +29,6 @@ add_executable(prego prego.test.cpp)
 target_compile_features(prego PRIVATE cxx_std_23)
 target_link_libraries(prego PRIVATE fmt::fmt)
 target_link_libraries(prego PRIVATE ut)
+
+add_test(NAME prego COMMAND prego)
+
