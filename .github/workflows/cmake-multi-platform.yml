@@ -64,8 +64,8 @@ jobs:
         sudo apt install clang
         clang --version
         sudo apt-get install clang-16 -y
-        sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-16 100
-        sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-16 100
+        #sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-16 100
+        #sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-16 100
 
     - name: Set reusable strings
       # Turn repeated input strings (such as the build output directory) into step outputs. These step outputs can be used throughout the workflow file.
