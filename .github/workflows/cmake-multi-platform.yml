@@ -58,7 +58,7 @@ jobs:
 
     - name: Install Clang 16
       if: matrix.c_compiler == 'clang'
-      run: 
+      run: |
         sudo apt update
         sudo apt upgrade
         sudo apt-get remove clang -y
