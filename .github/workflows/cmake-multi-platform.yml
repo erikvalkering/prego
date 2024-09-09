@@ -61,9 +61,9 @@ jobs:
       run: 
         sudo apt update
         sudo apt upgrade
-        sudo apt-get remove -y clang
-        sudo apt-get autoremove -y
+        sudo apt-get remove clang -y
         sudo apt-get install clang-16 -y
+        #sudo apt-get autoremove -y
         #sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-16 100
         #sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-16 100
 
