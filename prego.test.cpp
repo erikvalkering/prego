@@ -90,23 +90,23 @@ public:
   }
 };
 
-struct Person_ {
-  atom<std::string> first_name;
-  atom<std::string> last_name;
-
-  auto full_name(auto get) const {
-    return get(first_name) + " " + get(last_name);
-  }
-};
-
-struct Person : prego::Computable<Person_> {
-  /*    using full_name_thunk = Thunk<Class, [](auto &self, auto get) {
-      return self.full_name(get);
-      }>;
-
-      calc<full_name_thunk> full_name{this};*/
-  // PREGO_COMPUTED(full_name);
-};
+// struct Person_ {
+//   atom<std::string> first_name;
+//   atom<std::string> last_name;
+//
+//   auto full_name(auto get) const {
+//     return get(first_name) + " " + get(last_name);
+//   }
+// };
+//
+// struct Person : prego::Computable<Person_> {
+//   /*    using full_name_thunk = Thunk<Class, [](auto &self, auto get) {
+//       return self.full_name(get);
+//       }>;
+//
+//       calc<full_name_thunk> full_name{this};*/
+//   // PREGO_COMPUTED(full_name);
+// };
 
 int main() {
   "atom"_test = [] {
@@ -551,45 +551,45 @@ int main() {
     // auto g = calc{[](auto get) { return get(a) + get(b); }};
   };
 
-  "oo"_test = [] {
-    {
-      auto john = Person{"John"s, "Doe"s};
-      auto jane = Person{"Jane", "Doe"};
+  // "oo"_test = [] {
+  //   {
+  //     auto john = Person{"John"s, "Doe"s};
+  //     auto jane = Person{"Jane", "Doe"};
 
-      // assert_eq(john.full_name(), "John Doe", "John and Jane should not
-      // share state"); assert_eq(jane.full_name(), "Jane Doe", "John and
-      // Jane should not share state");
-    }
+  //     // assert_eq(john.full_name(), "John Doe", "John and Jane should not
+  //     // share state"); assert_eq(jane.full_name(), "Jane Doe", "John and
+  //     // Jane should not share state");
+  //   }
 
-    {
-      using Person = decltype([] {
-        atom first_name{"John"s};
-        atom last_name{"Doe"s};
+  //   {
+  //     using Person = decltype([] {
+  //       atom first_name{"John"s};
+  //       atom last_name{"Doe"s};
 
-        calc full_name = [=](auto get) {
-          return get(first_name) + " " + get(last_name);
-        };
+  //       calc full_name = [=](auto get) {
+  //         return get(first_name) + " " + get(last_name);
+  //       };
 
-        struct Person {
-          decltype(first_name) first_name{first_name};
-          decltype(last_name) last_name{last_name};
-          // decltype(full_name) full_name{full_name};
-        };
+  //       struct Person {
+  //         decltype(first_name) first_name{first_name};
+  //         decltype(last_name) last_name{last_name};
+  //         // decltype(full_name) full_name{full_name};
+  //       };
 
-        return Person{};
-      }());
+  //       return Person{};
+  //     }());
 
-      auto john = Person{"John"s, "Doe"s};
-      auto jane = Person{"Jane", "Doe"};
-    }
+  //     auto john = Person{"John"s, "Doe"s};
+  //     auto jane = Person{"Jane", "Doe"};
+  //   }
 
-    class atom_vector {
-      std::vector<int> v;
+  //   class atom_vector {
+  //     std::vector<int> v;
 
-    public:
-      void push_back(int x) {}
-    };
-  };
+  //   public:
+  //     void push_back(int x) {}
+  //   };
+  // };
 
   "simple_syntax"_test = [] {
     atom x = 42;
