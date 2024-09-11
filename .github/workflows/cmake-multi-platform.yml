@@ -58,12 +58,10 @@ jobs:
 
     - name: Install Clang 19
       if: matrix.c_compiler == 'clang-19'
-      run: sudo apt install clang-19 -y
-    #    sudo apt update
-    #    sudo apt upgrade
-    #    sudo apt-get remove clang -y
-    #    sudo apt-get install clang-16 -y
-    #    #sudo apt-get autoremove -y
+      run: |
+        wget https://apt.llvm.org/llvm.sh
+        chmod u+x llvm.sh
+        sudo ./llvm.sh 19
     #    #sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-16 100
     #    #sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-16 100
 
