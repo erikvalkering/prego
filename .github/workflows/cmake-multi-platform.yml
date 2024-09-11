@@ -25,20 +25,20 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
         build_type: [Release]
-        c_compiler: [gcc-14, clang-19, cl]
+        c_compiler: [gcc-13, clang-19, cl]
         include:
           - os: windows-latest
             c_compiler: cl
             cpp_compiler: cl
           - os: ubuntu-latest
-            c_compiler: gcc-14
-            cpp_compiler: g++-14
+            c_compiler: gcc-13
+            cpp_compiler: g++-13
           - os: ubuntu-latest
             c_compiler: clang-19
             cpp_compiler: clang++-19
         exclude:
           - os: windows-latest
-            c_compiler: gcc-14
+            c_compiler: gcc-13
           - os: windows-latest
             c_compiler: clang-19
           - os: ubuntu-latest
@@ -47,14 +47,14 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install GCC 14
-      if: matrix.c_compiler == 'gcc-14'
+    - name: Install GCC 13
+      if: matrix.c_compiler == 'gcc-13'
       run: |
         sudo apt update
         sudo apt install software-properties-common
         sudo add-apt-repository ppa:ubuntu-toolchain-r/test
         sudo apt update
-        sudo apt install gcc-14 g++-14 -y
+        sudo apt install gcc-13 g++-13 -y
 
     - name: Install Clang 19
       if: matrix.c_compiler == 'clang-19'
