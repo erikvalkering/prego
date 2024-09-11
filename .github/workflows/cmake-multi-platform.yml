@@ -56,9 +56,9 @@ jobs:
       #     sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 13
       #     sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 13
 
-    #- name: Install Clang 16
-    #  if: matrix.c_compiler == 'clang'
-    #  run: |
+    - name: Install Clang 19
+      if: matrix.c_compiler == 'clang-19'
+      run: sudo apt install clang-19 -y
     #    sudo apt update
     #    sudo apt upgrade
     #    sudo apt-get remove clang -y
