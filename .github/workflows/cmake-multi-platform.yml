@@ -53,7 +53,7 @@ jobs:
       uses: actions/cache@v3
       with:
         key: caches-gcc-14.1.0
-        path: ~/gcc-14.1.0
+        path: gcc-14.1.0
 
     - name: Build GCC 14.1.0
       if: matrix.c_compiler == 'gcc' && steps.cache-gcc.outputs.cache-hit != 'true'
