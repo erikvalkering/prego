@@ -48,6 +48,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Cache GCC 14.1.0
+      if: matrix.c_compiler == 'gcc'
       id: cache-gcc
       uses: actions/cache@v3
       with:
@@ -55,7 +56,7 @@ jobs:
         path: /usr/local/gcc-14.1.0
 
     - name: Build GCC 14.1.0
-      if: matrix.c_compiler == 'gcc' && ${{ steps.cache-gcc.outputs.cache-hit != 'true' }}
+      if: matrix.c_compiler == 'gcc' && steps.cache-gcc.outputs.cache-hit != 'true'
       run: |
         sudo apt install build-essential
         sudo apt install libmpfr-dev libgmp3-dev libmpc-dev -y
@@ -100,8 +101,8 @@ jobs:
       # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
       run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
 
-    #- name: Test
-     # working-directory: ${{ steps.strings.outputs.build-output-dir }}
+    - name: Test
+      working-directory: ${{ steps.strings.outputs.build-output-dir }}
       # Execute tests defined by the CMake configuration. Note that --build-config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      #run: ctest --build-config ${{ matrix.build_type }} --output-on-failure
+      run: ctest --build-config ${{ matrix.build_type }} --output-on-failure
