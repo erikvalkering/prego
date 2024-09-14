@@ -73,10 +73,6 @@ jobs:
         sudo make install
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/local/gcc-14.1.0/bin/g++-14.1.0 14
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/local/gcc-14.1.0/bin/gcc-14.1.0 14
-        export PATH=/usr/local/gcc-14.1.0/bin:$PATH
-        export LD_LIBRARY_PATH=/usr/local/gcc-14.1.0/lib64:$LD_LIBRARY_PATH
-        echo $LD_LIBRARY_PATH
-        ls /usr/local/gcc-14.1.0/lib64
 
     - name: Install Clang 19
       if: matrix.c_compiler == 'clang-19'
@@ -105,10 +101,8 @@ jobs:
 
     - name: Build
       # Build your program with the given configuration. Note that --config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
-      run: |
-        cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
-        ldd /home/runner/work/prego/prego/build/test_prego
- 
+      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
+
     - name: Test
       working-directory: ${{ steps.strings.outputs.build-output-dir }}
       # Execute tests defined by the CMake configuration. Note that --build-config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
