@@ -73,6 +73,7 @@ jobs:
         sudo make install
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/local/gcc-14.1.0/bin/g++-14.1.0 14
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/local/gcc-14.1.0/bin/gcc-14.1.0 14
+        export PATH=/usr/local/gcc-14.1.0/bin:$PATH
         export LD_LIBRARY_PATH=/usr/local/gcc-14.1.0/lib64:$LD_LIBRARY_PATH
 
     - name: Install Clang 19
