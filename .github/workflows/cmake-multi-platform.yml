@@ -93,8 +93,9 @@ jobs:
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
       run: >
         cmake -B ${{ steps.strings.outputs.build-output-dir }}
+        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
-        -DCMAKE_CXX_FLAGS="-fsanitize=address"
+        -DCMAKE_CXX_FLAGS="-fsanitize=address -fsanitize=undefined"
         -DCMAKE_LINKER_FLAGS="-fsanitize=address"
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         -DCMAKE_BUILD_RPATH=/usr/local/gcc-14.1.0/lib64
