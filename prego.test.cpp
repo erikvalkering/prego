@@ -108,6 +108,10 @@ public:
 //   // PREGO_COMPUTED(full_name);
 // };
 
+template <>
+auto boost::ut::cfg<boost::ut::override> =
+    boost::ut::runner<boost::ut::reporter<>>{};
+
 int main() {
   "atom"_test = [] {
     auto a = atom{42};
