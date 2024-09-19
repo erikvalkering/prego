@@ -34,7 +34,7 @@ add_executable(test_prego prego.test.cpp)
 target_compile_features(test_prego PRIVATE cxx_std_23)
 target_link_libraries(test_prego PRIVATE fmt::fmt)
 target_link_libraries(test_prego PRIVATE ut)
-#target_compile_definitions(test_prego PRIVATE BOOST_UT_DISABLE_MODULE)
+target_compile_definitions(test_prego PRIVATE BOOST_UT_DISABLE_MODULE)
 #target_compile_options(test_prego PRIVATE
 #  $<$<CXX_COMPILER_ID:GNU>:-fsanitize=address -fsanitize=undefined -static-libasan>
 #  $<$<CXX_COMPILER_ID:Clang>:-fsanitize=address -fsanitize=undefined -static-libasan>
