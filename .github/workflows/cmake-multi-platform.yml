@@ -77,6 +77,8 @@ jobs:
     - name: Install Clang 19
       if: matrix.c_compiler == 'clang-19'
       run: |
+        sudo apt-get update
+        sudo apt-get upgrade
         wget https://apt.llvm.org/llvm.sh
         chmod u+x llvm.sh
         sudo ./llvm.sh 19
