@@ -1,3 +1,5 @@
+[![CMake on multiple platforms](https://github.com/erikvalkering/prego/actions/workflows/cmake-multi-platform.yml/badge.svg)](https://github.com/erikvalkering/prego/actions/workflows/cmake-multi-platform.yml)
+
 # Example:
 ```cpp
 atom first_name = "John"s;
