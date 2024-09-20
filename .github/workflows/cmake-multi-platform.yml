@@ -25,7 +25,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
         build_type: [Debug, Release]
-        c_compiler: [gcc, clang-19, cl]
+        c_compiler: [gcc, clang-18, cl]
         include:
           - os: windows-latest
             c_compiler: cl
@@ -34,13 +34,13 @@ jobs:
             c_compiler: gcc
             cpp_compiler: g++
           - os: ubuntu-latest
-            c_compiler: clang-19
-            cpp_compiler: clang++-19
+            c_compiler: clang-18
+            cpp_compiler: clang++-18
         exclude:
           - os: windows-latest
             c_compiler: gcc
           - os: windows-latest
-            c_compiler: clang-19
+            c_compiler: clang-18
           - os: ubuntu-latest
             c_compiler: cl
 
@@ -74,14 +74,14 @@ jobs:
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/local/gcc-14.1.0/bin/g++-14.1.0 14
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/local/gcc-14.1.0/bin/gcc-14.1.0 14
 
-    - name: Install Clang 19
-      if: matrix.c_compiler == 'clang-19'
+    - name: Install Clang 18
+      if: matrix.c_compiler == 'clang-18'
       run: |
         sudo apt-get update
         sudo apt-get upgrade
         wget https://apt.llvm.org/llvm.sh
         chmod u+x llvm.sh
-        sudo ./llvm.sh 19
+        sudo ./llvm.sh 18
 
     - name: Set reusable strings
       # Turn repeated input strings (such as the build output directory) into step outputs. These step outputs can be used throughout the workflow file.
