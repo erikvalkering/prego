@@ -749,7 +749,6 @@ int main() {
         << "[false] => [] => no propagation";
   };
 
-  /*
   "observe_efficiency_reactive"_test = [] {
     atom a = 42;
 
@@ -789,7 +788,6 @@ int main() {
         << "b is not reactive, so adding a reactive observer should not "
            "require redetermining reactivity of b ";
   };
-  */
 
   "mixed_observing"_test = [] {
     atom x = 42;
