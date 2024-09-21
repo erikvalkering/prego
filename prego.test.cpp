@@ -604,7 +604,7 @@ int main() {
   };
 
   "graph_traversal_efficiency_basics"_test = [] {
-    atom<int> a = 42;
+    atom a = 42;
     a();
     expect(a.state->is_up_to_date_counter == 0_i)
         << "accessing a should directly return the value, without checking "
@@ -619,7 +619,7 @@ int main() {
   };
 
   "graph_traversal_efficiency_lazy"_test = [] {
-    atom<int> a = 42;
+    atom a = 42;
     calc b = [=] { return a(); };
 
     calc c = [=] { return b(); };
@@ -643,7 +643,7 @@ int main() {
   };
 
   skip / "graph_traversal_efficiency_reactive_bottom_up"_test = [] {
-    atom<int> a = 42;
+    atom a = 42;
     calc b = [=] { return a(); };
 
     atom f = true;
@@ -680,7 +680,7 @@ int main() {
   };
 
   skip / "graph_traversal_efficiency_reactive_bottom_up_top_down"_test = [] {
-    atom<int> a = 42;
+    atom a = 42;
     calc b = [=] { return a(); };
 
     atom f = true;
@@ -724,7 +724,7 @@ int main() {
   // This unit test makes sure that calls to unobserve() don't trigger
   // unnecessary reactive state propagation (through observe()).
   "unobserve_efficiency"_test = [] {
-    atom<int> a = 42;
+    atom a = 42;
 
     calc b = [=] { return a(); };
 
@@ -774,7 +774,7 @@ int main() {
 
   /*
   "observe_efficiency_reactive"_test = [] {
-    atom<int> a = 42;
+    atom a = 42;
 
     calc b = [=] { return a(); };
     autorun([=] { b(); });
@@ -794,7 +794,7 @@ int main() {
   };
 
   "observe_efficiency_unreactive"_test = [] {
-    atom<int> a = 42;
+    atom a = 42;
 
     calc b = [=] { return a(); };
     b();
