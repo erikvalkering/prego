@@ -695,8 +695,7 @@ int main() {
     f = false;
     expect(a.state->is_up_to_date_counter == 0_i)
         << "b should not need to check a for determining whether it is up "
-           "to "
-           "date, because it was reactive after all";
+           "to date, because it was reactive after all";
   };
 
   // This unit test makes sure that calls to unobserve() don't trigger
