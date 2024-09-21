@@ -699,28 +699,6 @@ int main() {
            "date, because it was reactive after all";
   };
 
-  /*"graph_traversal_efficiency_reactive_top_down"_test = [] {
-      atom<int> a = 42;
-      calc b = [=] { return a(); };
-
-      atom f1 = true;
-      calc g = [=] { return f1() ? b() : 0; };
-      calc h = [=] { return f1() ? 0 : b(); }
-
-      calc i = [=] { return f2() ? g() : h(); };
-
-      atom f2 = true;
-      autorun([=] { f2() ? g() : b(); } });
-
-      f1 = false;
-      a.state->is_up_to_date_counter = 0;
-
-      f2 = false;
-      assert_eq(a.state->is_up_to_date_counter, 0, "b should not need to check a
-  for determining whether it is up to date, because it was reactive after all");
-  };
-  */
-
   // This unit test makes sure that calls to unobserve() don't trigger
   // unnecessary reactive state propagation (through observe()).
   "unobserve_efficiency"_test = [] {
