@@ -432,15 +432,19 @@ public:
     }
   }
 
+  auto propagate_nonreactiveness() {
+    const auto observer = this->weak_from_this();
+    for (auto &observable : observables)
+      if (auto p = observable.lock())
+        p->observe(observer, false);
+      else
+        log(1, get_id(*this), ": err - propagate_nonreactiveness");
+  }
+
   virtual void on_observers_changed() override final {
     // TODO: can we move is_reactive() check to caller?
     if (!is_reactive()) {
-      const auto observer = this->weak_from_this();
-      for (auto &observable : observables)
-        if (auto p = observable.lock())
-          p->observe(observer, false);
-        else
-          log(1, get_id(*this), ": err - on_observers_changed");
+      propagate_nonreactiveness();
     } else {
       // TODO: check if the opposite is already established:
       //       if we become reactive, does that mean that all
