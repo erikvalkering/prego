@@ -2,7 +2,6 @@
 #include <cassert>
 #include <concepts>
 #include <iostream>
-#include <map>
 #include <memory>
 #include <optional>
 #include <ranges>
@@ -73,15 +72,12 @@ struct hooks_mixin {
   mutable int is_up_to_date_counter = 0;
   mutable int observe_counter = 0;
   mutable std::vector<bool> observe_calls;
-  mutable int is_reactive_counter = 0;
 
   void before_observe(const std::weak_ptr<prego::observer_t> &observer,
                       bool reactive) const {
     ++observe_counter;
     observe_calls.push_back(reactive);
   }
-
-  void before_is_reactive() const { ++is_reactive_counter; }
 
   void before_is_up_to_date(bool reactive) const { ++is_up_to_date_counter; }
 };
@@ -151,26 +147,21 @@ public:
 struct observable_t : id_mixin, hooks_mixin {
   insertion_order_map<std::weak_ptr<observer_t>, bool, std::owner_less<>>
       observers = {};
+  size_t reactive_observers_count = 0;
 
-  virtual void on_observers_changed() {}
+  virtual void on_nonreactive() {}
   virtual bool is_up_to_date(bool reactive) = 0;
 
-  auto is_reactive() const {
-    before_is_reactive();
-    auto is_true = [](auto x) { return x; };
-    return std::ranges::any_of(observers | std::views::values, is_true);
-  }
+  auto is_reactive() const { return reactive_observers_count != 0; }
 
   void observe(const std::weak_ptr<observer_t> &observer, const bool reactive) {
     before_observe(observer, reactive);
 
     log(1, get_id(*this), ".observe(", get_id(observer), ", ", reactive, ")");
     if (reactive != std::exchange(observers[observer], reactive)) {
-      // TODO: Only if reactive == false, on_observers_changed() could
-      // potentially do something (if this was the last remaining reactive
-      // observer).
-      // TODO: Also, on_reactive_changed() might be a better name
-      on_observers_changed();
+      reactive_observers_count += (reactive ? +1 : -1);
+      if (!is_reactive())
+        on_nonreactive();
     }
   }
 
@@ -189,8 +180,11 @@ struct observable_t : id_mixin, hooks_mixin {
     if (!node.mapped())
       return;
 
+    --reactive_observers_count;
+
     // Now propagate the (potentially) new reactive state
-    on_observers_changed();
+    if (!is_reactive())
+      on_nonreactive();
   }
 };
 
@@ -432,27 +426,13 @@ public:
     }
   }
 
-  auto propagate_nonreactiveness() {
+  virtual void on_nonreactive() override final {
     const auto observer = this->weak_from_this();
     for (auto &observable : observables)
       if (auto p = observable.lock())
         p->observe(observer, false);
       else
-        log(1, get_id(*this), ": err - propagate_nonreactiveness");
-  }
-
-  virtual void on_observers_changed() override final {
-    // TODO: can we move is_reactive() check to caller?
-    if (!is_reactive()) {
-      propagate_nonreactiveness();
-    } else {
-      // TODO: check if the opposite is already established:
-      //       if we become reactive, does that mean that all
-      //       observables were already reactive?
-      // Assert that if we are reactive, all observables are also reactiveive.
-      auto is_reactive = [](auto &o) { return o.lock()->is_reactive(); };
-      assert(std::ranges::all_of(observables, is_reactive));
-    }
+        log(1, get_id(*this), ": err - on_nonreactive");
   }
 
   virtual bool is_up_to_date(bool reactive) override final {

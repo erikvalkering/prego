@@ -749,46 +749,6 @@ int main() {
         << "[false] => [] => no propagation";
   };
 
-  "observe_efficiency_reactive"_test = [] {
-    atom a = 42;
-
-    calc b = [=] { return a(); };
-    autorun([=] { b(); });
-
-    b.state->is_reactive_counter = 0;
-
-    calc c = [=] { return b(); };
-    c();
-    expect(b.state->is_reactive_counter == 0_i)
-        << "b is already reactive, so adding a non - reactive observer should "
-           "not require redetermining reactivity of b";
-
-    autorun([=] { b(); });
-    expect(b.state->is_reactive_counter == 0_i)
-        << "b is already reactive, so adding a reactive observer should not "
-           "require redetermining reactivity of b ";
-  };
-
-  "observe_efficiency_unreactive"_test = [] {
-    atom a = 42;
-
-    calc b = [=] { return a(); };
-    b();
-
-    b.state->is_reactive_counter = 0;
-
-    calc c = [=] { return b(); };
-    c();
-    expect(b.state->is_reactive_counter == 0_i)
-        << "b is not reactive, so adding a non-reactive observer should not "
-           "require redetermining reactivity of b ";
-
-    autorun([=] { b(); });
-    expect(b.state->is_reactive_counter == 0_i)
-        << "b is not reactive, so adding a reactive observer should not "
-           "require redetermining reactivity of b ";
-  };
-
   "mixed_observing"_test = [] {
     atom x = 42;
     calc y = [=] { return x(); };
