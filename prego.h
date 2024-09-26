@@ -244,8 +244,6 @@ template <typename T> struct atom_state : observable_t {
   }
 };
 
-auto &get_value(auto &state) { return state.value; }
-
 auto &get(auto &observable) {
   if (active_observers.empty()) {
     // We temporarily create an autorun to force this entire
@@ -278,13 +276,13 @@ public:
       : state{std::make_shared<state_t>(FWD(value))} {}
 
   template <convertible_to<T> U>
-  atom(atom<U> &&src) : atom{std::move(get_value(*src.state))} {}
+  atom(atom<U> &&src) : atom{std::move(src.state->value)} {}
 
   auto set(auto &&value) {
     log(1, "");
-    log(1, get_id(*state), ".set(", value, ") [", get_value(*state), "]");
-    const auto old_value = std::exchange(get_value(*state), FWD(value));
-    if (get_value(*state) == old_value)
+    log(1, get_id(*state), ".set(", value, ") [", state->value, "]");
+    const auto old_value = std::exchange(state->value, FWD(value));
+    if (state->value == old_value)
       return;
     log(1, get_id(*state), ": changed");
 
@@ -300,7 +298,7 @@ public:
     return *this;
   }
 
-  auto &internal_get(bool reactive = false) const { return get_value(*state); }
+  auto &internal_get(bool reactive = false) const { return state->value; }
 
   auto &operator()() const { return get(*this); }
 
