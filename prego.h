@@ -307,7 +307,9 @@ public:
 
 template <typename T> atom(T &&) -> atom<T>;
 
-inline constexpr auto noop_get = [](const auto &o) { return o.internal_get(); };
+inline constexpr auto noop_get = [](const auto &o) -> decltype(auto) {
+  return o.internal_get();
+};
 using noop_get_t = decltype(noop_get);
 
 template <typename F, typename... Args>
@@ -319,9 +321,9 @@ concept invocable_with_get = invocable<F, noop_get_t>;
 auto get_result_t(invocable_with_get auto f) -> decltype(f(noop_get));
 auto get_result_t(invocable auto f) -> decltype(f());
 
-auto get_value(invocable_with_get auto &f, auto observer, auto &observables,
-               bool reactive) {
-  return f([&](auto observable) {
+decltype(auto) get_value(invocable_with_get auto &f, auto observer,
+                         auto &observables, bool reactive) {
+  return f([&](auto observable) -> auto & {
     // Before linking together the observer
     // and observable, get the value,
     // because the calc::internal_get() function
@@ -332,7 +334,7 @@ auto get_value(invocable_with_get auto &f, auto observer, auto &observables,
     // reactive and therefore up-to-date,
     // which would skip a recomputation and
     // return an outdated value instead.
-    auto value = observable.internal_get(reactive);
+    auto &value = observable.internal_get(reactive);
 
     // Register this observable
     observables.insert(observable.state);
@@ -342,10 +344,10 @@ auto get_value(invocable_with_get auto &f, auto observer, auto &observables,
   });
 }
 
-auto get_value(invocable auto &f, auto observer, auto &observables,
-               bool reactive) {
+decltype(auto) get_value(invocable auto &f, auto observer, auto &observables,
+                         bool reactive) {
   active_observers.emplace_back(observer, &observables, reactive);
-  auto value = f();
+  decltype(auto) value = f();
   active_observers.pop_back();
   return value;
 }
