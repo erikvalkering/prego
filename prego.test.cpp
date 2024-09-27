@@ -500,8 +500,31 @@ int main() {
     expect(not c_lt.alive()) << "c should be destroyed";
   };
 
-  skip / "noncopyable_types"_test = [] {
-    expect(not true) << "not implemented yet";
+  "moveonly_types"_test = [] {
+    struct moveonly {
+      moveonly() = default;
+      moveonly(const moveonly &) = delete;
+      moveonly(moveonly &&) = default;
+    };
+    atom a = moveonly{};
+    calc b = [=] {
+      a();
+      return moveonly{};
+    };
+    calc c = [=](auto get) {
+      get(a);
+      return moveonly{};
+    };
+    autorun([=] {
+      a();
+      b();
+      c();
+    });
+    autorun([=](auto get) {
+      get(a);
+      get(b);
+      get(c);
+    });
   };
 
   skip / "immovable_types"_test = [] {
