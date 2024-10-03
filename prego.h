@@ -469,7 +469,7 @@ public:
     return true;
   }
 
-  auto compute(bool reactive) {
+  decltype(auto) compute(bool reactive) {
     log(1, get_id(*this), ": compute");
 
     // Continue reactively if we are either called
@@ -488,7 +488,7 @@ public:
     // together the observer and observable.
     const auto observer = this->weak_from_this();
 
-    auto value = get_value(f, observer, observables, reactive);
+    decltype(auto) value = get_value(f, observer, observables, reactive);
 
     // Set any previously-observed observables to
     // non-reactive.
@@ -514,7 +514,9 @@ public:
 
   auto recompute(bool reactive) {
     // Recompute and determine whether we actually changed
-    const auto changed = value != std::exchange(value, compute(reactive));
+    const auto old_value = std::move(value);
+    value.emplace(compute(reactive));
+    const auto changed = old_value != value;
 
     // Reset these data, otherwise this observable
     // will be incorrectly considered as outdated.
