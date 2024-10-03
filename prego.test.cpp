@@ -505,21 +505,28 @@ int main() {
       moveonly() = default;
       moveonly(const moveonly &) = delete;
       moveonly(moveonly &&) = default;
+
+      auto operator<=>(const moveonly &) const = default;
     };
+
     atom a = moveonly{};
+
     calc b = [=] {
       a();
       return moveonly{};
     };
+
     calc c = [=](auto get) {
       get(a);
       return moveonly{};
     };
+
     autorun([=] {
       a();
       b();
       c();
     });
+
     autorun([=](auto get) {
       get(a);
       get(b);
