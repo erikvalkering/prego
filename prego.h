@@ -1,7 +1,6 @@
 #include <algorithm>
 #include <cassert>
 #include <iostream>
-#include <map>
 #include <memory>
 #include <optional>
 #include <ranges>
@@ -72,15 +71,12 @@ struct hooks_mixin {
   mutable int is_up_to_date_counter = 0;
   mutable int observe_counter = 0;
   mutable std::vector<bool> observe_calls;
-  mutable int is_reactive_counter = 0;
 
   void before_observe(const std::weak_ptr<prego::observer_t> &observer,
                       bool reactive) const {
     ++observe_counter;
     observe_calls.push_back(reactive);
   }
-
-  void before_is_reactive() const { ++is_reactive_counter; }
 
   void before_is_up_to_date(bool reactive) const { ++is_up_to_date_counter; }
 };
@@ -150,26 +146,21 @@ public:
 struct observable_t : id_mixin, hooks_mixin {
   insertion_order_map<std::weak_ptr<observer_t>, bool, std::owner_less<>>
       observers = {};
+  size_t reactive_observers_count = 0;
 
-  virtual void on_observers_changed() {}
+  virtual void on_nonreactive() {}
   virtual bool is_up_to_date(bool reactive) = 0;
 
-  auto is_reactive() const {
-    before_is_reactive();
-    auto is_true = [](auto x) { return x; };
-    return std::ranges::any_of(observers | std::views::values, is_true);
-  }
+  auto is_reactive() const { return reactive_observers_count != 0; }
 
   void observe(const std::weak_ptr<observer_t> &observer, const bool reactive) {
     before_observe(observer, reactive);
 
     log(1, get_id(*this), ".observe(", get_id(observer), ", ", reactive, ")");
     if (reactive != std::exchange(observers[observer], reactive)) {
-      // TODO: Only if reactive == false, on_observers_changed() could
-      // potentially do something (if this was the last remaining reactive
-      // observer).
-      // TODO: Also, on_reactive_changed() might be a better name
-      on_observers_changed();
+      reactive_observers_count += (reactive ? +1 : -1);
+      if (!is_reactive())
+        on_nonreactive();
     }
   }
 
@@ -187,8 +178,11 @@ struct observable_t : id_mixin, hooks_mixin {
     if (!node.mapped())
       return;
 
+    --reactive_observers_count;
+
     // Now propagate the (potentially) new reactive state
-    on_observers_changed();
+    if (!is_reactive())
+      on_nonreactive();
   }
 };
 
@@ -248,8 +242,6 @@ template <typename T> struct atom_state : observable_t {
   }
 };
 
-auto &get_value(auto &state) { return state.value; }
-
 auto &get(auto &observable) {
   if (active_observers.empty()) {
     // We temporarily create an autorun to force this entire
@@ -282,13 +274,13 @@ public:
       : state{std::make_shared<state_t>(FWD(value))} {}
 
   template <convertible_to<T> U>
-  atom(atom<U> &&src) : atom{std::move(get_value(*src.state))} {}
+  atom(atom<U> &&src) : atom{std::move(src.state->value)} {}
 
   auto set(auto &&value) {
     log(1, "");
-    log(1, get_id(*state), ".set(", value, ") [", get_value(*state), "]");
-    const auto old_value = std::exchange(get_value(*state), FWD(value));
-    if (get_value(*state) == old_value)
+    log(1, get_id(*state), ".set(", value, ") [", state->value, "]");
+    const auto old_value = std::exchange(state->value, FWD(value));
+    if (state->value == old_value)
       return;
     log(1, get_id(*state), ": changed");
 
@@ -304,7 +296,7 @@ public:
     return *this;
   }
 
-  auto &internal_get(bool reactive = false) const { return get_value(*state); }
+  auto &internal_get(bool reactive = false) const { return state->value; }
 
   auto &operator()() const { return get(*this); }
 
@@ -313,7 +305,9 @@ public:
 
 template <typename T> atom(T &&) -> atom<T>;
 
-inline constexpr auto noop_get = [](const auto &o) { return o.internal_get(); };
+inline constexpr auto noop_get = [](const auto &o) -> decltype(auto) {
+  return o.internal_get();
+};
 using noop_get_t = decltype(noop_get);
 
 template <typename F, typename... Args>
@@ -325,9 +319,9 @@ concept invocable_with_get = invocable<F, noop_get_t>;
 auto get_result_t(invocable_with_get auto f) -> decltype(f(noop_get));
 auto get_result_t(invocable auto f) -> decltype(f());
 
-auto get_value(invocable_with_get auto &f, auto observer, auto &observables,
-               bool reactive) {
-  return f([&](auto observable) {
+decltype(auto) get_value(invocable_with_get auto &f, auto observer,
+                         auto &observables, bool reactive) {
+  return f([&](auto observable) -> auto & {
     // Before linking together the observer
     // and observable, get the value,
     // because the calc::internal_get() function
@@ -338,7 +332,7 @@ auto get_value(invocable_with_get auto &f, auto observer, auto &observables,
     // reactive and therefore up-to-date,
     // which would skip a recomputation and
     // return an outdated value instead.
-    auto value = observable.internal_get(reactive);
+    auto &value = observable.internal_get(reactive);
 
     // Register this observable
     observables.insert(observable.state);
@@ -348,10 +342,10 @@ auto get_value(invocable_with_get auto &f, auto observer, auto &observables,
   });
 }
 
-auto get_value(invocable auto &f, auto observer, auto &observables,
-               bool reactive) {
+decltype(auto) get_value(invocable auto &f, auto observer, auto &observables,
+                         bool reactive) {
   active_observers.emplace_back(observer, &observables, reactive);
-  auto value = f();
+  decltype(auto) value = f();
   active_observers.pop_back();
   return value;
 }
@@ -430,23 +424,13 @@ public:
     }
   }
 
-  virtual void on_observers_changed() override final {
-    // TODO: can we move is_reactive() check to caller?
-    if (!is_reactive()) {
-      const auto observer = this->weak_from_this();
-      for (auto &observable : observables)
-        if (auto p = observable.lock())
-          p->observe(observer, false);
-        else
-          log(1, get_id(*this), ": err - on_observers_changed");
-    } else {
-      // TODO: check if the opposite is already established:
-      //       if we become reactive, does that mean that all
-      //       observables were already reactive?
-      // Assert that if we are reactive, all observables are also reactiveive.
-      auto is_reactive = [](auto &o) { return o.lock()->is_reactive(); };
-      assert(std::ranges::all_of(observables, is_reactive));
-    }
+  virtual void on_nonreactive() override final {
+    const auto observer = this->weak_from_this();
+    for (auto &observable : observables)
+      if (auto p = observable.lock())
+        p->observe(observer, false);
+      else
+        log(1, get_id(*this), ": err - on_nonreactive");
   }
 
   virtual bool is_up_to_date(bool reactive) override final {
@@ -483,7 +467,7 @@ public:
     return true;
   }
 
-  auto compute(bool reactive) {
+  decltype(auto) compute(bool reactive) {
     log(1, get_id(*this), ": compute");
 
     // Continue reactively if we are either called
@@ -502,7 +486,7 @@ public:
     // together the observer and observable.
     const auto observer = this->weak_from_this();
 
-    auto value = get_value(f, observer, observables, reactive);
+    decltype(auto) value = get_value(f, observer, observables, reactive);
 
     // Set any previously-observed observables to
     // non-reactive.
@@ -528,7 +512,9 @@ public:
 
   auto recompute(bool reactive) {
     // Recompute and determine whether we actually changed
-    const auto changed = value != std::exchange(value, compute(reactive));
+    const auto old_value = std::move(value);
+    value.emplace(compute(reactive));
+    const auto changed = old_value != value;
 
     // Reset these data, otherwise this observable
     // will be incorrectly considered as outdated.

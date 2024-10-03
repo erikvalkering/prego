@@ -500,8 +500,38 @@ int main() {
     expect(not c_lt.alive()) << "c should be destroyed";
   };
 
-  skip / "noncopyable_types"_test = [] {
-    expect(not true) << "not implemented yet";
+  "moveonly_types"_test = [] {
+    struct moveonly {
+      moveonly() = default;
+      moveonly(const moveonly &) = delete;
+      moveonly(moveonly &&) = default;
+
+      auto operator<=>(const moveonly &) const = default;
+    };
+
+    atom a = moveonly{};
+
+    calc b = [=] {
+      a();
+      return moveonly{};
+    };
+
+    calc c = [=](auto get) {
+      get(a);
+      return moveonly{};
+    };
+
+    autorun([=] {
+      a();
+      b();
+      c();
+    });
+
+    autorun([=](auto get) {
+      get(a);
+      get(b);
+      get(c);
+    });
   };
 
   skip / "immovable_types"_test = [] {
@@ -604,7 +634,7 @@ int main() {
   };
 
   "graph_traversal_efficiency_basics"_test = [] {
-    atom<int> a = 42;
+    atom a = 42;
     a();
     expect(a.state->is_up_to_date_counter == 0_i)
         << "accessing a should directly return the value, without checking "
@@ -619,7 +649,7 @@ int main() {
   };
 
   "graph_traversal_efficiency_lazy"_test = [] {
-    atom<int> a = 42;
+    atom a = 42;
     calc b = [=] { return a(); };
 
     calc c = [=] { return b(); };
@@ -643,7 +673,7 @@ int main() {
   };
 
   skip / "graph_traversal_efficiency_reactive_bottom_up"_test = [] {
-    atom<int> a = 42;
+    atom a = 42;
     calc b = [=] { return a(); };
 
     atom f = true;
@@ -680,7 +710,7 @@ int main() {
   };
 
   skip / "graph_traversal_efficiency_reactive_bottom_up_top_down"_test = [] {
-    atom<int> a = 42;
+    atom a = 42;
     calc b = [=] { return a(); };
 
     atom f = true;
@@ -695,36 +725,13 @@ int main() {
     f = false;
     expect(a.state->is_up_to_date_counter == 0_i)
         << "b should not need to check a for determining whether it is up "
-           "to "
-           "date, because it was reactive after all";
+           "to date, because it was reactive after all";
   };
-
-  /*"graph_traversal_efficiency_reactive_top_down"_test = [] {
-      atom<int> a = 42;
-      calc b = [=] { return a(); };
-
-      atom f1 = true;
-      calc g = [=] { return f1() ? b() : 0; };
-      calc h = [=] { return f1() ? 0 : b(); }
-
-      calc i = [=] { return f2() ? g() : h(); };
-
-      atom f2 = true;
-      autorun([=] { f2() ? g() : b(); } });
-
-      f1 = false;
-      a.state->is_up_to_date_counter = 0;
-
-      f2 = false;
-      assert_eq(a.state->is_up_to_date_counter, 0, "b should not need to check a
-  for determining whether it is up to date, because it was reactive after all");
-  };
-  */
 
   // This unit test makes sure that calls to unobserve() don't trigger
   // unnecessary reactive state propagation (through observe()).
   "unobserve_efficiency"_test = [] {
-    atom<int> a = 42;
+    atom a = 42;
 
     calc b = [=] { return a(); };
 
@@ -771,48 +778,6 @@ int main() {
     expect(a.state->observe_counter == 0_i)
         << "[false] => [] => no propagation";
   };
-
-  /*
-  "observe_efficiency_reactive"_test = [] {
-    atom<int> a = 42;
-
-    calc b = [=] { return a(); };
-    autorun([=] { b(); });
-
-    b.state->is_reactive_counter = 0;
-
-    calc c = [=] { return b(); };
-    c();
-    expect(b.state->is_reactive_counter == 0_i)
-        << "b is already reactive, so adding a non - reactive observer should "
-           "not require redetermining reactivity of b";
-
-    autorun([=] { b(); });
-    expect(b.state->is_reactive_counter == 0_i)
-        << "b is already reactive, so adding a reactive observer should not "
-           "require redetermining reactivity of b ";
-  };
-
-  "observe_efficiency_unreactive"_test = [] {
-    atom<int> a = 42;
-
-    calc b = [=] { return a(); };
-    b();
-
-    b.state->is_reactive_counter = 0;
-
-    calc c = [=] { return b(); };
-    c();
-    expect(b.state->is_reactive_counter == 0_i)
-        << "b is not reactive, so adding a non-reactive observer should not "
-           "require redetermining reactivity of b ";
-
-    autorun([=] { b(); });
-    expect(b.state->is_reactive_counter == 0_i)
-        << "b is not reactive, so adding a reactive observer should not "
-           "require redetermining reactivity of b ";
-  };
-  */
 
   "mixed_observing"_test = [] {
     atom x = 42;
