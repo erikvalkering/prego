@@ -14,7 +14,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(cmake/CPM.cmake)
 
 CPMAddPackage("gh:fmtlib/fmt#11.0.1")
-CPMAddPackage("gh:boost-ext/ut#v2.1.0")
+CPMAddPackage("gh:boost-ext/ut#v2.3.0")
 
 add_executable(test_prego prego.test.cpp)
 target_compile_features(test_prego PRIVATE cxx_std_23)
