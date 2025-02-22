@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cassert>
+#include <concepts>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -93,7 +94,7 @@ template <typename Key, typename Value, typename Comparator = std::less<Key>>
 class insertion_order_map {
   std::vector<std::pair<Key, Value>> nodes;
 
-  inline auto find_node(this auto &&self, const Key &key) {
+  inline auto find_node(this auto &&self, const auto &key) {
     return std::ranges::find_if(
         FWD(self).nodes,
         [&](auto &k) {
@@ -108,7 +109,7 @@ public:
   decltype(auto) begin(this auto &&self) { return FWD(self).nodes.begin(); }
   decltype(auto) end(this auto &&self) { return FWD(self).nodes.end(); }
 
-  inline auto &operator[](const Key &key) {
+  inline auto &operator[](const auto &key) {
     auto it = find_node(key);
     if (it != nodes.end()) {
       return it->second;
@@ -117,11 +118,11 @@ public:
     return nodes.emplace_back(key, Value{}).second;
   }
 
-  inline decltype(auto) contains(const Key &key) const {
+  inline decltype(auto) contains(const auto &key) const {
     return find_node(key) != nodes.end();
   }
 
-  inline decltype(auto) extract(const Key &key) {
+  inline decltype(auto) extract(const auto &key) {
     struct node_handle {
       bool _empty;
       Key _key;
@@ -175,7 +176,8 @@ struct observable_t : id_mixin, hooks_mixin {
 
   // Called when an observer (e.g. a calc_state) gets destroyed
   // and needs to remove itself from the observable.
-  void unobserve(const std::weak_ptr<observer_t> &observer) {
+  template <std::derived_from<observer_t> T>
+  void unobserve(const std::weak_ptr<T> &observer) {
     log(1, get_id(*this), ".unobserve(<observer>)");
 
     assert(observers.contains(observer));
