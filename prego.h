@@ -223,6 +223,8 @@ concept convertible_to = std::is_convertible_v<From, To> &&
 template <typename T> struct atom_state : observable_t {
   T value;
 
+  atom_state() = default;
+
   atom_state(auto &&value) : value{FWD(value)} {}
   ~atom_state() { log(1, "~", get_id(*this)); }
 
@@ -266,6 +268,8 @@ template <typename T> struct atom {
   std::shared_ptr<state_t> state;
 
 public:
+  atom() : state{std::make_shared<state_t>()} {}
+
   atom(const atom &) = default;
   atom &operator=(const atom &) = default;
 

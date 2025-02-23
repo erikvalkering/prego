@@ -38,6 +38,14 @@ auto to_vector(auto &&rng) {
   return r;
 }
 
+struct immovable {
+  immovable() = default;
+  immovable(const immovable &) = delete;
+  immovable(immovable &&) = delete;
+
+  auto operator<=>(const immovable &) const = default;
+};
+
 auto sandbox() {
   auto first_name = atom{"Anita"s};
   auto last_name = atom{"Laera"s};
@@ -534,8 +542,13 @@ int main() {
     });
   };
 
-  skip / "immovable_types"_test = [] {
-    expect(not true) << "not implemented yet";
+  "immovable_types"_test = [] {
+    immovable a = immovable{};
+    // not allowed: atom b = immovable{};
+
+    atom<immovable> c = atom<immovable>{};
+    atom d = atom<immovable>{};
+    auto e = atom<immovable>{};
   };
 
   "atom_syntaxes"_test = [] {
