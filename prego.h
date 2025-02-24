@@ -225,7 +225,7 @@ template <typename T> struct atom_state : observable_t {
 
   atom_state() = default;
 
-  atom_state(auto &&value) : value{FWD(value)} {}
+  atom_state(convertible_to<T> auto &&value) : value{FWD(value)} {}
   ~atom_state() { log(1, "~", get_id(*this)); }
 
   virtual bool is_up_to_date(bool reactive) override final {
