@@ -563,6 +563,11 @@ int main() {
     // Explicit constructors
     atom h = atom<immovable>{true};
     atom i = atom<immovable>{std::in_place, true, true};
+
+    // Concise syntx
+    atom<immovable> j = {std::in_place, 42, 1729};
+    atom k = {std::in_place_type<immovable>, 42, 1729};
+    atom l = {std::in_place_type<immovable>, 42, 1729};
   };
 
   "atom_syntaxes"_test = [] {

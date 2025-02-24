@@ -284,6 +284,9 @@ public:
   atom(std::in_place_t, auto &&...args)
       : state{std::make_shared<state_t>(std::in_place, FWD(args)...)} {}
 
+  atom(std::in_place_type_t<T>, auto &&...args)
+      : state{std::make_shared<state_t>(std::in_place, FWD(args)...)} {}
+
   template <convertible_to<T> U>
   atom(atom<U> &&src) : atom{std::move(src.state->value)} {}
 
@@ -315,6 +318,7 @@ public:
 };
 
 template <typename T> atom(T &&) -> atom<T>;
+template <typename T> atom(std::in_place_type_t<T>, auto &&...) -> atom<T>;
 
 inline constexpr auto noop_get = [](const auto &o) -> decltype(auto) {
   return o.internal_get();
