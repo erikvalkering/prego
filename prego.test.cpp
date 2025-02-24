@@ -7,6 +7,7 @@
 
 #include <string>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 template <> struct fmt::formatter<std::vector<bool>> {
@@ -40,6 +41,11 @@ auto to_vector(auto &&rng) {
 
 struct immovable {
   immovable() = default;
+  immovable(int) {}
+  immovable(int, int) {}
+  explicit immovable(bool) {}
+  explicit immovable(bool, bool) {}
+
   immovable(const immovable &) = delete;
   immovable(immovable &&) = delete;
 
@@ -542,13 +548,21 @@ int main() {
     });
   };
 
-  "immovable_types"_test = [] {
+  "immovable_atom_types"_test = [] {
     immovable a = immovable{};
     // not allowed: atom b = immovable{};
 
     atom<immovable> c = atom<immovable>{};
     atom d = atom<immovable>{};
     auto e = atom<immovable>{};
+
+    // Implicit constructors
+    atom f = atom<immovable>{42};
+    atom g = atom<immovable>{std::in_place, 42, 1729};
+
+    // Explicit constructors
+    atom h = atom<immovable>{true};
+    atom i = atom<immovable>{std::in_place, true, true};
   };
 
   "atom_syntaxes"_test = [] {

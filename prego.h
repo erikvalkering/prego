@@ -226,6 +226,8 @@ template <typename T> struct atom_state : observable_t {
   atom_state() = default;
 
   atom_state(convertible_to<T> auto &&value) : value{FWD(value)} {}
+  atom_state(std::in_place_t, auto &&...args) : value{FWD(args)...} {}
+
   ~atom_state() { log(1, "~", get_id(*this)); }
 
   virtual bool is_up_to_date(bool reactive) override final {
@@ -278,6 +280,9 @@ public:
 
   atom(convertible_to<T> auto &&value)
       : state{std::make_shared<state_t>(FWD(value))} {}
+
+  atom(std::in_place_t, auto &&...args)
+      : state{std::make_shared<state_t>(std::in_place, FWD(args)...)} {}
 
   template <convertible_to<T> U>
   atom(atom<U> &&src) : atom{std::move(src.state->value)} {}
