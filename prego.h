@@ -320,6 +320,10 @@ public:
 template <typename T> atom(T &&) -> atom<T>;
 template <typename T> atom(std::in_place_type_t<T>, auto &&...) -> atom<T>;
 
+template <typename T> auto make_atom(auto &&...args) {
+  return atom<T>{std::in_place, FWD(args)...};
+}
+
 inline constexpr auto noop_get = [](const auto &o) -> decltype(auto) {
   return o.internal_get();
 };

@@ -27,6 +27,7 @@ using prego::autorun;
 using prego::calc;
 using prego::global_scope_manager;
 using prego::insertion_order_map;
+using prego::make_atom;
 using prego::scope_manager_t;
 
 auto to_vector(auto &&rng) {
@@ -568,6 +569,9 @@ int main() {
     atom<immovable> j = {std::in_place, 42, 1729};
     atom k = {std::in_place_type<immovable>, 42, 1729};
     atom l = {std::in_place_type<immovable>, 42, 1729};
+
+    // Factory function
+    atom m = make_atom<immovable>(42, 1729);
   };
 
   "atom_syntaxes"_test = [] {
