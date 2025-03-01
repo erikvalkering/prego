@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cassert>
 #include <concepts>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <optional>
@@ -361,12 +362,16 @@ decltype(auto) get_value(invocable_with_get auto &f, auto observer,
   });
 }
 
+template <typename F> struct scope_guard {
+  F f;
+  ~scope_guard() { f(); };
+};
+
 decltype(auto) get_value(invocable auto &f, auto observer, auto &observables,
                          bool reactive) {
   active_observers.emplace_back(observer, &observables, reactive);
-  decltype(auto) value = f();
-  active_observers.pop_back();
-  return value;
+  auto _ = scope_guard{[] { active_observers.pop_back(); }};
+  return f();
 }
 
 template <typename F>
@@ -505,35 +510,49 @@ public:
     // together the observer and observable.
     const auto observer = this->weak_from_this();
 
-    decltype(auto) value = get_value(f, observer, observables, reactive);
+    // This code should be executed after the function
+    // has been invoked, to mark any non-reactive
+    // dependencies as such.
+    // However, in order te support functions that return
+    // immovable types, we need to return the result immediately.c
+    // To achieve that, we use a scope_guard.
+    auto _ = scope_guard{[&] {
+      // Set any previously-observed observables to
+      // non-reactive.
+      // NOTE: they should *not* be removed, for two reasons:
+      // - they might become reactive again, and we don't
+      //   want to loose their cache
+      // - they might be lazily observed again,
+      //   in which case the is_up_to_date() function
+      //   will traverse the observables to figure out
+      //   if it is still up to date.
+      for (auto &observable : previous_observables) {
+        if (observables.contains(observable))
+          continue;
 
-    // Set any previously-observed observables to
-    // non-reactive.
-    // NOTE: they should *not* be removed, for two reasons:
-    // - they might become reactive again, and we don't
-    //   want to loose their cache
-    // - they might be lazily observed again,
-    //   in which case the is_up_to_date() function
-    //   will traverse the observables to figure out
-    //   if it is still up to date.
-    for (auto &observable : previous_observables) {
-      if (observables.contains(observable))
-        continue;
+        if (auto p = observable.lock())
+          p->observe(observer, false);
+        else
+          log(1, "err - compute");
+      }
+    }};
 
-      if (auto p = observable.lock())
-        p->observe(observer, false);
-      else
-        log(1, "err - compute");
-    }
-
-    return value;
+    return get_value(f, observer, observables, reactive);
   }
 
   auto recompute(bool reactive) {
     // Recompute and determine whether we actually changed
-    const auto old_value = std::move(value);
-    value.emplace(compute(reactive));
-    const auto changed = old_value != value;
+    const auto changed = [&] {
+      if constexpr (std::movable<T> or std::copyable<T>) {
+        const auto old_value = std::move(value);
+        value.emplace(compute(reactive));
+        return old_value != value;
+      } else {
+        value->~T();
+        new (&*value) T{compute(reactive)};
+        return true;
+      }
+    }();
 
     // Reset these data, otherwise this observable
     // will be incorrectly considered as outdated.

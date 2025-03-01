@@ -41,6 +41,8 @@ auto to_vector(auto &&rng) {
 }
 
 struct immovable {
+  int x = 42;
+
   immovable() = default;
   immovable(int) {}
   immovable(int, int) {}
@@ -572,6 +574,39 @@ int main() {
 
     // Factory function
     atom m = make_atom<immovable>(42, 1729);
+  };
+
+  "immovable_calc_types"_test = [] {
+    calc a = [] { return immovable{42, 1729}; };
+
+    atom b = 42;
+    calc c = [=] { return immovable{b(), 1729}; };
+
+    atom d = atom<immovable>{};
+    calc e = [=] { return immovable{d().x, 1729}; };
+
+    calc f = [=](auto get) {
+      get(e);
+      return immovable{};
+    };
+
+    autorun([=] {
+      a();
+      b();
+      c();
+      d();
+      e();
+      f();
+    });
+
+    autorun([=](auto get) {
+      get(a);
+      get(b);
+      get(c);
+      get(d);
+      get(e);
+      get(f);
+    });
   };
 
   "atom_syntaxes"_test = [] {
