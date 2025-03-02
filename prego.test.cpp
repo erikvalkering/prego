@@ -609,6 +609,25 @@ int main() {
     });
   };
 
+  "nondefault_constructible_types"_test = [] {
+    struct Foo {
+      Foo(int) {}
+      auto operator<=>(const Foo &) const = default;
+    };
+
+    atom a = Foo{42};
+
+    calc b = [=] {
+      a();
+      return Foo{1729};
+    };
+
+    autorun([=] {
+      a();
+      b();
+    });
+  };
+
   "atom_syntaxes"_test = [] {
     auto a = atom{42};
     atom b = 42;
