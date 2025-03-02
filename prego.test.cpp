@@ -40,21 +40,6 @@ auto to_vector(auto &&rng) {
   return r;
 }
 
-struct immovable {
-  int x = 42;
-
-  immovable() = default;
-  immovable(int) {}
-  immovable(int, int) {}
-  explicit immovable(bool) {}
-  explicit immovable(bool, bool) {}
-
-  immovable(const immovable &) = delete;
-  immovable(immovable &&) = delete;
-
-  auto operator<=>(const immovable &) const = default;
-};
-
 auto sandbox() {
   auto first_name = atom{"Anita"s};
   auto last_name = atom{"Laera"s};
@@ -549,6 +534,21 @@ int main() {
       get(b);
       get(c);
     });
+  };
+
+  struct immovable {
+    int x = 42;
+
+    immovable() = default;
+    immovable(int) {}
+    immovable(int, int) {}
+    explicit immovable(bool) {}
+    explicit immovable(bool, bool) {}
+
+    immovable(const immovable &) = delete;
+    immovable(immovable &&) = delete;
+
+    auto operator<=>(const immovable &) const = default;
   };
 
   "immovable_atom_types"_test = [] {
