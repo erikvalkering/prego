@@ -538,10 +538,12 @@ int main() {
 
   struct immovable {
     int x = 42;
+    int y = 1729;
 
     immovable() = default;
-    immovable(int) {}
-    immovable(int, int) {}
+    immovable(int x) : x{x} {}
+    immovable(int x, int y) : x{x}, y{y} {}
+
     explicit immovable(bool) {}
     explicit immovable(bool, bool) {}
 
@@ -574,6 +576,10 @@ int main() {
 
     // Factory function
     atom m = make_atom<immovable>(42, 1729);
+
+    atom n = make_atom<immovable>(1729, 42);
+    expect(n().x == 1729_i);
+    expect(n().y == 42_i);
   };
 
   "immovable_calc_types"_test = [] {
@@ -590,23 +596,9 @@ int main() {
       return immovable{};
     };
 
-    autorun([=] {
-      a();
-      b();
-      c();
-      d();
-      e();
-      f();
-    });
-
-    autorun([=](auto get) {
-      get(a);
-      get(b);
-      get(c);
-      get(d);
-      get(e);
-      get(f);
-    });
+    calc g = [] { return immovable{1729, 42}; };
+    expect(g().x == 1729_i);
+    expect(g().y == 42_i);
   };
 
   "nondefault_constructible_types"_test = [] {
