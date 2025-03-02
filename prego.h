@@ -249,6 +249,8 @@ template <typename T> struct atom_state : observable_t {
   }
 };
 
+/// Returns a reference to the cached value, automatically linking together the
+/// observer and observable.
 auto &get(auto &observable) {
   if (active_observers.empty()) {
     // We temporarily create an autorun to force this entire
@@ -311,6 +313,9 @@ public:
     return *this;
   }
 
+  /// Returns a reference to the cached value
+  /// atom - stored value
+  /// calc - (re)calculates, if necessary
   auto &internal_get(bool reactive = false) const { return state->value; }
 
   auto &operator()() const { return get(*this); }
