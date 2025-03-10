@@ -580,6 +580,21 @@ int main() {
     atom n = make_atom<immovable>(1729, 42);
     expect(n().x == 1729_i);
     expect(n().y == 42_i);
+
+    atom o = make_atom<immovable>(42, 1729);
+    auto triggered = false;
+    autorun([=, &triggered] {
+      o();
+      triggered = true;
+    });
+    triggered = false;
+
+    o = make_atom<immovable>(42, 1729);
+    expect(not triggered)
+        << "equal immovable types should not trigger recomputation";
+
+    o = make_atom<immovable>(1729, 42);
+    expect(triggered) << "unequal immovable types should trigger recomputation";
   };
 
   "immovable_calc_types"_test = [] {
