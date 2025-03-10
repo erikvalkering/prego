@@ -8,6 +8,7 @@
 #include <ranges>
 #include <set>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -385,10 +386,12 @@ struct calc_state : observable_t,
                     std::enable_shared_from_this<calc_state<F>> {
 private:
   using T = decltype(get_result_t(std::declval<F>()));
+  using holder_t = std::conditional_t<std::movable<T> or std::copyable<T>,
+                                      std::optional<T>, std::unique_ptr<T>>;
 
 public:
   F f;
-  std::optional<T> value;
+  holder_t value;
   observables_t observables;
   int stale_count = 0;
   bool maybe_changed = false;
@@ -547,17 +550,15 @@ public:
 
   auto recompute(bool reactive) {
     // Recompute and determine whether we actually changed
-    const auto changed = [&] {
-      if constexpr (std::movable<T> or std::copyable<T>) {
-        const auto old_value = std::move(value);
-        value.emplace(compute(reactive));
-        return old_value != value;
-      } else {
-        value->~T();
-        new (&*value) T{compute(reactive)};
-        return true;
-      }
-    }();
+    const auto old_value = std::move(value);
+
+    if constexpr (std::movable<T> or std::copyable<T>) {
+      value.emplace(compute(reactive));
+    } else {
+      value = std::unique_ptr<T>{new T{compute(reactive)}};
+    }
+
+    const auto changed = !old_value or (*old_value != *value);
 
     // Reset these data, otherwise this observable
     // will be incorrectly considered as outdated.
