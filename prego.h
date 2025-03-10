@@ -553,7 +553,7 @@ public:
     const auto old_value = std::move(value);
 
     if constexpr (std::movable<T> or std::copyable<T>) {
-      value.emplace(compute(reactive));
+      value = compute(reactive);
     } else {
       value = std::unique_ptr<T>{new T{compute(reactive)}};
     }
