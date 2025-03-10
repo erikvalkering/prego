@@ -599,6 +599,22 @@ int main() {
     calc g = [] { return immovable{1729, 42}; };
     expect(g().x == 1729_i);
     expect(g().y == 42_i);
+
+    atom h = 0;
+    calc i = [=] { return immovable{h() < 2 ? 42 : 1729}; };
+    auto triggered = false;
+    autorun([=, &triggered] {
+      i();
+      triggered = true;
+    });
+    triggered = false;
+
+    h = 1;
+    expect(not triggered)
+        << "equal immovable types should not trigger recomputation";
+
+    h = 2;
+    expect(triggered) << "unequal immovable types should trigger recomputation";
   };
 
   "nondefault_constructible_types"_test = [] {
