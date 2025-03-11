@@ -107,6 +107,10 @@ struct immovable {
   immovable(immovable &&) = delete;
 
   auto operator<=>(const immovable &) const = default;
+
+  friend auto &operator<<(std::ostream &os, const immovable &o) {
+    return os << "immovable{" << o.x << ", " << o.y << "}";
+  }
 };
 
 // struct Person_ {
