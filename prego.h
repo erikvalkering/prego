@@ -226,12 +226,20 @@ template <typename T>
 concept immovable = not(std::movable<T> or std::copyable<T>);
 
 template <typename T> struct atom_state : observable_t {
-  T value;
+  using holder_t = std::conditional_t<immovable<T>, std::unique_ptr<T>, T>;
+  holder_t value;
 
   atom_state() = default;
 
-  atom_state(convertible_to<T> auto &&value) : value{FWD(value)} {}
-  atom_state(std::in_place_t, auto &&...args) : value{FWD(args)...} {}
+  atom_state(convertible_to<T> auto &&value)
+      : atom_state{std::in_place, FWD(value)} {}
+
+  atom_state(std::in_place_t, auto &&...args)
+    requires(immovable<T>)
+      : value{std::make_unique<T>(FWD(args)...)} {}
+  atom_state(std::in_place_t, auto &&...args)
+    requires(not immovable<T>)
+      : value{FWD(args)...} {}
 
   ~atom_state() { log(1, "~", get_id(*this)); }
 
@@ -280,10 +288,7 @@ public:
   atom() : state{std::make_shared<state_t>()} {}
 
   atom(const atom &) = default;
-  atom &operator=(const atom &) = default;
-
   atom(atom &&) = default;
-  atom &operator=(atom &&) = default;
 
   atom(convertible_to<T> auto &&value)
       : state{std::make_shared<state_t>(FWD(value))} {}
@@ -299,10 +304,17 @@ public:
 
   auto set(auto &&value) {
     log(1, "");
-    log(1, get_id(*state), ".set(", value, ") [", state->value, "]");
-    const auto old_value = std::exchange(state->value, FWD(value));
-    if (state->value == old_value)
-      return;
+    if constexpr (immovable<T>) {
+      log(1, get_id(*state), ".set(", *value, ") [", *state->value, "]");
+      if (*state->value == *value)
+        return;
+    } else {
+      log(1, get_id(*state), ".set(", value, ") [", state->value, "]");
+      if (state->value == value)
+        return;
+    }
+
+    state->value = FWD(value);
     log(1, get_id(*state), ": changed");
 
     // First sweep: mark all as stale
@@ -312,15 +324,35 @@ public:
     notify_observers(*state, notification_t::changed);
   }
 
+  auto emplace(auto &&...args) {
+    if constexpr (immovable<T>) {
+      set(std::make_unique<T>(FWD(args)...));
+    } else {
+      set(T{FWD(args)...});
+    }
+  }
+
   auto &operator=(auto &&value) {
     set(value);
     return *this;
   }
 
+  // Disallow assignment from atoms.
+  // That would cause unexpected unwiring
+  // of dependent calc nodes.
+  atom &operator=(const atom &) = delete;
+  atom &operator=(atom &&) = delete;
+
   /// Returns a reference to the cached value
   /// atom - stored value
   /// calc - (re)calculates, if necessary
-  auto &internal_get(bool reactive = false) const { return state->value; }
+  auto &internal_get(bool reactive = false) const {
+    if constexpr (immovable<T>) {
+      return *state->value;
+    } else {
+      return state->value;
+    }
+  }
 
   auto &operator()() const { return get(*this); }
 

@@ -593,11 +593,11 @@ int main() {
     });
     triggered = false;
 
-    o = make_atom<immovable>(42, 1729);
+    o.emplace(42, 1729);
     expect(not triggered)
         << "equal immovable types should not trigger recomputation";
 
-    o = make_atom<immovable>(1729, 42);
+    o.emplace(1729, 42);
     expect(triggered) << "unequal immovable types should trigger recomputation";
   };
 
