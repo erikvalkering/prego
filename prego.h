@@ -16,9 +16,9 @@
 
 namespace prego {
 
-auto to_string(auto x) { return x; }
+const auto &to_string(const auto &x) { return x; }
 
-auto log_(int level, auto... args) {
+auto log_(int level, const auto &...args) {
   switch (level) {
   default:
     break;
@@ -39,7 +39,7 @@ auto log_(int level, auto... args) {
   std::cout << std::endl;
 }
 
-auto log(auto... args) { log_(args...); }
+auto log(const auto &...args) { log_(args...); }
 
 enum class notification_t {
   stale,
