@@ -92,6 +92,23 @@ public:
   }
 };
 
+struct immovable {
+  int x = 42;
+  int y = 1729;
+
+  immovable() = default;
+  immovable(int x) : x{x} {}
+  immovable(int x, int y) : x{x}, y{y} {}
+
+  explicit immovable(bool) {}
+  explicit immovable(bool, bool) {}
+
+  immovable(const immovable &) = delete;
+  immovable(immovable &&) = delete;
+
+  auto operator<=>(const immovable &) const = default;
+};
+
 // struct Person_ {
 //   atom<std::string> first_name;
 //   atom<std::string> last_name;
@@ -534,23 +551,6 @@ int main() {
       get(b);
       get(c);
     });
-  };
-
-  struct immovable {
-    int x = 42;
-    int y = 1729;
-
-    immovable() = default;
-    immovable(int x) : x{x} {}
-    immovable(int x, int y) : x{x}, y{y} {}
-
-    explicit immovable(bool) {}
-    explicit immovable(bool, bool) {}
-
-    immovable(const immovable &) = delete;
-    immovable(immovable &&) = delete;
-
-    auto operator<=>(const immovable &) const = default;
   };
 
   "immovable_atom_types"_test = [] {
