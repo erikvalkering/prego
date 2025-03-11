@@ -222,6 +222,9 @@ template <typename From, typename To>
 concept convertible_to = std::is_convertible_v<From, To> &&
                          requires { static_cast<To>(std::declval<From>()); };
 
+template <typename T>
+concept immovable = not(std::movable<T> or std::copyable<T>);
+
 template <typename T> struct atom_state : observable_t {
   T value;
 
@@ -386,8 +389,8 @@ struct calc_state : observable_t,
                     std::enable_shared_from_this<calc_state<F>> {
 private:
   using T = decltype(get_result_t(std::declval<F>()));
-  using holder_t = std::conditional_t<std::movable<T> or std::copyable<T>,
-                                      std::optional<T>, std::unique_ptr<T>>;
+  using holder_t =
+      std::conditional_t<immovable<T>, std::unique_ptr<T>, std::optional<T>>;
 
 public:
   F f;
@@ -552,10 +555,10 @@ public:
     // Recompute and determine whether we actually changed
     const auto old_value = std::move(value);
 
-    if constexpr (std::movable<T> or std::copyable<T>) {
-      value = compute(reactive);
-    } else {
+    if constexpr (immovable<T>) {
       value = std::unique_ptr<T>{new T{compute(reactive)}};
+    } else {
+      value = compute(reactive);
     }
 
     const auto changed = !old_value or (*old_value != *value);
