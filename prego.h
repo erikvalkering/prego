@@ -642,27 +642,38 @@ public:
 
 template <typename F> calc(F &&) -> calc<F>;
 
-auto with_return(invocable_with_get auto f) {
-  return [=](auto get) {
-    f(get);
+auto with_return(auto &&f) {
+  return [g = std::tuple{FWD(f)}](auto &&...args)
+    requires requires { f(FWD(args)...); }
+  {
+    std::get<0>(g)(FWD(args)...);
     return 0;
   };
 }
 
-auto with_return(invocable auto f) {
-  return [=] {
-    f();
-    return 0;
-  };
-}
+auto autorun(auto &&f, scope_manager_t *scope_manager = &global_scope_manager) {
+  // Insert a new calc node that simply calls f
+  auto c = calc{with_return(FWD(f))};
 
-auto autorun(auto f, scope_manager_t *scope_manager = &global_scope_manager) {
-  auto c = calc{with_return(f)};
-
+  // Make sure that c becomes reactive by
+  // adding a new calc node that depends on c.
+  // Without this additional indirection,
+  // c would not have any (reactive) observers
+  // and would therefore determine that itself
+  // is not reactive.
+  // Note that this node itself is not reactive,
+  // because it has no observers.
   auto reaction = calc{[=](auto get) {
     get(c);
     return 0;
   }};
+
+  // Now trigger _reactive_ observation of c,
+  // through this additional calc node.
+  // We should _not_ trigger this in the usual way
+  // (i.e. reaction()), because that would eventually
+  // link this node as nonreactive from the perspective
+  // of c, after the computation finished.
   reaction.internal_get(true);
 
   if (scope_manager)
@@ -671,8 +682,8 @@ auto autorun(auto f, scope_manager_t *scope_manager = &global_scope_manager) {
   return reaction;
 }
 
-[[nodiscard]] auto autorun(auto f, std::nullptr_t) {
-  return autorun(f, static_cast<scope_manager_t *>(nullptr));
+[[nodiscard]] auto autorun(auto &&f, std::nullptr_t) {
+  return autorun(FWD(f), static_cast<scope_manager_t *>(nullptr));
 }
 
 template <typename Class, auto thunk> struct Thunk {
