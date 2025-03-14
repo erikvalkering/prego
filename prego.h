@@ -225,6 +225,18 @@ concept convertible_to = std::is_convertible_v<From, To> &&
 template <typename T>
 concept immovable = not(std::movable<T> or std::copyable<T>);
 
+template <typename> constexpr auto is_indirect_holder = false;
+template <typename T>
+constexpr auto is_indirect_holder<std::unique_ptr<T>> = true;
+template <typename T>
+constexpr auto is_indirect_holder<std::optional<T>> = true;
+
+template <typename T>
+concept indirect_holder = is_indirect_holder<std::remove_cvref_t<T>>;
+
+decltype(auto) indirect(indirect_holder auto &&value) { return *FWD(value); }
+decltype(auto) indirect(auto &&value) { return FWD(value); }
+
 template <typename T> struct atom_state : observable_t {
   using holder_t = std::conditional_t<immovable<T>, std::unique_ptr<T>, T>;
   holder_t value;
@@ -290,29 +302,23 @@ public:
   atom(const atom &) = default;
   atom(atom &&) = default;
 
-  atom(convertible_to<T> auto &&value)
-      : state{std::make_shared<state_t>(FWD(value))} {}
-
   atom(std::in_place_t, auto &&...args)
       : state{std::make_shared<state_t>(std::in_place, FWD(args)...)} {}
 
+  atom(convertible_to<T> auto &&value) : atom{std::in_place, FWD(value)} {}
+
   atom(std::in_place_type_t<T>, auto &&...args)
-      : state{std::make_shared<state_t>(std::in_place, FWD(args)...)} {}
+      : atom{std::in_place, FWD(args)...} {}
 
   template <convertible_to<T> U>
   atom(atom<U> &&src) : atom{std::move(src.state->value)} {}
 
   auto set(auto &&value) {
     log(1, "");
-    if constexpr (immovable<T>) {
-      log(1, get_id(*state), ".set(", *value, ") [", *state->value, "]");
-      if (*state->value == *value)
-        return;
-    } else {
-      log(1, get_id(*state), ".set(", value, ") [", state->value, "]");
-      if (state->value == value)
-        return;
-    }
+    log(1, get_id(*state), ".set(", indirect(value), ") [",
+        indirect(state->value), "]");
+    if (indirect(state->value) == indirect(value))
+      return;
 
     state->value = FWD(value);
     log(1, get_id(*state), ": changed");
@@ -347,11 +353,7 @@ public:
   /// atom - stored value
   /// calc - (re)calculates, if necessary
   auto &internal_get(bool reactive = false) const {
-    if constexpr (immovable<T>) {
-      return *state->value;
-    } else {
-      return state->value;
-    }
+    return indirect(state->value);
   }
 
   auto &operator()() const { return get(*this); }
