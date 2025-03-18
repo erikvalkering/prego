@@ -266,7 +266,7 @@ template <typename T> struct atom_state : observable_t {
     // (using the stale_count).
     // Therefore, we know that this atom
     // did not change with respect to the previous time
-    // that the observer was computed, and
+    // that the observer was calculated, and
     // must therefore be considered up-to-date.
     log(6, get_id(*this), ".is_up_to_date() [true]");
     return true;
@@ -389,11 +389,11 @@ decltype(auto) get_value(invocable_with_get auto &f, auto observer,
     // and observable, get the value,
     // because the calc::internal_get() function
     // uses the link to determine whether
-    // it should recompute (via is_reactive).
+    // it should recalculate (via is_reactive).
     // So linking them before retrieving the value,
     // might incorrectly flag the observable as
     // reactive and therefore up-to-date,
-    // which would skip a recomputation and
+    // which would skip a recalculation and
     // return an outdated value instead.
     auto &value = observable.internal_get(reactive);
 
@@ -465,7 +465,7 @@ public:
     case notification_t::changed:
     case notification_t::unchanged: {
       // If an observable was changed,
-      // we need to recompute as well
+      // we need to recalculate as well
       maybe_changed |= notification == notification_t::changed;
       log(1, get_id(*this), ": maybe_changed: ", maybe_changed);
 
@@ -474,7 +474,7 @@ public:
         break;
 
       // If we are not reactive,
-      // don't propagate nor recompute
+      // don't propagate nor recalculate
       if (!is_reactive())
         break;
 
@@ -486,8 +486,8 @@ public:
       }
 
       // Some observables have changed,
-      // so we must recompute
-      recompute(true);
+      // so we must recalculate
+      recalculate(true);
       break;
     }
     }
@@ -536,8 +536,8 @@ public:
     return true;
   }
 
-  decltype(auto) compute(bool reactive) {
-    log(1, get_id(*this), ": compute");
+  decltype(auto) calculate(bool reactive) {
+    log(1, get_id(*this), ": calculate");
 
     // Continue reactively if we are either called
     // reactively (via observable::set()) or if we
@@ -547,7 +547,7 @@ public:
 
     // Clear the old observables by moving them
     // into a temporary variable, such that we can
-    // later compute the diff between them.
+    // later calculate the diff between them.
     auto previous_observables = std::move(observables);
 
     // Create a reference to the current observer,
@@ -578,21 +578,21 @@ public:
         if (auto p = observable.lock())
           p->observe(observer, false);
         else
-          log(1, "err - compute");
+          log(1, "err - calculate");
       }
     }};
 
     return get_value(f, observer, observables, reactive);
   }
 
-  auto recompute(bool reactive) {
-    // Recompute and determine whether we actually changed
+  auto recalculate(bool reactive) {
+    // Recalculate and determine whether we actually changed
     const auto old_value = std::move(value);
 
     if constexpr (immovable<T>) {
-      value = std::unique_ptr<T>{new T{compute(reactive)}};
+      value = std::unique_ptr<T>{new T{calculate(reactive)}};
     } else {
-      value = compute(reactive);
+      value = calculate(reactive);
     }
 
     const auto changed = !old_value or (*old_value != *value);
@@ -630,7 +630,7 @@ public:
   //       because there's no way to unsubscribe
   auto &internal_get(bool reactive = false) const {
     if (!state->is_up_to_date(reactive))
-      state->recompute(reactive);
+      state->recalculate(reactive);
 
     return *state->value;
   }
@@ -673,7 +673,7 @@ auto autorun(auto &&f, scope_manager_t *scope_manager = &global_scope_manager) {
   // We should _not_ trigger this in the usual way
   // (i.e. reaction()), because that would eventually
   // link this node as nonreactive from the perspective
-  // of c, after the computation finished.
+  // of c, after the calculation finished.
   reaction.internal_get(true);
 
   if (scope_manager)
@@ -703,11 +703,11 @@ template <typename Class, auto thunk> struct Thunk {
   }
 };
 
-template <typename Base> struct Computable : Base {
+template <typename Base> struct Calculatable : Base {
   using Class = Base;
 };
 
-#define PREGO_COMPUTED(name)                                                   \
+#define PREGO_CALCULATED(name)                                                 \
   using name##_thunk_get =                                                     \
       Thunk<Class, [](auto &self, auto get) -> decltype(self.name(get)) {      \
         return self.name(get);                                                 \

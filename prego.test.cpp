@@ -122,13 +122,13 @@ struct immovable {
 //   }
 // };
 //
-// struct Person : prego::Computable<Person_> {
+// struct Person : prego::Calculatable<Person_> {
 //   /*    using full_name_thunk = Thunk<Class, [](auto &self, auto get) {
 //       return self.full_name(get);
 //       }>;
 //
 //       calc<full_name_thunk> full_name{this};*/
-//   // PREGO_COMPUTED(full_name);
+//   // PREGO_CALCULATED(full_name);
 // };
 
 template <>
@@ -150,11 +150,12 @@ int main() {
 
     auto b = calc{[=](auto get) { return 2 * get(a); }};
 
-    expect(b() == _i(2 * 42)) << "computed state should be accessible directly";
+    expect(b() == _i(2 * 42))
+        << "calculated state should be accessible directly";
 
     a.set(1729);
     expect(b() == _i(2 * 1729)) << "mutations should be allowed and observable "
-                                   "through computed state";
+                                   "through calculated state";
   };
 
   "lazy_observing"_test = [] {
@@ -167,22 +168,24 @@ int main() {
       return 0;
     }};
 
-    expect(not x) << "computed state should not compute when not requested";
+    expect(not x) << "calculated state should not calculate when not requested";
     b();
-    expect(x) << "computed state should compute the first time when requested";
+    expect(x)
+        << "calculated state should calculate the first time when requested";
 
     x = false;
     b();
-    expect(not x) << "computed state should not recompute when dependencies "
-                     "have not changed";
+    expect(not x)
+        << "calculated state should not recalculate when dependencies "
+           "have not changed";
 
     x = false;
     a.set(1729);
-    expect(not x) << "computed state should not be reactive if not "
+    expect(not x) << "calculated state should not be reactive if not "
                      "reactively observed";
     b();
     expect(x)
-        << "computed state should recompute when dependencies have changed";
+        << "calculated state should recalculate when dependencies have changed";
   };
 
   "dynamic_reactions"_test = [] {
@@ -223,8 +226,8 @@ int main() {
         prego::log(1, "autorun = disabled");
     });
 
-    expect(x) << "full_name should be computed";
-    expect(y) << "display_name should be computed";
+    expect(x) << "full_name should be calculated";
+    expect(y) << "display_name should be calculated";
     expect(z) << "autorun should execute immediately";
 
     x = false;
@@ -298,9 +301,9 @@ int main() {
     //   It matters, because those observables should
     //   be invalidated even if they are not being observed
     enabled.set(true);
-    expect(not x) << "full_name should not recompute because it is still "
+    expect(not x) << "full_name should not recalculate because it is still "
                      "not being observed";
-    expect(y) << "display_name should recompute, because it is "
+    expect(y) << "display_name should recalculate, because it is "
                  "being observed again";
     expect(z) << "autorun should react to change of enabled, as well as "
                  "display_name that was changed";
@@ -311,9 +314,9 @@ int main() {
 
     nick_name.set("");
     expect(x)
-        << "full_name should be queried through display_name and recompute "
+        << "full_name should be queried through display_name and recalculate "
            "because it was previously changed";
-    expect(y) << "display_name should recompute, because nick_name "
+    expect(y) << "display_name should recalculate, because nick_name "
                  "changed, as well "
                  "as full_name";
     expect(not z)
@@ -327,8 +330,8 @@ int main() {
     z = false;
 
     enabled.set(true);
-    expect(not x) << "full_name should not recompute because nothing changed";
-    expect(not y) << "display_name should recompute, because nothing changed";
+    expect(not x) << "full_name should not recalculate because nothing changed";
+    expect(not y) << "display_name should recalculate, because nothing changed";
     expect(z) << "autorun should react to change of enabled";
   };
 
@@ -595,10 +598,10 @@ int main() {
 
     o.emplace(42, 1729);
     expect(not triggered)
-        << "equal immovable types should not trigger recomputation";
+        << "equal immovable types should not trigger recalculation";
 
     o.emplace(1729, 42);
-    expect(triggered) << "unequal immovable types should trigger recomputation";
+    expect(triggered) << "unequal immovable types should trigger recalculation";
   };
 
   "immovable_calc_types"_test = [] {
@@ -630,10 +633,10 @@ int main() {
 
     h = 1;
     expect(not triggered)
-        << "equal immovable types should not trigger recomputation";
+        << "equal immovable types should not trigger recalculation";
 
     h = 2;
-    expect(triggered) << "unequal immovable types should trigger recomputation";
+    expect(triggered) << "unequal immovable types should trigger recalculation";
   };
 
   "nondefault_constructible_types"_test = [] {
