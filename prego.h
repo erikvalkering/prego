@@ -559,7 +559,7 @@ public:
     // has been invoked, to mark any non-reactive
     // dependencies as such.
     // However, in order te support functions that return
-    // immovable types, we need to return the result immediately.c
+    // immovable types, we need to return the result immediately.
     // To achieve that, we use a scope_guard.
     auto _ = scope_guard{[&] {
       // Set any previously-observed observables to
