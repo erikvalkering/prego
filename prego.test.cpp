@@ -529,7 +529,7 @@ suite<"lifetimes"> _ = [] {
   };
 };
 
-int main() {
+suite<"type support"> _ = [] {
   "moveonly_types"_test = [] {
     struct moveonly {
       moveonly() = default;
@@ -661,7 +661,9 @@ int main() {
       b();
     });
   };
+};
 
+int main() {
   "atom_syntaxes"_test = [] {
     auto a = atom{42};
     atom b = 42;
