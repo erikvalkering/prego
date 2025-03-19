@@ -663,7 +663,7 @@ suite<"type support"> _ = [] {
   };
 };
 
-int main() {
+suite<"syntaxes"> _ = [] {
   "atom_syntaxes"_test = [] {
     auto a = atom{42};
     atom b = 42;
@@ -758,7 +758,9 @@ int main() {
 
     x = 1729;
   };
+};
 
+int main() {
   "graph_traversal_efficiency_basics"_test = [] {
     atom a = 42;
     a();
