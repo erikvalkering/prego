@@ -148,9 +148,7 @@ suite<"basics"> _ = [] {
     a.set(1729);
     expect(a() == 1729_i) << "mutations should be allowed and observable";
   };
-};
 
-int main() {
   "calc"_test = [] {
     auto a = atom{42};
 
@@ -390,7 +388,9 @@ int main() {
       expect(x) << "should react on mutations of a";
     }
   };
+};
 
+int main() {
   "scope_manager"_test = [] {
     auto a = atom{42};
 
