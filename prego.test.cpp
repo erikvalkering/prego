@@ -973,7 +973,7 @@ suite<"graph traversal efficiency"> _ = [] {
   };
 };
 
-int main() {
+suite<"insertion_order_map"> _ = [] {
   auto x = std::make_shared<int>(42);
   auto y = std::make_shared<int>(1729);
 
@@ -1021,4 +1021,6 @@ int main() {
           std::tuple{42, 1729, std::less{}},
           std::tuple{std::weak_ptr{x}, std::weak_ptr{y}, std::owner_less{}},
       };
-}
+};
+
+int main() {}
