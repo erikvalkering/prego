@@ -390,7 +390,7 @@ suite<"basics"> _ = [] {
   };
 };
 
-int main() {
+suite<"lifetimes"> _ = [] {
   "scope_manager"_test = [] {
     auto a = atom{42};
 
@@ -531,7 +531,9 @@ int main() {
     expect(not b_lt.alive()) << "b should be destroyed";
     expect(not c_lt.alive()) << "c should be destroyed";
   };
+};
 
+int main() {
   "moveonly_types"_test = [] {
     struct moveonly {
       moveonly() = default;
