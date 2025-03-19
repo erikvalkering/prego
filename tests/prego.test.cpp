@@ -1,4 +1,4 @@
-#include "prego.h"
+#include <prego/prego.h>
 
 #include <fmt/core.h>
 #include <fmt/ranges.h>

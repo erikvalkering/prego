@@ -16,8 +16,12 @@ include(cmake/CPM.cmake)
 CPMAddPackage("gh:fmtlib/fmt#11.0.1")
 CPMAddPackage("gh:boost-ext/ut#v2.3.0")
 
-add_executable(test_prego prego.test.cpp)
+add_library(prego INTERFACE)
+target_include_directories(prego INTERFACE include)
+
+add_executable(test_prego tests/prego.test.cpp)
 target_compile_features(test_prego PRIVATE cxx_std_23)
+target_link_libraries(test_prego PRIVATE prego)
 target_link_libraries(test_prego PRIVATE fmt::fmt)
 target_link_libraries(test_prego PRIVATE ut)
 target_compile_definitions(test_prego PRIVATE BOOST_UT_DISABLE_MODULE)
