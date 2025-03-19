@@ -131,10 +131,6 @@ struct immovable {
 //   // PREGO_CALCULATED(full_name);
 // };
 
-template <>
-auto boost::ut::cfg<boost::ut::override> =
-    boost::ut::runner<boost::ut::reporter<>>{};
-
 #define CONCAT2(a, b) a##b
 #define CONCAT(a, b) CONCAT2(a, b)
 #define _ CONCAT(placeholder_, __LINE__)
