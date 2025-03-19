@@ -760,7 +760,7 @@ suite<"syntaxes"> _ = [] {
   };
 };
 
-int main() {
+suite<"graph traversal efficiency"> _ = [] {
   "graph_traversal_efficiency_basics"_test = [] {
     atom a = 42;
     a();
@@ -906,7 +906,9 @@ int main() {
     expect(a.state->observe_counter == 0_i)
         << "[false] => [] => no propagation";
   };
+};
 
+int main() {
   "mixed_observing"_test = [] {
     atom x = 42;
     calc y = [=] { return x(); };
