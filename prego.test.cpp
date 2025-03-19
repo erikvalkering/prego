@@ -135,7 +135,11 @@ template <>
 auto boost::ut::cfg<boost::ut::override> =
     boost::ut::runner<boost::ut::reporter<>>{};
 
-int main() {
+#define CONCAT2(a, b) a##b
+#define CONCAT(a, b) CONCAT2(a, b)
+#define _ CONCAT(placeholder_, __LINE__)
+
+suite<"basics"> _ = [] {
   "atom"_test = [] {
     auto a = atom{42};
 
@@ -144,7 +148,9 @@ int main() {
     a.set(1729);
     expect(a() == 1729_i) << "mutations should be allowed and observable";
   };
+};
 
+int main() {
   "calc"_test = [] {
     auto a = atom{42};
 
