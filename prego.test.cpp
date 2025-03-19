@@ -384,6 +384,71 @@ suite<"basics"> _ = [] {
       expect(x) << "should react on mutations of a";
     }
   };
+
+  "mixed_observing"_test = [] {
+    atom x = 42;
+    calc y = [=] { return x(); };
+    calc z = [=] { return y(); };
+
+    auto b = false;
+    autorun([=, &b] {
+      b = true;
+      z();
+    });
+    expect(b) << "autorun should execute immediately";
+
+    b = false;
+    x = 1729;
+    expect(b) << "autorun should react to x";
+
+    z();
+
+    b = false;
+    x = 42;
+    expect(b) << "autorun should react to x";
+  };
+
+  "deterministic_ordering_observers"_test = [] {
+    atom a = 42;
+    atom b = 1729;
+    atom x = true;
+    atom y = true;
+    auto order = ""s;
+    calc c = [=, &order] {
+      order += "c";
+      return x() ? a() : b();
+    };
+    calc d = [=, &order] {
+      order += "d";
+      return y() ? a() : b();
+    };
+    autorun([=] {
+      c();
+      d();
+    });
+
+    expect(that % order == "cd"s);
+
+    order = "";
+    a = 0;
+    expect(that % order == "cd"s);
+
+    order = "";
+    b = 0;
+    expect(that % order == ""s);
+
+    order = "";
+    y = false;
+    expect(that % order == "d"s);
+
+    order = "";
+    x = false;
+    expect(that % order == "c"s);
+
+    order = "";
+    b = 1;
+    expect(that % order == "dc"s);
+  };
 };
 
 suite<"lifetimes"> _ = [] {
@@ -909,71 +974,6 @@ suite<"graph traversal efficiency"> _ = [] {
 };
 
 int main() {
-  "mixed_observing"_test = [] {
-    atom x = 42;
-    calc y = [=] { return x(); };
-    calc z = [=] { return y(); };
-
-    auto b = false;
-    autorun([=, &b] {
-      b = true;
-      z();
-    });
-    expect(b) << "autorun should execute immediately";
-
-    b = false;
-    x = 1729;
-    expect(b) << "autorun should react to x";
-
-    z();
-
-    b = false;
-    x = 42;
-    expect(b) << "autorun should react to x";
-  };
-
-  "deterministic_ordering_observers"_test = [] {
-    atom a = 42;
-    atom b = 1729;
-    atom x = true;
-    atom y = true;
-    auto order = ""s;
-    calc c = [=, &order] {
-      order += "c";
-      return x() ? a() : b();
-    };
-    calc d = [=, &order] {
-      order += "d";
-      return y() ? a() : b();
-    };
-    autorun([=] {
-      c();
-      d();
-    });
-
-    expect(that % order == "cd"s);
-
-    order = "";
-    a = 0;
-    expect(that % order == "cd"s);
-
-    order = "";
-    b = 0;
-    expect(that % order == ""s);
-
-    order = "";
-    y = false;
-    expect(that % order == "d"s);
-
-    order = "";
-    x = false;
-    expect(that % order == "c"s);
-
-    order = "";
-    b = 1;
-    expect(that % order == "dc"s);
-  };
-
   auto x = std::make_shared<int>(42);
   auto y = std::make_shared<int>(1729);
 
