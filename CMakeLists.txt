@@ -19,7 +19,9 @@ CPMAddPackage("gh:boost-ext/ut#v2.3.0")
 add_library(prego INTERFACE)
 target_include_directories(prego INTERFACE include)
 
-add_executable(test_prego tests/prego.test.cpp)
+add_executable(test_prego
+  tests/prego.test.cpp
+)
 target_compile_features(test_prego PRIVATE cxx_std_23)
 target_link_libraries(test_prego PRIVATE prego)
 target_link_libraries(test_prego PRIVATE fmt::fmt)
