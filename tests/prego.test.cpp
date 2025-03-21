@@ -1,14 +1,9 @@
-#include <prego/prego.h>
-
+#include "common.h"
 #include <fmt/core.h>
 #include <fmt/ranges.h>
 
-#include <boost/ut.hpp>
-
 #include <string>
-#include <tuple>
 #include <utility>
-#include <vector>
 
 template <> struct fmt::formatter<std::vector<bool>> {
   constexpr auto parse(format_parse_context &ctx) { return ctx.begin(); }
@@ -20,25 +15,13 @@ template <> struct fmt::formatter<std::vector<bool>> {
 };
 
 using namespace std::string_literals;
-using namespace boost::ut;
 
 using prego::atom;
 using prego::autorun;
 using prego::calc;
 using prego::global_scope_manager;
-using prego::insertion_order_map;
 using prego::make_atom;
 using prego::scope_manager_t;
-
-auto to_vector(auto &&rng) {
-  using T = std::ranges::range_value_t<decltype(rng)>;
-
-  auto r = std::vector<T>{};
-  for (auto &&x : rng)
-    r.push_back(x);
-
-  return r;
-}
 
 class lifetime_tracker {
   std::weak_ptr<int> p;
@@ -91,10 +74,6 @@ struct immovable {
 //       calc<full_name_thunk> full_name{this};*/
 //   // PREGO_CALCULATED(full_name);
 // };
-
-#define CONCAT2(a, b) a##b
-#define CONCAT(a, b) CONCAT2(a, b)
-#define _ CONCAT(placeholder_, __LINE__)
 
 suite<"basics"> _ = [] {
   "atom"_test = [] {
@@ -932,56 +911,6 @@ suite<"graph traversal efficiency"> _ = [] {
     expect(a.state->observe_counter == 0_i)
         << "[false] => [] => no propagation";
   };
-};
-
-suite<"insertion_order_map"> _ = [] {
-  auto x = std::make_shared<int>(42);
-  auto y = std::make_shared<int>(1729);
-
-  "insertion_order_map"_test =
-      [](auto data) {
-        auto [key0, key1, cmp] = data;
-        using key_t = decltype(key0);
-        using cmp_t = decltype(cmp);
-
-        auto eq = [=](auto lhs, auto rhs) {
-          return not cmp(lhs, rhs) and not cmp(rhs, lhs);
-        };
-
-        auto m = insertion_order_map<key_t, int, cmp_t>{};
-
-        expect(m.size() == 0_i);
-        expect(m.begin() == m.end());
-        expect(not m.contains(key0));
-        expect(that % m[key0] == 0);
-        expect(m.size() == 1_i);
-        expect(m.begin() != m.end());
-        expect(m.contains(key0));
-        expect(that % (m[key0] = 42) == 42);
-
-        auto n = m.extract(key0);
-        expect(not n.empty());
-        expect(that % eq(n.key(), key0));
-        expect(that % n.mapped() == 42);
-        expect(m.size() == 0_i);
-
-        n = m.extract(key0);
-        expect(n.empty());
-        expect(m.size() == 0_i);
-
-        expect(that % (m[key0] = 42) == 42);
-        expect(that % (m[key1] = 1729) == 1729);
-        expect(m.size() == 2_i);
-        expect(m.begin() != m.end());
-
-        auto keys = to_vector(m | std::views::keys);
-        expect(that % eq(keys[0], key0));
-        expect(that % eq(keys[1], key1));
-      } |
-      std::tuple{
-          std::tuple{42, 1729, std::less{}},
-          std::tuple{std::weak_ptr{x}, std::weak_ptr{y}, std::owner_less{}},
-      };
 };
 
 int main() {}
