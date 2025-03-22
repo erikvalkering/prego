@@ -31,6 +31,7 @@ add_executable(test_prego
   tests/insertion_order_map.cpp
   tests/graph_traversal.cpp
   tests/types.cpp
+  tests/transparent_syntax.cpp
 )
 target_compile_features(test_prego PRIVATE cxx_std_23)
 target_link_libraries(test_prego PRIVATE prego)
