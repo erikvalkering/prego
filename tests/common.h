@@ -16,6 +16,7 @@ using prego::autorun;
 using prego::calc;
 using prego::global_scope_manager;
 using prego::insertion_order_map;
+using prego::make_atom;
 using prego::scope_manager_t;
 
 auto to_vector(auto &&rng) {
