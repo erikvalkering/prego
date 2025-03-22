@@ -13,7 +13,7 @@ public:
   }
 };
 
-suite<"lifetimes"> _ = [] {
+static suite<"lifetimes"> _ = [] {
   "scope_manager"_test = [] {
     auto a = atom{42};
 

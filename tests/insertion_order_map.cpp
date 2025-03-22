@@ -1,6 +1,6 @@
 #include "common.h"
 
-suite<"insertion_order_map"> _ = [] {
+static suite<"insertion_order_map"> _ = [] {
   auto x = std::make_shared<int>(42);
   auto y = std::make_shared<int>(1729);
 

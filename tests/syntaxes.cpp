@@ -1,6 +1,6 @@
 #include "common.h"
 
-suite<"syntaxes"> _ = [] {
+static suite<"syntaxes"> _ = [] {
   "atom_syntaxes"_test = [] {
     auto a = atom{42};
     atom b = 42;

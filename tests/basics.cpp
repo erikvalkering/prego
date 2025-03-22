@@ -1,6 +1,6 @@
 #include "common.h"
 
-suite<"basics"> _ = [] {
+static suite<"basics"> _ = [] {
   "atom"_test = [] {
     auto a = atom{42};
 

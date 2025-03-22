@@ -1,6 +1,6 @@
 #include "common.h"
 
-suite<"graph traversal efficiency"> _ = [] {
+static suite<"graph traversal efficiency"> _ = [] {
   "graph_traversal_efficiency_basics"_test = [] {
     atom a = 42;
     a();

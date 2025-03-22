@@ -21,7 +21,7 @@ struct immovable {
   }
 };
 
-suite<"type support"> _ = [] {
+static suite<"type support"> _ = [] {
   "moveonly_types"_test = [] {
     struct moveonly {
       moveonly() = default;
