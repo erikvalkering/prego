@@ -29,6 +29,7 @@ add_executable(test_prego
   tests/lifetimes.cpp
   tests/syntaxes.cpp
   tests/insertion_order_map.cpp
+  tests/graph_traversal.cpp
   tests/types.cpp
 )
 target_compile_features(test_prego PRIVATE cxx_std_23)
