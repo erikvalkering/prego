@@ -9,7 +9,12 @@
 
 using namespace boost::ut;
 
+using prego::atom;
+using prego::autorun;
+using prego::calc;
+using prego::global_scope_manager;
 using prego::insertion_order_map;
+using prego::scope_manager_t;
 
 auto to_vector(auto &&rng) {
   using T = std::ranges::range_value_t<decltype(rng)>;
