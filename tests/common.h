@@ -28,4 +28,4 @@ auto to_vector(auto &&rng) {
 
 #define CONCAT2(a, b) a##b
 #define CONCAT(a, b) CONCAT2(a, b)
-#define _ CONCAT(placeholder_, __LINE__)
+#define _ static CONCAT(placeholder_, __LINE__)

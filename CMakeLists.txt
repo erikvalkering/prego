@@ -26,6 +26,7 @@ target_link_libraries(sandbox PRIVATE prego)
 add_executable(test_prego
   tests/prego.test.cpp
   tests/lifetimes.cpp
+  tests/syntaxes.cpp
   tests/insertion_order_map.cpp
 )
 target_compile_features(test_prego PRIVATE cxx_std_23)
