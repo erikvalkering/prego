@@ -4,9 +4,11 @@
 
 #include <boost/ut.hpp>
 
+#include <string>
 #include <tuple>
 #include <vector>
 
+using namespace std::string_literals;
 using namespace boost::ut;
 
 using prego::atom;

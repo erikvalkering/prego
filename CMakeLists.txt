@@ -25,6 +25,7 @@ target_link_libraries(sandbox PRIVATE prego)
 
 add_executable(test_prego
   tests/prego.test.cpp
+  tests/basics.cpp
   tests/lifetimes.cpp
   tests/syntaxes.cpp
   tests/insertion_order_map.cpp
@@ -40,3 +41,4 @@ target_compile_options(test_prego PRIVATE
   $<$<AND:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_VERSION:19>>:-fsanitize=address -fsanitize=undefined -static-libsan>
 )
 add_test(NAME prego_test_suite COMMAND test_prego)
+
