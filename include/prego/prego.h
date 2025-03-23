@@ -386,14 +386,10 @@ inline constexpr auto noop_get = [](const auto &o) -> decltype(auto) {
 };
 using noop_get_t = decltype(noop_get);
 
-template <typename F, typename... Args>
-concept invocable = std::is_invocable_v<F, Args...>;
-
-template <typename F>
-concept invocable_with_get = invocable<F, noop_get_t>;
-
-auto get_result_t(invocable_with_get auto f) -> decltype(f(noop_get));
-auto get_result_t(invocable auto f) -> decltype(f());
+auto get_result_t(std::invocable<noop_get_t> auto f)
+    -> std::remove_cvref_t<std::invoke_result_t<decltype(f), noop_get_t>>;
+auto get_result_t(std::invocable auto f)
+    -> std::remove_cvref_t<std::invoke_result_t<decltype(f)>>;
 
 decltype(auto) get_value(invocable_with_get auto &f, auto observer,
                          auto &observables, bool reactive) {
