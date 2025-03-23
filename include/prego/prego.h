@@ -391,7 +391,7 @@ auto get_result_t(std::invocable<noop_get_t> auto f)
 auto get_result_t(std::invocable auto f)
     -> std::remove_cvref_t<std::invoke_result_t<decltype(f)>>;
 
-decltype(auto) get_value(invocable_with_get auto &f, auto observer,
+decltype(auto) get_value(std::invocable<noop_get_t> auto &f, auto observer,
                          auto &observables, bool reactive) {
   return f([&](auto observable) -> auto & {
     // Before linking together the observer
@@ -419,8 +419,8 @@ template <typename F> struct scope_guard {
   ~scope_guard() { f(); };
 };
 
-decltype(auto) get_value(invocable auto &f, auto observer, auto &observables,
-                         bool reactive) {
+decltype(auto) get_value(std::invocable auto &f, auto observer,
+                         auto &observables, bool reactive) {
   active_observers.emplace_back(observer, &observables, reactive);
   auto _ = scope_guard{[] { active_observers.pop_back(); }};
   return f();
@@ -646,6 +646,9 @@ public:
 
   auto &operator()() const { return get(*this); }
 
+  using T = decltype(get_result_t(std::declval<F>()));
+  operator const T &() const { return (*this)(); }
+
   auto observers() const { return state->observers; }
 };
 
@@ -700,13 +703,13 @@ template <typename Class, auto thunk> struct Thunk {
   Thunk(Class *obj) : obj{obj} {}
 
   auto operator()(auto get) const
-    requires prego::invocable_with_get<decltype(thunk)>
+    requires std::invocable<decltype(thunk), noop_get_t>
   {
     return thunk(*obj, get);
   }
 
   auto operator()() const
-    requires prego::invocable<decltype(thunk)>
+    requires std::invocable<decltype(thunk)>
   {
     return thunk(*obj);
   }
