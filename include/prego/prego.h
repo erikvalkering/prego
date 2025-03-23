@@ -645,7 +645,7 @@ public:
 template <typename F> calc(F &&) -> calc<F>;
 
 auto with_return(auto &&f) {
-  return [g = std::tuple{FWD(f)}](auto &&...args)
+  return [g = std::tuple<decltype(f)>{FWD(f)}](auto &&...args)
     requires requires { f(FWD(args)...); }
   {
     std::get<0>(g)(FWD(args)...);
