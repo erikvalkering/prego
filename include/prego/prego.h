@@ -307,6 +307,14 @@ public:
   atom(std::in_place_t, auto &&...args)
       : state{std::make_shared<state_t>(std::in_place, FWD(args)...)} {}
 
+  // This constructor is necessary to
+  // allow for the following syntaxes:
+  // auto a = atom{42};
+  // atom b = 42;
+  //
+  // The std::convertible_to is necessary to support:
+  // auto c = atom<foo>{42};
+  // auto d = atom<immovable>{42};
   atom(convertible_to<T> auto &&value) : atom{std::in_place, FWD(value)} {}
 
   atom(std::in_place_type_t<T>, auto &&...args)
