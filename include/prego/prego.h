@@ -315,7 +315,9 @@ public:
   // The std::convertible_to is necessary to support:
   // auto c = atom<foo>{42};
   // auto d = atom<immovable>{42};
-  atom(convertible_to<T> auto &&value) : atom{std::in_place, FWD(value)} {}
+  atom(convertible_to<T> auto &&value)
+    requires(not std::same_as<std::remove_cvref_t<decltype(value)>, atom>)
+      : atom{std::in_place, FWD(value)} {}
 
   atom(std::in_place_type_t<T>, auto &&...args)
       : atom{std::in_place, FWD(args)...} {}
@@ -367,6 +369,7 @@ public:
   }
 
   auto &operator()() const { return get(*this); }
+  operator const T &() const { return (*this)(); }
 
   auto observers() const { return state->observers; }
 };
