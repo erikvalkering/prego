@@ -294,7 +294,10 @@ auto &get(auto &observable) {
   return value;
 }
 
-template <typename T> struct atom {
+struct magic_mixin {
+};
+
+template <typename T> struct atom : magic_mixin {
   using state_t = atom_state<T>;
   std::shared_ptr<state_t> state;
 
@@ -390,6 +393,17 @@ auto get_result_t(std::invocable<noop_get_t> auto f)
     -> std::remove_cvref_t<std::invoke_result_t<decltype(f), noop_get_t>>;
 auto get_result_t(std::invocable auto f)
     -> std::remove_cvref_t<std::invoke_result_t<decltype(f)>>;
+auto get_result_t(std::invocable<noop_get_t> auto f)
+    -> std::remove_cvref_t<std::invoke_result_t<
+        std::remove_cvref_t<std::invoke_result_t<decltype(f), noop_get_t>>>>
+  requires std::derived_from<
+      std::remove_cvref_t<std::invoke_result_t<decltype(f), noop_get_t>>,
+      magic_mixin>;
+auto get_result_t(std::invocable auto f)
+    -> std::remove_cvref_t<std::invoke_result_t<
+        std::remove_cvref_t<std::invoke_result_t<decltype(f)>>>>
+  requires std::derived_from<
+      std::remove_cvref_t<std::invoke_result_t<decltype(f)>>, magic_mixin>;
 
 decltype(auto) get_value(std::invocable<noop_get_t> auto &f, auto observer,
                          auto &observables, bool reactive) {
@@ -620,7 +634,7 @@ public:
 };
 
 // TODO: change into class instead of struct
-template <typename F> struct calc {
+template <typename F> struct calc : magic_mixin {
 public:
   std::shared_ptr<calc_state<F>> state;
   friend auto autorun(auto f, scope_manager_t *);
