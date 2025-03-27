@@ -9,7 +9,7 @@ static suite<"transparent syntax"> _ = [] {
     std::string f = faaiv;
   };
 
-  "test_get_result_t"_test = [] {
+  "test_get_result_t_atom"_test = [] {
     using prego::get_result_t;
 
     atom missi = "Missi"s;
@@ -20,7 +20,7 @@ static suite<"transparent syntax"> _ = [] {
     auto a4 = [=] { return "Missi"s; };
 
     static_assert(std::same_as<decltype(get_result_t(a1)), std::string>);
-    // static_assert(std::same_as<decltype(get_result_t(a2)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(a2)), std::string>);
     static_assert(std::same_as<decltype(get_result_t(a3)), std::string>);
     static_assert(std::same_as<decltype(get_result_t(a4)), std::string>);
 
@@ -28,26 +28,97 @@ static suite<"transparent syntax"> _ = [] {
     auto a6 = [=](auto get) { return get(missi); };
     auto a7 = [=](auto) { return "Missi"s; };
 
-    // static_assert(std::same_as<decltype(get_result_t(a5)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(a5)), std::string>);
     static_assert(std::same_as<decltype(get_result_t(a6)), std::string>);
     static_assert(std::same_as<decltype(get_result_t(a7)), std::string>);
 
     calc c1 = missi;
-    // calc c2 = [=] { return missi; };
+    calc c2 = [=] { return missi; };
     calc c3 = [=] { return missi(); };
     calc c4 = [=] { return "Missi"s; };
 
     static_assert(std::same_as<decltype(get_result_t(c1)), std::string>);
-    // static_assert(std::same_as<decltype(get_result_t(c2)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(c2)), std::string>);
     static_assert(std::same_as<decltype(get_result_t(c3)), std::string>);
     static_assert(std::same_as<decltype(get_result_t(c4)), std::string>);
 
-    // calc c5 = [=] { return missi; };
+    calc c5 = [=] { return missi; };
     calc c6 = [=](auto get) { return get(missi); };
     calc c7 = [=](auto) { return "Missi"s; };
 
-    // static_assert(std::same_as<decltype(get_result_t(c5)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(c5)), std::string>);
     static_assert(std::same_as<decltype(get_result_t(c6)), std::string>);
     static_assert(std::same_as<decltype(get_result_t(c7)), std::string>);
+  };
+
+  "test_get_result_t_calc"_test = [] {
+    using prego::get_result_t;
+
+    calc missi = [] { return "Missi"s; };
+    calc faaiv = [](auto) { return "Faaiv"s; };
+
+    auto a1 = missi;
+    auto a2 = [=] { return missi; };
+    auto a3 = [=] { return missi(); };
+    auto a4 = [=] { return "Missi"s; };
+    auto a5 = faaiv;
+    auto a6 = [=] { return faaiv; };
+    auto a7 = [=] { return faaiv(); };
+    auto a8 = [=] { return "Faaiv"s; };
+
+    static_assert(std::same_as<decltype(get_result_t(a1)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(a2)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(a3)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(a4)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(a5)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(a6)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(a7)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(a8)), std::string>);
+
+    auto a9 = [=](auto) { return missi; };
+    auto aA = [=](auto get) { return get(missi); };
+    auto aB = [=](auto) { return "Missi"s; };
+    auto aC = [=](auto) { return faaiv; };
+    auto aD = [=](auto get) { return get(faaiv); };
+    auto aE = [=](auto) { return "Faaiv"s; };
+
+    static_assert(std::same_as<decltype(get_result_t(a9)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(aA)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(aB)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(aC)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(aD)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(aE)), std::string>);
+
+    calc c1 = missi;
+    calc c2 = [=] { return missi; };
+    calc c3 = [=] { return missi(); };
+    calc c4 = [=] { return "Missi"s; };
+    calc c5 = faaiv;
+    calc c6 = [=] { return faaiv; };
+    calc c7 = [=] { return faaiv(); };
+    calc c8 = [=] { return "Faaiv"s; };
+
+    static_assert(std::same_as<decltype(get_result_t(c1)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(c2)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(c3)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(c4)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(c5)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(c6)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(c7)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(c8)), std::string>);
+
+    calc c9 = [=] { return missi; };
+    calc cA = [=](auto get) { return get(missi); };
+    calc cB = [=](auto) { return "Missi"s; };
+    calc cC = [=] { return faaiv; };
+    calc cD = [=](auto get) { return get(faaiv); };
+    calc cE = [=](auto) { return "Faaiv"s; };
+
+    static_assert(std::same_as<decltype(get_result_t(c9)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(cA)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(cB)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(cC)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(cD)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(cE)), std::string>);
   };
 };
