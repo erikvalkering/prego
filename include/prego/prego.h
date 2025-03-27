@@ -654,11 +654,17 @@ public:
 
 template <typename F> calc(F &&) -> calc<F>;
 
+template <typename T> auto fwd_capture(T &&x) { return std::tuple<T>(FWD(x)); }
+
+template <typename T> decltype(auto) access(T &&x) {
+  return std::get<0>(FWD(x));
+}
+
 auto with_return(auto &&f) {
-  return [g = std::tuple<decltype(f)>{FWD(f)}](auto &&...args)
+  return [g = fwd_capture(FWD(f))](auto &&...args)
     requires requires { f(FWD(args)...); }
   {
-    std::get<0>(g)(FWD(args)...);
+    access(g)(FWD(args)...);
     return 0;
   };
 }
