@@ -1,6 +1,12 @@
 #include "common.h"
 
 static suite<"transparent syntax"> _ = [] {
+  "test_comparisons"_test = [] {
+    atom x = 42;
+
+    calc y1 = x <=> 1729;
+  };
+
   "test_implicit_conversions"_test = [] {
     atom missi = "Missi"s;
     calc faaiv = [] { return "Faaiv"s; };

@@ -294,7 +294,19 @@ auto &get(auto &observable) {
   return value;
 }
 
+template <typename F> struct magic_wrapper;
+
 struct magic_mixin {
+  auto operator<=>(this auto self, auto rhs) {
+    return magic_wrapper{[=] { return self() <=> rhs; }};
+  }
+};
+
+template <typename F> struct magic_wrapper : F, magic_mixin {
+  using F::operator();
+
+  using T = std::invoke_result_t<F>;
+  operator T(this auto self) { return self(); }
 };
 
 template <typename T> struct atom : magic_mixin {
