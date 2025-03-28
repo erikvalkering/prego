@@ -308,6 +308,26 @@ struct magic_mixin {
   auto operator<=>(this auto self, auto rhs) {
     return magic_wrapper{[=] { return self() <=> get_value_from_param(rhs); }};
   }
+
+  auto operator==(this auto self, auto rhs) {
+    return magic_wrapper{[=] { return self() == get_value_from_param(rhs); }};
+  }
+
+  auto operator>(this auto self, auto rhs) {
+    return magic_wrapper{[=] { return self() > get_value_from_param(rhs); }};
+  }
+
+  auto operator<(this auto self, auto rhs) {
+    return magic_wrapper{[=] { return self() < get_value_from_param(rhs); }};
+  }
+
+  auto operator>=(this auto self, auto rhs) {
+    return magic_wrapper{[=] { return self() >= get_value_from_param(rhs); }};
+  }
+
+  auto operator<=(this auto self, auto rhs) {
+    return magic_wrapper{[=] { return self() <= get_value_from_param(rhs); }};
+  }
 };
 
 template <typename F> struct magic_wrapper : F, magic_mixin {

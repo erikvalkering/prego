@@ -5,9 +5,20 @@ static suite<"transparent syntax"> _ = [] {
     atom x = 42;
 
     calc y1 = x <=> 1729;
+    calc y2 = x == 1729;
+    calc y3 = x > 1729;
+    calc y4 = x < 1729;
+    calc y5 = x >= 1729;
+    calc y6 = x <= 1729;
+
     atom y = 1729;
 
     calc z1 = x <=> y;
+    calc z2 = x == y;
+    calc z3 = x > y;
+    calc z4 = x < y;
+    calc z5 = x >= y;
+    calc z6 = x <= y;
   };
 
   "test_implicit_conversions"_test = [] {
