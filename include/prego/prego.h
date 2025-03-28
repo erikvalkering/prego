@@ -297,6 +297,10 @@ auto &get(auto &observable) {
 template <typename F> struct magic_wrapper;
 
 struct magic_mixin {
+  auto operator<=>(this auto self, std::derived_from<magic_mixin> auto rhs) {
+    return magic_wrapper{[=] { return self() <=> rhs(); }};
+  }
+
   auto operator<=>(this auto self, auto rhs) {
     return magic_wrapper{[=] { return self() <=> rhs; }};
   }
