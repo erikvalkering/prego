@@ -294,15 +294,19 @@ auto &get(auto &observable) {
   return value;
 }
 
+struct magic_mixin;
+
+auto get_value_from_param(std::derived_from<magic_mixin> auto param) {
+  return param();
+}
+
+auto get_value_from_param(auto param) { return param; }
+
 template <typename F> struct magic_wrapper;
 
 struct magic_mixin {
-  auto operator<=>(this auto self, std::derived_from<magic_mixin> auto rhs) {
-    return magic_wrapper{[=] { return self() <=> rhs(); }};
-  }
-
   auto operator<=>(this auto self, auto rhs) {
-    return magic_wrapper{[=] { return self() <=> rhs; }};
+    return magic_wrapper{[=] { return self() <=> get_value_from_param(rhs); }};
   }
 };
 
