@@ -168,4 +168,17 @@ static suite<"transparent syntax"> _ = [] {
     expect(c5 == "MissiFaaiv");
     expect(c6 == "MissiFaaiv");
   };
+
+  "string_size"_test = [] {
+    atom missi = "Missi"s;
+    atom faaiv = "Faaiv"s;
+
+    calc c1 = [=] { return (missi() + faaiv()).size(); };
+    calc c2 = [=] { return (missi + faaiv).size(); };
+    calc c3 = (missi + faaiv).size();
+
+    expect(c1 == 10);
+    expect(c2 == 10);
+    expect(c3 == 10);
+  };
 };
