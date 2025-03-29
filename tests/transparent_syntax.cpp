@@ -152,10 +152,13 @@ static suite<"transparent syntax"> _ = [] {
 
     expect(missi + faaiv == "MissiFaaiv");
     expect(missi + "Faaiv" == "MissiFaaiv");
+    expect("Missi" + faaiv == "MissiFaaiv");
 
     calc c1 = missi + faaiv;
     calc c2 = missi + "Faaiv";
+    calc c3 = "Missi" + faaiv;
     expect(c1 == "MissiFaaiv");
     expect(c2 == "MissiFaaiv");
+    expect(c3 == "MissiFaaiv");
   };
 };
