@@ -11,6 +11,8 @@ static suite<"transparent syntax"> _ = [] {
     calc y5 = x >= 1729;
     calc y6 = x <= 1729;
 
+    auto y7 = bool{x > 1729};
+
     atom y = 1729;
 
     calc z1 = x <=> y;
@@ -19,6 +21,8 @@ static suite<"transparent syntax"> _ = [] {
     calc z4 = x < y;
     calc z5 = x >= y;
     calc z6 = x <= y;
+
+    auto z7 = bool{x > y};
   };
 
   "test_implicit_conversions"_test = [] {
