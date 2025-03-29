@@ -32,6 +32,19 @@ static suite<"transparent syntax"> _ = [] {
     calc z6 = x <= y;
 
     auto z7 = bool{x > y};
+
+    calc w1 = [=] { return x == y; };
+    calc w2 = [=] {
+      auto z = x == y;
+      return z;
+    };
+    calc w3 = [=] {
+      auto z = x == y;
+      return z ? true : false;
+    };
+    expect(w1 == false);
+    expect(w2 == false);
+    expect(w3 == false);
   };
 
   "test_implicit_conversions"_test = [] {
