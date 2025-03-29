@@ -346,6 +346,18 @@ template <typename F> struct magic_wrapper : F, magic_mixin {
   operator T(this auto self) { return self(); }
 };
 
+} // namespace prego
+
+template <std::derived_from<prego::magic_mixin> F> struct std::formatter<F> {
+  constexpr auto parse(auto &ctx) { return ctx.begin(); }
+
+  auto format(const F &f, auto &ctx) const {
+    return std::format_to(ctx.out(), "{}", f());
+  }
+};
+
+namespace prego {
+
 template <typename T> struct atom : magic_mixin {
   using state_t = atom_state<T>;
   std::shared_ptr<state_t> state;

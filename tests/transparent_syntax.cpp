@@ -181,4 +181,14 @@ static suite<"transparent syntax"> _ = [] {
     expect(c2 == 10);
     expect(c3 == 10);
   };
+
+  "format"_test = [=] {
+    atom missi = "Missi"s;
+    expect(std::format("{}", missi) == "Missi");
+
+    calc faaiv = [] { return "Faaiv"; };
+    expect(std::format("{}", faaiv) == "Faaiv");
+
+    expect(std::format("{}", missi + faaiv) == "MissiFaaiv");
+  };
 };
