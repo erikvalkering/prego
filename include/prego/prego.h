@@ -310,28 +310,34 @@ struct magic_mixin {
         [=] { return get_value_from_param(lhs) + get_value_from_param(rhs); }};
   }
 
-  auto operator<=>(this auto self, auto rhs) {
-    return magic_wrapper{[=] { return self() <=> get_value_from_param(rhs); }};
+  friend auto operator<=>(auto lhs, auto rhs) {
+    return magic_wrapper{[=] {
+      return get_value_from_param(lhs) <=> get_value_from_param(rhs);
+    }};
+  }
+  friend auto operator==(auto lhs, auto rhs) {
+    return magic_wrapper{
+        [=] { return get_value_from_param(lhs) == get_value_from_param(rhs); }};
   }
 
-  auto operator==(this auto self, auto rhs) {
-    return magic_wrapper{[=] { return self() == get_value_from_param(rhs); }};
+  friend auto operator>(auto lhs, auto rhs) {
+    return magic_wrapper{
+        [=] { return get_value_from_param(lhs) > get_value_from_param(rhs); }};
   }
 
-  auto operator>(this auto self, auto rhs) {
-    return magic_wrapper{[=] { return self() > get_value_from_param(rhs); }};
+  friend auto operator<(auto lhs, auto rhs) {
+    return magic_wrapper{
+        [=] { return get_value_from_param(lhs) < get_value_from_param(rhs); }};
   }
 
-  auto operator<(this auto self, auto rhs) {
-    return magic_wrapper{[=] { return self() < get_value_from_param(rhs); }};
+  friend auto operator>=(auto lhs, auto rhs) {
+    return magic_wrapper{
+        [=] { return get_value_from_param(lhs) >= get_value_from_param(rhs); }};
   }
 
-  auto operator>=(this auto self, auto rhs) {
-    return magic_wrapper{[=] { return self() >= get_value_from_param(rhs); }};
-  }
-
-  auto operator<=(this auto self, auto rhs) {
-    return magic_wrapper{[=] { return self() <= get_value_from_param(rhs); }};
+  friend auto operator<=(auto lhs, auto rhs) {
+    return magic_wrapper{
+        [=] { return get_value_from_param(lhs) <= get_value_from_param(rhs); }};
   }
 
   auto size(this auto self) {

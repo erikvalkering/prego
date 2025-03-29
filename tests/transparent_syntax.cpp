@@ -13,6 +13,15 @@ static suite<"transparent syntax"> _ = [] {
 
     auto y7 = bool{x > 1729};
 
+    calc y8 = 1729 <=> x;
+    calc y9 = 1729 == x;
+    calc yA = 1729 > x;
+    calc yB = 1729 < x;
+    calc yC = 1729 >= x;
+    calc yD = 1729 <= x;
+
+    auto yE = bool{1729 > x};
+
     atom y = 1729;
 
     calc z1 = x <=> y;
