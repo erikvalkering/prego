@@ -145,4 +145,17 @@ static suite<"transparent syntax"> _ = [] {
     static_assert(std::same_as<decltype(get_result_t(cD)), std::string>);
     static_assert(std::same_as<decltype(get_result_t(cE)), std::string>);
   };
+
+  "string"_test = [] {
+    atom missi = "Missi"s;
+    atom faaiv = "Faaiv"s;
+
+    expect(missi + faaiv == "MissiFaaiv");
+    expect(missi + "Faaiv" == "MissiFaaiv");
+
+    calc c1 = missi + faaiv;
+    calc c2 = missi + "Faaiv";
+    expect(c1 == "MissiFaaiv");
+    expect(c2 == "MissiFaaiv");
+  };
 };

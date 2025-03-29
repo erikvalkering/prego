@@ -305,6 +305,10 @@ auto get_value_from_param(auto param) { return param; }
 template <typename F> struct magic_wrapper;
 
 struct magic_mixin {
+  auto operator+(this auto self, auto rhs) {
+    return magic_wrapper{[=] { return self() + get_value_from_param(rhs); }};
+  }
+
   auto operator<=>(this auto self, auto rhs) {
     return magic_wrapper{[=] { return self() <=> get_value_from_param(rhs); }};
   }
