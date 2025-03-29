@@ -146,7 +146,7 @@ static suite<"transparent syntax"> _ = [] {
     static_assert(std::same_as<decltype(get_result_t(cE)), std::string>);
   };
 
-  "string"_test = [] {
+  "string_concatenation"_test = [] {
     atom missi = "Missi"s;
     atom faaiv = "Faaiv"s;
 
