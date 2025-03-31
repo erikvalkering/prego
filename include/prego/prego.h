@@ -442,7 +442,7 @@ public:
   /// Returns a reference to the cached value
   /// atom - stored value
   /// calc - (re)calculates, if necessary
-  auto &internal_get(bool reactive = false) const {
+  const auto &internal_get(bool reactive = false) const {
     return indirect(state->holder);
   }
 
@@ -728,7 +728,7 @@ public:
 
   // TODO: reactive == true should not be accessible publicly,
   //       because there's no way to unsubscribe
-  auto &internal_get(bool reactive = false) const {
+  const auto &internal_get(bool reactive = false) const {
     if (!state->is_up_to_date(reactive))
       state->recalculate(reactive);
 
