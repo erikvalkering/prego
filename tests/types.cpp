@@ -186,20 +186,20 @@ static suite<"type support"> _ = [] {
     atom c = std::unique_ptr<int>{};
     atom d = std::make_unique<int>(42);
 
-    static_assert(std::same_as<decltype(auto{a()}), std::unique_ptr<int>>);
-    static_assert(std::same_as<decltype(auto{b()}), std::unique_ptr<int>>);
-    static_assert(std::same_as<decltype(auto{c()}), std::unique_ptr<int>>);
-    static_assert(std::same_as<decltype(auto{d()}), std::unique_ptr<int>>);
+    static_assert(std::same_as<decltype(a()), const std::unique_ptr<int> &>);
+    static_assert(std::same_as<decltype(b()), const std::unique_ptr<int> &>);
+    static_assert(std::same_as<decltype(c()), const std::unique_ptr<int> &>);
+    static_assert(std::same_as<decltype(d()), const std::unique_ptr<int> &>);
 
-    expect(*a() == std::nullopt);
+    expect(a() == nullptr);
     expect(*b() == 42);
-    expect(*c() == std::nullopt);
+    expect(c() == nullptr);
     expect(*d() == 42);
   };
 
   "unique_ptr calc"_test = [] {
-    calc a = [] { return std::make_unique<int>{42}; };
-    static_assert(std::same_as<decltype(auto{a()}), std::unique_ptr<int>>);
+    calc a = [] { return std::make_unique<int>(42); };
+    static_assert(std::same_as<decltype(a()), const std::unique_ptr<int> &>);
     expect(*a() == 42);
   };
 
@@ -221,14 +221,14 @@ static suite<"type support"> _ = [] {
 
     expect(a() == decltype(l){});
     expect(b() == decltype(l){l});
-    expect(c() == l;
+    expect(c() == l);
     expect(d() == decltype(l){});
     expect(e() == decltype(l){l});
     expect(f() == l);
   };
 
   "function calc"_test = [] {
-    auto l = [] { return 42 };
+    auto l = [] { return 42; };
     calc a = [=] { return l; };
     static_assert(std::same_as<decltype(auto{a()}), decltype(l)>);
     expect(a()() == 42);
