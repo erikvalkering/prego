@@ -25,8 +25,11 @@ static suite<"type support"> _ = [] {
   "moveonly_types"_test = [] {
     struct moveonly {
       moveonly() = default;
+
       moveonly(const moveonly &) = delete;
       moveonly(moveonly &&) = default;
+      moveonly &operator=(const moveonly &) = default;
+      moveonly &operator=(moveonly &&) = default;
 
       auto operator<=>(const moveonly &) const = default;
     };
