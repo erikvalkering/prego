@@ -406,7 +406,7 @@ public:
       : atom{std::in_place, FWD(args)...} {}
 
   template <convertible_to<T> U>
-  atom(atom<U> &&src) : atom{std::move(src.state->value)} {}
+  atom(atom<U> &&src) : atom{std::move(src.state->holder)} {}
 
   auto set(auto &&holder) {
     log(1, "");
