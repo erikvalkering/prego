@@ -153,4 +153,81 @@ static suite<"type support"> _ = [] {
       b();
     });
   };
+
+  "optional atom"_test = [] {
+    atom<std::optional<int>> a = std::nullopt;
+    atom<std::optional<int>> b = 42;
+    atom c = std::optional<int>{};
+    atom d = std::optional<int>{42};
+
+    static_assert(std::same_as<decltype(auto{a()}), std::optional<int>>);
+    static_assert(std::same_as<decltype(auto{b()}), std::optional<int>>);
+    static_assert(std::same_as<decltype(auto{c()}), std::optional<int>>);
+    static_assert(std::same_as<decltype(auto{d()}), std::optional<int>>);
+
+    expect(a() == std::nullopt);
+    expect(b() == 42);
+    expect(c() == std::nullopt);
+    expect(d() == 42);
+  };
+
+  "optional calc"_test = [] {
+    calc a = [] { return std::optional<int>{42}; };
+    static_assert(std::same_as<decltype(auto{a()}), std::optional<int>>);
+    expect(a() == 42);
+  };
+
+  "unique_ptr atom"_test = [] {
+    atom<std::unique_ptr<int>> a = nullptr;
+    atom<std::unique_ptr<int>> b = std::make_unique<int>(42);
+    atom c = std::unique_ptr<int>{};
+    atom d = std::make_unique<int>(42);
+
+    static_assert(std::same_as<decltype(auto{a()}), std::unique_ptr<int>>);
+    static_assert(std::same_as<decltype(auto{b()}), std::unique_ptr<int>>);
+    static_assert(std::same_as<decltype(auto{c()}), std::unique_ptr<int>>);
+    static_assert(std::same_as<decltype(auto{d()}), std::unique_ptr<int>>);
+
+    expect(*a() == std::nullopt);
+    expect(*b() == 42);
+    expect(*c() == std::nullopt);
+    expect(*d() == 42);
+  };
+
+  "unique_ptr calc"_test = [] {
+    calc a = [] { return std::make_unique<int>{42}; };
+    static_assert(std::same_as<decltype(auto{a()}), std::unique_ptr<int>>);
+    expect(*a() == 42);
+  };
+
+  "function atom"_test = [] {
+    auto l = [] { return 0; };
+    atom<decltype(l)> a = {};
+    atom<decltype(l)> b = decltype(l){l};
+    atom<decltype(l)> c = l;
+    atom d = decltype(l){};
+    atom e = decltype(l){l};
+    atom f = l;
+
+    static_assert(std::same_as<decltype(auto{a()}), decltype(l)>);
+    static_assert(std::same_as<decltype(auto{b()}), decltype(l)>);
+    static_assert(std::same_as<decltype(auto{c()}), decltype(l)>);
+    static_assert(std::same_as<decltype(auto{d()}), decltype(l)>);
+    static_assert(std::same_as<decltype(auto{e()}), decltype(l)>);
+    static_assert(std::same_as<decltype(auto{f()}), decltype(l)>);
+
+    expect(a() == decltype(l){});
+    expect(b() == decltype(l){l});
+    expect(c() == l;
+    expect(d() == decltype(l){});
+    expect(e() == decltype(l){l});
+    expect(f() == l);
+  };
+
+  "function calc"_test = [] {
+    auto l = [] { return 42 };
+    calc a = [=] { return l; };
+    static_assert(std::same_as<decltype(auto{a()}), decltype(l)>);
+    expect(a()() == 42);
+  };
 };
