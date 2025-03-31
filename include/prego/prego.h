@@ -227,21 +227,29 @@ concept convertible_to = std::is_convertible_v<From, To> &&
 template <typename T>
 concept immovable = not(std::movable<T> or std::copyable<T>);
 
-template <typename> constexpr auto is_indirect_holder = false;
-template <typename T>
-constexpr auto is_indirect_holder<std::unique_ptr<T>> = true;
-template <typename T>
-constexpr auto is_indirect_holder<std::optional<T>> = true;
+template <typename T> struct immovable_holder_t {
+  std::unique_ptr<T> value;
+  operator bool() const { return bool{value}; }
+  decltype(auto) operator*(this auto &&self) { return *FWD(self).value; }
+};
+
+template <typename> constexpr auto is_immovable_holder = false;
 
 template <typename T>
-concept indirect_holder = is_indirect_holder<std::remove_cvref_t<T>>;
+constexpr auto is_immovable_holder<immovable_holder_t<T>> = true;
 
-decltype(auto) indirect(indirect_holder auto &&value) { return *FWD(value); }
-decltype(auto) indirect(auto &&value) { return FWD(value); }
+template <typename T>
+concept immovable_holder = is_immovable_holder<std::remove_cvref_t<T>>;
+
+decltype(auto) indirect(immovable_holder auto &&holder) {
+  return *FWD(holder).value;
+}
+
+decltype(auto) indirect(auto &&holder) { return FWD(holder); }
 
 template <typename T> struct atom_state : observable_t {
-  using holder_t = std::conditional_t<immovable<T>, std::unique_ptr<T>, T>;
-  holder_t value;
+  using holder_t = std::conditional_t<immovable<T>, immovable_holder_t<T>, T>;
+  holder_t holder;
 
   atom_state() = default;
 
@@ -250,10 +258,10 @@ template <typename T> struct atom_state : observable_t {
 
   atom_state(std::in_place_t, auto &&...args)
     requires(immovable<T>)
-      : value{std::make_unique<T>(FWD(args)...)} {}
+      : holder{std::make_unique<T>(FWD(args)...)} {}
   atom_state(std::in_place_t, auto &&...args)
     requires(not immovable<T>)
-      : value{FWD(args)...} {}
+      : holder{FWD(args)...} {}
 
   ~atom_state() { log(1, "~", get_id(*this)); }
 
@@ -395,14 +403,14 @@ public:
   template <convertible_to<T> U>
   atom(atom<U> &&src) : atom{std::move(src.state->value)} {}
 
-  auto set(auto &&value) {
+  auto set(auto &&holder) {
     log(1, "");
-    log(1, get_id(*state), ".set(", indirect(value), ") [",
-        indirect(state->value), "]");
-    if (indirect(state->value) == indirect(value))
+    log(1, get_id(*state), ".set(", indirect(holder), ") [",
+        indirect(state->holder), "]");
+    if (indirect(state->holder) == indirect(holder))
       return;
 
-    state->value = FWD(value);
+    state->holder = FWD(holder);
     log(1, get_id(*state), ": changed");
 
     // First sweep: mark all as stale
@@ -414,7 +422,7 @@ public:
 
   auto emplace(auto &&...args) {
     if constexpr (immovable<T>) {
-      set(std::make_unique<T>(FWD(args)...));
+      set(typename state_t::holder_t{std::make_unique<T>(FWD(args)...)});
     } else {
       set(T{FWD(args)...});
     }
@@ -435,7 +443,7 @@ public:
   /// atom - stored value
   /// calc - (re)calculates, if necessary
   auto &internal_get(bool reactive = false) const {
-    return indirect(state->value);
+    return indirect(state->holder);
   }
 
   auto &operator()() const { return get(*this); }
@@ -514,11 +522,11 @@ struct calc_state : observable_t,
 private:
   using T = decltype(get_result_t(std::declval<F>()));
   using holder_t =
-      std::conditional_t<immovable<T>, std::unique_ptr<T>, std::optional<T>>;
+      std::conditional_t<immovable<T>, immovable_holder_t<T>, std::optional<T>>;
 
 public:
   F f;
-  holder_t value;
+  holder_t holder;
   observables_t observables;
   int stale_count = 0;
   bool maybe_changed = false;
@@ -595,7 +603,7 @@ public:
   virtual bool is_up_to_date(bool reactive) override final {
     before_is_up_to_date(reactive);
 
-    if (!value)
+    if (!holder)
       return false;
     if (maybe_changed)
       return false;
@@ -677,15 +685,17 @@ public:
 
   auto recalculate(bool reactive) {
     // Recalculate and determine whether we actually changed
-    const auto old_value = std::move(value);
+    const auto old_holder = std::move(holder);
 
     if constexpr (immovable<T>) {
-      value = std::unique_ptr<T>{new T{calculate(reactive)}};
+      holder =
+          immovable_holder_t<T>{std::unique_ptr<T>{new T{calculate(reactive)}}};
     } else {
-      value = calculate(reactive);
+      holder = calculate(reactive);
     }
 
-    const auto changed = !old_value or (*old_value != *value);
+    const auto changed =
+        !old_holder or (indirect(old_holder) != indirect(holder));
 
     // Reset these data, otherwise this observable
     // will be incorrectly considered as outdated.
@@ -722,7 +732,7 @@ public:
     if (!state->is_up_to_date(reactive))
       state->recalculate(reactive);
 
-    return *state->value;
+    return *state->holder;
   }
 
   auto &operator()() const { return get(*this); }
