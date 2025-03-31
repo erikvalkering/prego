@@ -351,6 +351,11 @@ struct magic_mixin {
   auto size(this auto self) {
     return magic_wrapper{[=] { return self().size(); }};
   }
+
+  auto value_or(this auto self, auto alternative) {
+    return magic_wrapper{
+        [=] { return self().value_or(get_value_from_param(alternative)); }};
+  }
 };
 
 template <typename F> struct magic_wrapper : F, magic_mixin {

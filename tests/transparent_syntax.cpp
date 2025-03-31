@@ -204,6 +204,14 @@ static suite<"transparent syntax"> _ = [] {
     expect(c3 == 10);
   };
 
+  "optional"_test = [] {
+    atom x = std::optional<int>{42};
+    atom y = std::optional<int>{};
+
+    expect(x.value_or(1729) == 42);
+    expect(y.value_or(1729) == 1729);
+  };
+
   "format"_test = [=] {
     atom missi = "Missi"s;
     expect(std::format("{}", missi) == "Missi");
