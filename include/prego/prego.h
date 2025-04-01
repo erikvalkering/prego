@@ -319,6 +319,12 @@ template <typename F> struct magic_wrapper;
     }};                                                                        \
   }
 
+#define PREGO_DEFINE_MAGIC_MEMBER(member)                                      \
+  auto member(this auto self, auto... args) {                                  \
+    return magic_wrapper{                                                      \
+        [=] { return self().member(get_value_from_param(args)...); }};         \
+  }
+
 struct magic_mixin {
   PREGO_DEFINE_MAGIC_OPERATOR(+);
   PREGO_DEFINE_MAGIC_OPERATOR(<=>);
@@ -328,16 +334,11 @@ struct magic_mixin {
   PREGO_DEFINE_MAGIC_OPERATOR(<=);
   PREGO_DEFINE_MAGIC_OPERATOR(>=);
 
-  auto size(this auto self) {
-    return magic_wrapper{[=] { return self().size(); }};
-  }
-
-  auto value_or(this auto self, auto alternative) {
-    return magic_wrapper{
-        [=] { return self().value_or(get_value_from_param(alternative)); }};
-  }
+  PREGO_DEFINE_MAGIC_MEMBER(size);
+  PREGO_DEFINE_MAGIC_MEMBER(value_or);
 };
 
+#undef PREGO_DEFINE_MAGIC_MEMBER
 #undef PREGO_DEFINE_MAGIC_OPERATOR
 
 template <typename F> struct magic_wrapper : F, magic_mixin {
