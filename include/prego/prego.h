@@ -312,41 +312,21 @@ auto get_value_from_param(auto param) { return param; }
 
 template <typename F> struct magic_wrapper;
 
+#define PREGO_DEFINE_MAGIC_OPERATOR(op)                                        \
+  friend auto operator op(auto lhs, auto rhs) {                                \
+    return magic_wrapper{[=] {                                                 \
+      return get_value_from_param(lhs) op get_value_from_param(rhs);           \
+    }};                                                                        \
+  }
+
 struct magic_mixin {
-  friend auto operator+(auto lhs, auto rhs) {
-    return magic_wrapper{
-        [=] { return get_value_from_param(lhs) + get_value_from_param(rhs); }};
-  }
-
-  friend auto operator<=>(auto lhs, auto rhs) {
-    return magic_wrapper{[=] {
-      return get_value_from_param(lhs) <=> get_value_from_param(rhs);
-    }};
-  }
-  friend auto operator==(auto lhs, auto rhs) {
-    return magic_wrapper{
-        [=] { return get_value_from_param(lhs) == get_value_from_param(rhs); }};
-  }
-
-  friend auto operator>(auto lhs, auto rhs) {
-    return magic_wrapper{
-        [=] { return get_value_from_param(lhs) > get_value_from_param(rhs); }};
-  }
-
-  friend auto operator<(auto lhs, auto rhs) {
-    return magic_wrapper{
-        [=] { return get_value_from_param(lhs) < get_value_from_param(rhs); }};
-  }
-
-  friend auto operator>=(auto lhs, auto rhs) {
-    return magic_wrapper{
-        [=] { return get_value_from_param(lhs) >= get_value_from_param(rhs); }};
-  }
-
-  friend auto operator<=(auto lhs, auto rhs) {
-    return magic_wrapper{
-        [=] { return get_value_from_param(lhs) <= get_value_from_param(rhs); }};
-  }
+  PREGO_DEFINE_MAGIC_OPERATOR(+);
+  PREGO_DEFINE_MAGIC_OPERATOR(<=>);
+  PREGO_DEFINE_MAGIC_OPERATOR(==);
+  PREGO_DEFINE_MAGIC_OPERATOR(>);
+  PREGO_DEFINE_MAGIC_OPERATOR(<);
+  PREGO_DEFINE_MAGIC_OPERATOR(<=);
+  PREGO_DEFINE_MAGIC_OPERATOR(>=);
 
   auto size(this auto self) {
     return magic_wrapper{[=] { return self().size(); }};
@@ -357,6 +337,8 @@ struct magic_mixin {
         [=] { return self().value_or(get_value_from_param(alternative)); }};
   }
 };
+
+#undef PREGO_DEFINE_MAGIC_OPERATOR
 
 template <typename F> struct magic_wrapper : F, magic_mixin {
   using F::operator();
