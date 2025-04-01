@@ -1,7 +1,5 @@
 #include "common.h"
 
-#include <type_traits>
-
 struct immovable {
   int x = 42;
   int y = 1729;
@@ -23,12 +21,6 @@ struct immovable {
   }
 };
 
-template <class C> struct class_template_traits;
-template <template <typename> class C, typename T>
-struct class_template_traits<C<T>> {
-  static constexpr bool is_reference_v = std::is_reference_v<T>;
-};
-
 static suite<"type support"> _ = [] {
   "atom ctad"_test = [] {
     auto c = 1729;
@@ -43,11 +35,11 @@ static suite<"type support"> _ = [] {
   "calc ctad"_test = [] {
     auto l = [] { return 1729; };
 
-    calc x = [] { return 42; };
-    calc y = l;
+    calc x = l;
+    calc y = std::move(l);
 
-    static_assert(not class_template_traits<decltype(x)>::is_reference_v);
-    static_assert(not class_template_traits<decltype(y)>::is_reference_v);
+    static_assert(std::same_as<decltype(x), calc<decltype(l)>>);
+    static_assert(std::same_as<decltype(y), calc<decltype(l)>>);
   };
 
   "moveonly_types"_test = [] {
