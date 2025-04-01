@@ -33,7 +33,7 @@ static suite<"type support"> _ = [] {
   };
 
   "calc ctad"_test = [] {
-    auto l = [] { return 1729; };
+    auto l = [] { return 42; };
 
     calc x = l;
     calc y = std::move(l);
