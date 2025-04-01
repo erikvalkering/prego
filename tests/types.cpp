@@ -187,10 +187,10 @@ static suite<"type support"> _ = [] {
     atom c = std::optional<int>{};
     atom d = std::optional<int>{42};
 
-    static_assert(std::same_as<decltype(auto{a()}), std::optional<int>>);
-    static_assert(std::same_as<decltype(auto{b()}), std::optional<int>>);
-    static_assert(std::same_as<decltype(auto{c()}), std::optional<int>>);
-    static_assert(std::same_as<decltype(auto{d()}), std::optional<int>>);
+    static_assert(std::same_as<decltype(a()), const std::optional<int> &>);
+    static_assert(std::same_as<decltype(b()), const std::optional<int> &>);
+    static_assert(std::same_as<decltype(c()), const std::optional<int> &>);
+    static_assert(std::same_as<decltype(d()), const std::optional<int> &>);
 
     expect(a() == std::nullopt);
     expect(b() == 42);
@@ -200,7 +200,7 @@ static suite<"type support"> _ = [] {
 
   "optional calc"_test = [] {
     calc a = [] { return std::optional<int>{42}; };
-    static_assert(std::same_as<decltype(auto{a()}), std::optional<int>>);
+    static_assert(std::same_as<decltype(a()), const std::optional<int> &>);
     expect(a() == 42);
   };
 
@@ -236,12 +236,12 @@ static suite<"type support"> _ = [] {
     atom e = decltype(l){l};
     atom f = l;
 
-    static_assert(std::same_as<decltype(auto{a()}), decltype(l)>);
-    static_assert(std::same_as<decltype(auto{b()}), decltype(l)>);
-    static_assert(std::same_as<decltype(auto{c()}), decltype(l)>);
-    static_assert(std::same_as<decltype(auto{d()}), decltype(l)>);
-    static_assert(std::same_as<decltype(auto{e()}), decltype(l)>);
-    static_assert(std::same_as<decltype(auto{f()}), decltype(l)>);
+    static_assert(std::same_as<decltype(a()), const decltype(l) &>);
+    static_assert(std::same_as<decltype(b()), const decltype(l) &>);
+    static_assert(std::same_as<decltype(c()), const decltype(l) &>);
+    static_assert(std::same_as<decltype(d()), const decltype(l) &>);
+    static_assert(std::same_as<decltype(e()), const decltype(l) &>);
+    static_assert(std::same_as<decltype(f()), const decltype(l) &>);
 
     expect(a() == decltype(l){});
     expect(b() == decltype(l){l});
@@ -254,7 +254,7 @@ static suite<"type support"> _ = [] {
   "function calc"_test = [] {
     auto l = [] { return 42; };
     calc a = [=] { return l; };
-    static_assert(std::same_as<decltype(auto{a()}), decltype(l)>);
+    static_assert(std::same_as<decltype(a()), const decltype(l) &>);
     expect(a()() == 42);
   };
 };
