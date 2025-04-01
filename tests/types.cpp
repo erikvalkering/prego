@@ -27,19 +27,23 @@ static suite<"type support"> _ = [] {
 
     atom x = 42;
     atom y = c;
+    atom z = std::as_const(c);
 
     static_assert(std::same_as<decltype(x), atom<int>>);
     static_assert(std::same_as<decltype(y), atom<int>>);
+    static_assert(std::same_as<decltype(z), atom<int>>);
   };
 
   "calc ctad"_test = [] {
     auto l = [] { return 42; };
 
     calc x = l;
-    calc y = std::move(l);
+    calc y = std::as_const(l);
+    calc z = std::move(l);
 
     static_assert(std::same_as<decltype(x), calc<decltype(l)>>);
     static_assert(std::same_as<decltype(y), calc<decltype(l)>>);
+    static_assert(std::same_as<decltype(z), calc<decltype(l)>>);
   };
 
   "moveonly_types"_test = [] {
