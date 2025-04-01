@@ -457,6 +457,8 @@ public:
   auto observers() const { return state->observers; }
 };
 
+template <typename T> atom(const T &) -> atom<T>;
+template <typename T> atom(T &) -> atom<T>;
 template <typename T> atom(T &&) -> atom<T>;
 template <typename T> atom(std::in_place_type_t<T>, auto &&...) -> atom<T>;
 
@@ -748,6 +750,8 @@ public:
   auto observers() const { return state->observers; }
 };
 
+template <typename F> calc(const F &) -> calc<F>;
+template <typename F> calc(F &) -> calc<F>;
 template <typename F> calc(F &&) -> calc<F>;
 
 template <typename T> auto fwd_capture(T &&x) { return std::tuple<T>(FWD(x)); }
