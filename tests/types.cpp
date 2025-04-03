@@ -196,6 +196,13 @@ static suite<"type support"> _ = [] {
     expect(b() == 42);
     expect(c() == std::nullopt);
     expect(d() == 42);
+
+    a = std::optional{42};
+    expect(a() == 42);
+    a = 1729;
+    expect(a() == 1729);
+    a = std::nullopt;
+    expect(a() == std::nullopt);
   };
 
   "optional calc"_test = [] {
