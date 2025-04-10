@@ -168,6 +168,15 @@ static suite<"transparent syntax"> _ = [] {
     static_assert(std::same_as<decltype(get_result_t(cE)), std::string>);
   };
 
+  "derived_from_magix_mixin"_test = [] {
+    static_assert(prego::derived_from<atom<int>, prego::magic_mixin>);
+    static_assert(prego::derived_from<const atom<int>, prego::magic_mixin>);
+    static_assert(prego::derived_from<atom<int> &, prego::magic_mixin>);
+    static_assert(prego::derived_from<const atom<int> &, prego::magic_mixin>);
+    static_assert(prego::derived_from<atom<int> &&, prego::magic_mixin>);
+    static_assert(prego::derived_from<const atom<int> &&, prego::magic_mixin>);
+  };
+
   "string_concatenation"_test = [] {
     atom missi = "Missi"s;
     atom faaiv = "Faaiv"s;

@@ -310,6 +310,9 @@ auto get_value_from_param(std::derived_from<magic_mixin> auto param) {
 
 auto get_value_from_param(auto param) { return param; }
 
+template <typename Derived, typename Base>
+concept derived_from = std::derived_from<std::remove_cvref_t<Derived>, Base>;
+
 template <typename F> struct magic_wrapper;
 
 #define PREGO_DEFINE_MAGIC_OPERATOR(op)                                        \
