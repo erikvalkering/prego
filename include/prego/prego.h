@@ -10,6 +10,7 @@
 #include <ranges>
 #include <set>
 #include <string>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -322,10 +323,49 @@ decltype(auto) get_value_from_param2(auto &&param) { return FWD(param); }
 
 template <typename F> struct magic_wrapper;
 
+template <typename F, typename... Args>
+auto make_magic_wrapper(F f, Args &&...args) {
+  return magic_wrapper{
+      [f, args = std::tuple<Args...>{FWD(args)...}] -> decltype(auto) {
+        return std::apply(
+            [=](auto &&...args) -> decltype(auto) {
+              return f(get_value_from_param2(FWD(args))...);
+            },
+            std::move(args));
+      }};
+}
+
 #define PREGO_DEFINE_MAGIC_OPERATOR(op)                                        \
   friend auto operator op(auto lhs, auto rhs) {                                \
     return magic_wrapper{[=] {                                                 \
       return get_value_from_param(lhs) op get_value_from_param(rhs);           \
+    }};                                                                        \
+  }
+
+#define PREGO_DEFINE_MAGIC_OPERATOR4(op)                                       \
+  template <typename T, typename U>                                            \
+  friend auto operator op(T &&lhs, U &&rhs) {                                  \
+    return magic_wrapper{                                                      \
+        [args = std::tuple<T, U>{FWD(lhs), FWD(rhs)}] -> decltype(auto) {      \
+          return std::apply(                                                   \
+              [](auto &&lhs, auto &&rhs) -> decltype(auto) {                   \
+                return get_value_from_param2(FWD(lhs))                         \
+                    op get_value_from_param2(FWD(rhs));                        \
+              },                                                               \
+              std::move(args));                                                \
+        }};                                                                    \
+  }
+
+#define PREGO_DEFINE_MAGIC_MEMBER4(member)                                     \
+  template <typename Self, typename... Args>                                   \
+  auto member(this Self &&self, Args &&...args) {                              \
+    return magic_wrapper{[args = std::tuple<Self, Args...>{                    \
+                              FWD(self), FWD(args)...}] -> decltype(auto) {    \
+      return std::apply(                                                       \
+          [](auto &&self, auto &&...args) -> decltype(auto) {                  \
+            return FWD(self)().member(get_value_from_param2(FWD(args))...);    \
+          },                                                                   \
+          std::move(args));                                                    \
     }};                                                                        \
   }
 
@@ -336,16 +376,16 @@ template <typename F> struct magic_wrapper;
   }
 
 struct magic_mixin {
-  PREGO_DEFINE_MAGIC_OPERATOR(+);
-  PREGO_DEFINE_MAGIC_OPERATOR(<=>);
-  PREGO_DEFINE_MAGIC_OPERATOR(==);
-  PREGO_DEFINE_MAGIC_OPERATOR(>);
-  PREGO_DEFINE_MAGIC_OPERATOR(<);
-  PREGO_DEFINE_MAGIC_OPERATOR(<=);
-  PREGO_DEFINE_MAGIC_OPERATOR(>=);
+  PREGO_DEFINE_MAGIC_OPERATOR4(+);
+  PREGO_DEFINE_MAGIC_OPERATOR4(<=>);
+  PREGO_DEFINE_MAGIC_OPERATOR4(==);
+  PREGO_DEFINE_MAGIC_OPERATOR4(>);
+  PREGO_DEFINE_MAGIC_OPERATOR4(<);
+  PREGO_DEFINE_MAGIC_OPERATOR4(<=);
+  PREGO_DEFINE_MAGIC_OPERATOR4(>=);
 
-  PREGO_DEFINE_MAGIC_MEMBER(size);
-  PREGO_DEFINE_MAGIC_MEMBER(value_or);
+  PREGO_DEFINE_MAGIC_MEMBER4(size);
+  PREGO_DEFINE_MAGIC_MEMBER4(value_or);
 };
 
 #undef PREGO_DEFINE_MAGIC_MEMBER
