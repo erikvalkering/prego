@@ -177,6 +177,50 @@ static suite<"transparent syntax"> _ = [] {
     static_assert(prego::derived_from<const atom<int> &&, prego::magic_mixin>);
   };
 
+  "get_value_from_param"_test = [] {
+    auto x = 42;
+    atom y = 42;
+    calc z = [] { return 42; };
+    auto w = prego::magic_wrapper{[] { return 42; }};
+
+    expect(x == 42_c);
+    expect(prego::get_value_from_param2(x) == 42_c);
+    expect(prego::get_value_from_param2(std::move(x)) == 42_c);
+
+    expect(y() == 42_c);
+    expect(prego::get_value_from_param2(y) == 42_c);
+    expect(prego::get_value_from_param2(std::move(y)) == 42_c);
+
+    expect(z() == 42_c);
+    expect(prego::get_value_from_param2(z) == 42_c);
+    expect(prego::get_value_from_param2(std::move(z)) == 42_c);
+
+    expect(w() == 42_c);
+    expect(prego::get_value_from_param2(w) == 42_c);
+    expect(prego::get_value_from_param2(std::move(w)) == 42_c);
+
+    static_assert(
+        std::same_as<decltype(prego::get_value_from_param2(x)), int &>);
+    static_assert(
+        std::same_as<decltype(prego::get_value_from_param2(y)), const int &>);
+    static_assert(
+        std::same_as<decltype(prego::get_value_from_param2(z)), const int &>);
+    static_assert(std::same_as<decltype(prego::get_value_from_param2(w)), int>);
+
+    static_assert(
+        std::same_as<decltype(prego::get_value_from_param2(std::move(x))),
+                     int &&>);
+    static_assert(
+        std::same_as<decltype(prego::get_value_from_param2(std::move(y))),
+                     const int &>);
+    static_assert(
+        std::same_as<decltype(prego::get_value_from_param2(std::move(z))),
+                     const int &>);
+    static_assert(
+        std::same_as<decltype(prego::get_value_from_param2(std::move(w))),
+                     int>);
+  };
+
   "string_concatenation"_test = [] {
     atom missi = "Missi"s;
     atom faaiv = "Faaiv"s;
