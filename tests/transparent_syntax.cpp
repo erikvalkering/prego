@@ -259,9 +259,43 @@ static suite<"transparent syntax"> _ = [] {
   "optional"_test = [] {
     atom x = std::optional<int>{42};
     atom y = std::optional<int>{};
+    atom z = 1729;
+    calc w = [] { return 1729; };
 
     expect(x.value_or(1729) == 42);
     expect(y.value_or(1729) == 1729);
+
+    expect(y.value_or(z) == 1729);
+    expect(y.value_or(w) == 1729);
+
+    calc c = y.value_or(w);
+    expect(c == 1729);
+  };
+
+  "optional_string"_test = [] {
+    atom x = std::optional{"Missi"s};
+    atom y = std::optional<std::string>{};
+    atom z = "Faaiv"s;
+    calc w = [] { return "Faaiv"s; };
+
+    expect(x.value_or("Faaiv"s) == "Missi"s);
+    expect(y.value_or("Faaiv"s) == "Faaiv"s);
+
+    expect(y.value_or(z) == "Faaiv"s);
+    expect(y.value_or(w) == "Faaiv"s);
+
+    calc c = y.value_or(w);
+    expect(c == "Faaiv"s);
+  };
+
+  "transparent_comparisons"_test = [] {
+    auto x = std::optional{"Missi"s};
+    atom y = std::optional{"Missi"s};
+
+    expect(x.value_or("Faaiv"s) == "Missi"s);
+    expect(x.value_or("Faaiv") == "Missi");
+    expect(y.value_or("Faaiv"s) == "Missi"s);
+    expect(y.value_or("Faaiv") == "Missi");
   };
 
   "format"_test = [=] {
