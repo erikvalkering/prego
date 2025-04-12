@@ -208,7 +208,7 @@ inline auto notify_observers(observable_t &state,
     if (auto p = observer.lock()) {
       p->notify(notification);
     } else {
-      log(1, get_id(state), ": err - notify_observers");
+      assert(false);
     }
   }
 }
@@ -551,7 +551,7 @@ public:
       if (auto p = observable.lock()) {
         p->unobserve(observer);
       } else
-        log(1, ": err - ~calc::state_t");
+        assert(false);
     }
   }
 
@@ -609,7 +609,7 @@ public:
       if (auto p = observable.lock())
         p->observe(observer, false);
       else
-        log(1, get_id(*this), ": err - on_nonreactive");
+        assert(false);
   }
 
   virtual bool is_up_to_date(bool reactive) override final {
@@ -641,7 +641,7 @@ public:
           p->observe(observer, true);
         }
       } else
-        log(1, "err - is_up_to_date");
+        assert(false);
 
     return true;
   }
@@ -688,7 +688,7 @@ public:
         if (auto p = observable.lock())
           p->observe(observer, false);
         else
-          log(1, "err - calculate");
+          assert(false);
       }
     }};
 
