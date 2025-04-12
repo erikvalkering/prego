@@ -184,41 +184,40 @@ static suite<"transparent syntax"> _ = [] {
     auto w = prego::magic_wrapper{[] { return 42; }};
 
     expect(x == 42_c);
-    expect(prego::get_value_from_param2(x) == 42_c);
-    expect(prego::get_value_from_param2(std::move(x)) == 42_c);
+    expect(prego::get_value_from_param(x) == 42_c);
+    expect(prego::get_value_from_param(std::move(x)) == 42_c);
 
     expect(y() == 42_c);
-    expect(prego::get_value_from_param2(y) == 42_c);
-    expect(prego::get_value_from_param2(std::move(y)) == 42_c);
+    expect(prego::get_value_from_param(y) == 42_c);
+    expect(prego::get_value_from_param(std::move(y)) == 42_c);
 
     expect(z() == 42_c);
-    expect(prego::get_value_from_param2(z) == 42_c);
-    expect(prego::get_value_from_param2(std::move(z)) == 42_c);
+    expect(prego::get_value_from_param(z) == 42_c);
+    expect(prego::get_value_from_param(std::move(z)) == 42_c);
 
     expect(w() == 42_c);
-    expect(prego::get_value_from_param2(w) == 42_c);
-    expect(prego::get_value_from_param2(std::move(w)) == 42_c);
+    expect(prego::get_value_from_param(w) == 42_c);
+    expect(prego::get_value_from_param(std::move(w)) == 42_c);
 
     static_assert(
-        std::same_as<decltype(prego::get_value_from_param2(x)), int &>);
+        std::same_as<decltype(prego::get_value_from_param(x)), int &>);
     static_assert(
-        std::same_as<decltype(prego::get_value_from_param2(y)), const int &>);
+        std::same_as<decltype(prego::get_value_from_param(y)), const int &>);
     static_assert(
-        std::same_as<decltype(prego::get_value_from_param2(z)), const int &>);
-    static_assert(std::same_as<decltype(prego::get_value_from_param2(w)), int>);
+        std::same_as<decltype(prego::get_value_from_param(z)), const int &>);
+    static_assert(std::same_as<decltype(prego::get_value_from_param(w)), int>);
 
     static_assert(
-        std::same_as<decltype(prego::get_value_from_param2(std::move(x))),
+        std::same_as<decltype(prego::get_value_from_param(std::move(x))),
                      int &&>);
     static_assert(
-        std::same_as<decltype(prego::get_value_from_param2(std::move(y))),
+        std::same_as<decltype(prego::get_value_from_param(std::move(y))),
                      const int &>);
     static_assert(
-        std::same_as<decltype(prego::get_value_from_param2(std::move(z))),
+        std::same_as<decltype(prego::get_value_from_param(std::move(z))),
                      const int &>);
     static_assert(
-        std::same_as<decltype(prego::get_value_from_param2(std::move(w))),
-                     int>);
+        std::same_as<decltype(prego::get_value_from_param(std::move(w))), int>);
   };
 
   "string_concatenation"_test = [] {
