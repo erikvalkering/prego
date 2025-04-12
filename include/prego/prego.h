@@ -343,30 +343,21 @@ auto make_magic_wrapper(F f, Args &&...args) {
   }
 
 #define PREGO_DEFINE_MAGIC_OPERATOR4(op)                                       \
-  template <typename T, typename U>                                            \
-  friend auto operator op(T &&lhs, U &&rhs) {                                  \
-    return magic_wrapper{                                                      \
-        [args = std::tuple<T, U>{FWD(lhs), FWD(rhs)}] -> decltype(auto) {      \
-          return std::apply(                                                   \
-              [](auto &&lhs, auto &&rhs) -> decltype(auto) {                   \
-                return get_value_from_param2(FWD(lhs))                         \
-                    op get_value_from_param2(FWD(rhs));                        \
-              },                                                               \
-              std::move(args));                                                \
-        }};                                                                    \
+  friend auto operator op(auto &&lhs, auto &&rhs) {                            \
+    return make_magic_wrapper(                                                 \
+        [](auto &&lhs, auto &&rhs) -> decltype(auto) {                         \
+          return FWD(lhs) op FWD(rhs);                                         \
+        },                                                                     \
+        FWD(lhs), FWD(rhs));                                                   \
   }
 
 #define PREGO_DEFINE_MAGIC_MEMBER4(member)                                     \
-  template <typename Self, typename... Args>                                   \
-  auto member(this Self &&self, Args &&...args) {                              \
-    return magic_wrapper{[args = std::tuple<Self, Args...>{                    \
-                              FWD(self), FWD(args)...}] -> decltype(auto) {    \
-      return std::apply(                                                       \
-          [](auto &&self, auto &&...args) -> decltype(auto) {                  \
-            return FWD(self)().member(get_value_from_param2(FWD(args))...);    \
-          },                                                                   \
-          std::move(args));                                                    \
-    }};                                                                        \
+  auto member(this auto &&self, auto &&...args) {                              \
+    return make_magic_wrapper(                                                 \
+        [](auto &&self, auto &&...args) -> decltype(auto) {                    \
+          return FWD(self).member(FWD(args)...);                               \
+        },                                                                     \
+        FWD(self), FWD(args)...);                                              \
   }
 
 #define PREGO_DEFINE_MAGIC_MEMBER(member)                                      \
