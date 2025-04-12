@@ -62,7 +62,6 @@ static suite<"basics"> _ = [] {
     auto full_name = calc{[=, &x](auto get) {
       x = true;
       auto value = get(first_name) + " " + get(last_name);
-      prego::log(1, "full_name = ", value);
       return value;
     }};
 
@@ -71,11 +70,9 @@ static suite<"basics"> _ = [] {
       y = true;
       if (get(nick_name) != "") {
         auto value = get(nick_name);
-        prego::log(1, "display_name = ", value);
         return value;
       } else {
         auto value = get(full_name);
-        prego::log(1, "display_name = ", value);
         return value;
       }
     }};
@@ -86,9 +83,7 @@ static suite<"basics"> _ = [] {
       z = true;
       if (get(enabled)) {
         auto value = get(display_name);
-        prego::log(1, "autorun = ", value);
-      } else
-        prego::log(1, "autorun = disabled");
+      }
     });
 
     expect(x) << "full_name should be calculated";

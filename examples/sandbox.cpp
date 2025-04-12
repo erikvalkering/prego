@@ -1,5 +1,6 @@
 #include <prego/prego.h>
 
+#include <iostream>
 #include <string>
 
 using namespace prego;

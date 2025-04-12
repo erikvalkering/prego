@@ -3,13 +3,12 @@
 #include <algorithm>
 #include <cassert>
 #include <concepts>
+#include <format>
 #include <functional>
-#include <iostream>
 #include <memory>
 #include <optional>
 #include <ranges>
 #include <set>
-#include <string>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -19,30 +18,9 @@
 
 namespace prego {
 
-const auto &to_string(const auto &x) { return x; }
-
-auto log_(int level, const auto &...args) {
-  switch (level) {
-  default:
-    break;
-  case 0:
-  case 1:
-  case 2:
-  case 3:
-  case 4:
-  case 5:
-  case 6: {
-    return;
-    break;
-  }
-  }
-
-  std::cout << std::boolalpha << level << ": ";
-  ((std::cout << to_string(args)), ...);
-  std::cout << std::endl;
+auto event(const auto &...args) {
+  // TODO: implement zero-overhead hook system
 }
-
-auto log(const auto &...args) { log_(args...); }
 
 enum class notification_t {
   stale,
@@ -50,27 +28,8 @@ enum class notification_t {
   unchanged,
 };
 
-inline auto to_string(const notification_t notification) {
-  switch (notification) {
-  default:
-    throw 0;
-  case notification_t::stale:
-    return "stale";
-  case notification_t::changed:
-    return "changed";
-  case notification_t::unchanged:
-    return "unchanged";
-  }
-}
-
 struct observer_t {
   virtual void notify(const notification_t) = 0;
-};
-
-struct id_mixin {
-  static inline int id_counter = 0;
-  std::string id = std::to_string(id_counter++);
-  ~id_mixin() { --id_counter; }
 };
 
 struct hooks_mixin {
@@ -88,8 +47,6 @@ struct hooks_mixin {
 };
 
 struct observable_t;
-auto get_id(const std::weak_ptr<observer_t> &) -> std::string;
-auto get_id(const observable_t &) -> std::string;
 
 template <typename Key, typename Value, typename Comparator = std::less<Key>>
 class insertion_order_map {
@@ -149,7 +106,7 @@ public:
   }
 };
 
-struct observable_t : id_mixin, hooks_mixin {
+struct observable_t : hooks_mixin {
   insertion_order_map<std::weak_ptr<observer_t>, bool, std::owner_less<>>
       observers = {};
   size_t reactive_observers_count = 0;
@@ -162,7 +119,7 @@ struct observable_t : id_mixin, hooks_mixin {
   void observe(const std::weak_ptr<observer_t> &observer, const bool reactive) {
     before_observe(observer, reactive);
 
-    log(1, get_id(*this), ".observe(", get_id(observer), ", ", reactive, ")");
+    event(".observe()", *this, observer, reactive);
     if (reactive != std::exchange(observers[observer], reactive)) {
       reactive_observers_count += (reactive ? +1 : -1);
       if (!is_reactive())
@@ -174,7 +131,7 @@ struct observable_t : id_mixin, hooks_mixin {
   // and needs to remove itself from the observable.
   template <std::derived_from<observer_t> T>
   void unobserve(const std::weak_ptr<T> &observer) {
-    log(1, get_id(*this), ".unobserve(<observer>)");
+    event(".unobserve(<observer>)", *this, observer);
 
     assert(observers.contains(observer));
     const auto node = observers.extract(observer);
@@ -203,7 +160,7 @@ inline auto global_scope_manager = scope_manager_t{};
 
 inline auto notify_observers(observable_t &state,
                              const notification_t notification) {
-  // log(1, "notify ", state.observers.size(), " observers");
+  event("notify()", state, notification);
   for (auto &observer : state.observers | std::views::keys) {
     if (auto p = observer.lock()) {
       p->notify(notification);
@@ -211,14 +168,6 @@ inline auto notify_observers(observable_t &state,
       assert(false);
     }
   }
-}
-
-inline auto get_id(const std::weak_ptr<observer_t> &observer) -> std::string {
-  return get_id(*std::dynamic_pointer_cast<observable_t>(observer.lock()));
-}
-
-inline auto get_id(const observable_t &observable) -> std::string {
-  return dynamic_cast<const id_mixin &>(observable).id;
 }
 
 template <typename From, typename To>
@@ -264,7 +213,7 @@ template <typename T> struct atom_state : observable_t {
     requires(not immovable<T>)
       : holder{FWD(args)...} {}
 
-  ~atom_state() { log(1, "~", get_id(*this)); }
+  ~atom_state() { event("~atom_state()", *this); }
 
   virtual bool is_up_to_date(bool reactive) override final {
     before_is_up_to_date(reactive);
@@ -279,7 +228,6 @@ template <typename T> struct atom_state : observable_t {
     // did not change with respect to the previous time
     // that the observer was calculated, and
     // must therefore be considered up-to-date.
-    log(6, get_id(*this), ".is_up_to_date() [true]");
     return true;
   }
 };
@@ -414,14 +362,12 @@ public:
   atom(atom<U> &&src) : atom{std::move(src.state->holder)} {}
 
   auto set(auto &&holder) {
-    log(1, "");
-    log(1, get_id(*state), ".set(", indirect(holder), ") [",
-        indirect(state->holder), "]");
+    event(".set()", *this, holder);
     if (indirect(state->holder) == indirect(holder))
       return;
 
     state->holder = FWD(holder);
-    log(1, get_id(*state), ": changed");
+    event(".set/changed()", *this);
 
     // First sweep: mark all as stale
     notify_observers(*state, notification_t::stale);
@@ -545,7 +491,7 @@ public:
 
   explicit calc_state(auto &&f) : f{FWD(f)} {}
   ~calc_state() {
-    log(1, "~calc::state_t(", get_id(*this), ")");
+    event("~calc_state()", *this);
     const auto observer = this->weak_from_this();
     for (auto &observable : observables) {
       if (auto p = observable.lock()) {
@@ -556,8 +502,7 @@ public:
   }
 
   virtual void notify(const notification_t notification) override final {
-    log(1, get_id(*this), "(reactive=", is_reactive(),
-        "): notify: ", notification);
+    event(".notify()", *this, notification);
     switch (notification) {
     default:
       assert(false);
@@ -577,7 +522,7 @@ public:
       // If an observable was changed,
       // we need to recalculate as well
       maybe_changed |= notification == notification_t::changed;
-      log(1, get_id(*this), ": maybe_changed: ", maybe_changed);
+      event(".notify/maybe_changed()", *this, maybe_changed);
 
       // Only continue when all observables have been updated
       if (--stale_count != 0)
@@ -647,7 +592,7 @@ public:
   }
 
   decltype(auto) calculate(bool reactive) {
-    log(1, get_id(*this), ": calculate");
+    event(".calculate()", *this, reactive);
 
     // Continue reactively if we are either called
     // reactively (via observable::set()) or if we
@@ -714,7 +659,7 @@ public:
     stale_count = 0;
     maybe_changed = false;
 
-    log(1, get_id(*this), ": changed: ", changed);
+    event(".recalculate()", *this, reactive, changed);
 
     // Finally notify all the observers that we are up to date
     notify_observers(*this, changed ? notification_t::changed
