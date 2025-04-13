@@ -268,7 +268,7 @@ template <typename F> struct magic_wrapper;
 template <typename F, typename... Args>
 auto make_magic_wrapper(F f, Args &&...args) {
   return magic_wrapper{
-      [f, args = std::tuple<Args...>{FWD(args)...}] -> decltype(auto) {
+      [f, args = std::tuple<Args...>{FWD(args)...}]() -> decltype(auto) {
         return std::apply(
             [=](auto &&...args) -> decltype(auto) {
               return f(get_value_from_param(FWD(args))...);
