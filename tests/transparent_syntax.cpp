@@ -307,4 +307,13 @@ static suite<"transparent syntax"> _ = [] {
 
     expect(std::format("{}", missi + faaiv) == "MissiFaaiv");
   };
+
+  skip / "calc_from_atom"_test = [] {
+    atom x = 42;
+    calc y = x;
+
+    // Executing this autorun triggered a bug in the assignment of an atom to
+    // the previous calc
+    auto r = autorun([=] { y(); }, nullptr);
+  };
 };
