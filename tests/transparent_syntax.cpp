@@ -308,6 +308,33 @@ static suite<"transparent syntax"> _ = [] {
     expect(std::format("{}", missi + faaiv) == "MissiFaaiv");
   };
 
+  "capture_by_value"_test = [] {
+    bool destroyed = false;
+    struct mock {
+      mutable int copies = 0;
+      bool *destroyed;
+      mock(bool *destroyed = nullptr) : destroyed{destroyed} {}
+
+      mock(const mock &rhs) { ++rhs.copies; }
+      ~mock() {
+        if (destroyed)
+          *destroyed = true;
+      }
+
+      operator int() const { return 0; }
+    };
+
+    auto x = mock{};
+
+    auto y = [&] {
+      atom z = mock{&destroyed};
+      return x == z;
+    }();
+
+    expect(x.copies == 1);
+    expect(not destroyed);
+  };
+
   skip / "calc_from_atom"_test = [] {
     atom x = 42;
     calc y = x;
