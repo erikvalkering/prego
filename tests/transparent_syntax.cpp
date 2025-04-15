@@ -1,7 +1,7 @@
 #include "common.h"
 
 static suite<"transparent syntax"> _ = [] {
-  "test_comparisons"_test = [] {
+  "comparisons"_test = [] {
     atom x = 42;
 
     calc y1 = x <=> 1729;
@@ -47,7 +47,7 @@ static suite<"transparent syntax"> _ = [] {
     expect(w3 == false);
   };
 
-  "test_implicit_conversions"_test = [] {
+  "implicit_conversions"_test = [] {
     atom missi = "Missi"s;
     calc faaiv = [] { return "Faaiv"s; };
 
@@ -55,7 +55,7 @@ static suite<"transparent syntax"> _ = [] {
     std::string f = faaiv;
   };
 
-  "test_get_result_t_atom"_test = [] {
+  "get_result_t_atom"_test = [] {
     using prego::get_result_t;
 
     atom missi = "Missi"s;
@@ -97,7 +97,7 @@ static suite<"transparent syntax"> _ = [] {
     static_assert(std::same_as<decltype(get_result_t(c7)), std::string>);
   };
 
-  "test_get_result_t_calc"_test = [] {
+  "get_result_t_calc"_test = [] {
     using prego::get_result_t;
 
     calc missi = [] { return "Missi"s; };
