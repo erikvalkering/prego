@@ -316,19 +316,22 @@ static suite<"transparent syntax"> _ = [] {
       mock(bool *destroyed = nullptr) : destroyed{destroyed} {}
 
       mock(const mock &rhs) { ++rhs.copies; }
+      mock(mock &&) = default;
+      mock &operator=(const mock &) = default;
+      mock &operator=(mock &&) = default;
+
       ~mock() {
         if (destroyed)
           *destroyed = true;
       }
-
-      operator int() const { return 0; }
+      bool operator==(const mock &) const = default;
     };
 
     auto x = mock{};
 
     auto y = [&] {
       atom z = mock{&destroyed};
-      return x == z;
+      return z == x;
     }();
 
     expect(x.copies == 1);
