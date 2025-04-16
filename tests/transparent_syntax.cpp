@@ -339,7 +339,7 @@ static suite<"transparent syntax"> _ = [] {
     expect(not destroyed);
   };
 
-  skip / "calc_from_atom"_test = [] {
+  "calc_from_atom"_test = [] {
     atom x = 42;
     calc y = x;
 
