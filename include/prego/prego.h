@@ -680,8 +680,8 @@ public:
   calc(calc &&) = default;
   calc &operator=(calc &&) = default;
 
-  calc(convertible_to<F> auto &&f)
-      : state{std::make_shared<calc_state<F>>(FWD(f))} {}
+  calc(convertible_to<F> auto f)
+      : state{std::make_shared<calc_state<F>>(std::move(f))} {}
 
   // TODO: reactive == true should not be accessible publicly,
   //       because there's no way to unsubscribe
