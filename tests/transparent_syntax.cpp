@@ -331,6 +331,7 @@ static suite<"transparent syntax"> _ = [] {
 
     auto y = [&] {
       atom z = mock{&destroyed};
+      destroyed = false;
       return z == x;
     }();
 
