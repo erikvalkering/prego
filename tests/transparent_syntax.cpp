@@ -332,7 +332,7 @@ static suite<"transparent syntax"> _ = [] {
     auto y = [&] {
       atom z = mock{&destroyed};
       destroyed = false;
-      return z == x;
+      return x == z;
     }();
 
     expect(x.copies == 1_c);
