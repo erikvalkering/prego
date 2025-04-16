@@ -270,29 +270,29 @@ auto make_magic_wrapper(F f, Args &&...args) {
   return magic_wrapper{
       [f, args = std::tuple<Args...>{FWD(args)...}]() -> decltype(auto) {
         return std::apply(
-            [=](auto &&...args) -> decltype(auto) {
-              return f(get_value_from_param(FWD(args))...);
+            [=](const auto &...args) -> decltype(auto) {
+              return f(get_value_from_param(args)...);
             },
-            std::move(args));
+            args);
       }};
 }
 
 #define PREGO_DEFINE_MAGIC_OPERATOR(op)                                        \
-  friend auto operator op(auto &&lhs, auto &&rhs) {                            \
+  friend auto operator op(auto lhs, auto rhs) {                                \
     return make_magic_wrapper(                                                 \
         [](auto &&lhs, auto &&rhs) -> decltype(auto) {                         \
           return FWD(lhs) op FWD(rhs);                                         \
         },                                                                     \
-        FWD(lhs), FWD(rhs));                                                   \
+        std::move(lhs), std::move(rhs));                                       \
   }
 
 #define PREGO_DEFINE_MAGIC_MEMBER(member)                                      \
-  auto member(this auto &&self, auto &&...args) {                              \
+  auto member(this auto self, auto... args) {                                  \
     return make_magic_wrapper(                                                 \
         [](auto &&self, auto &&...args) -> decltype(auto) {                    \
           return FWD(self).member(FWD(args)...);                               \
         },                                                                     \
-        FWD(self), FWD(args)...);                                              \
+        std::move(self), std::move(args)...);                                  \
   }
 
 struct magic_mixin {
