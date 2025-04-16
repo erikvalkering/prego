@@ -312,7 +312,7 @@ static suite<"transparent syntax"> _ = [] {
     bool destroyed = false;
     struct mock {
       mutable int copies = 0;
-      bool *destroyed;
+      bool *destroyed = nullptr;
       mock(bool *destroyed = nullptr) : destroyed{destroyed} {}
 
       mock(const mock &rhs) { ++rhs.copies; }
