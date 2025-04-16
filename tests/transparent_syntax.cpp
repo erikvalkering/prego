@@ -335,7 +335,7 @@ static suite<"transparent syntax"> _ = [] {
       return z == x;
     }();
 
-    expect(x.copies == 1);
+    expect(x.copies == 1_c);
     expect(not destroyed);
   };
 
