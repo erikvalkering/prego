@@ -154,4 +154,11 @@ static suite<"lifetimes"> _ = [] {
     expect(not b_lt.alive()) << "b should be destroyed";
     expect(not c_lt.alive()) << "c should be destroyed";
   };
+
+  "atom_calc_autorun"_test = [] {
+    atom x = 42;
+    calc y = x + 0;
+
+    autorun([=] { y(); });
+  };
 };
