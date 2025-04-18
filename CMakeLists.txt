@@ -52,5 +52,10 @@ target_compile_options(test_prego PRIVATE
     $<AND:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_VERSION:19>>:
     -fsanitize=address -fsanitize=undefined -static-libsan
   >
+  $<
+    $<CXX_COMPILER_ID:MSVC>:
+    /bigobj
+  >
 )
 add_test(NAME prego_test_suite COMMAND test_prego)
+
