@@ -15,10 +15,10 @@ calc display_name = nick_name.value_or(full_name);
 atom enabled = true;
 autorun([=] {
   if (enabled)
-    std::println(display_name); // prints "Mr Unknown"
+    std::println("{}", display_name); // prints "Mr Unknown"
 });
 
-nickname.reset();               // prints "John Doe"
+nick_name.reset();               // prints "John Doe"
 first_name = "Jane";            // prints "Jane Doe"
 nick_name = "Jane Doe";         // no change, nothing printed
 first_name = "John";            // no change, nothing printed
