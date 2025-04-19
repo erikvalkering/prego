@@ -306,7 +306,8 @@ struct magic_mixin {
 
   PREGO_DEFINE_MAGIC_MEMBER(size);
   PREGO_DEFINE_MAGIC_MEMBER(value_or);
-  PREGO_DEFINE_MAGIC_MEMBER(reset);
+  // PREGO_DEFINE_MAGIC_MEMBER(reset);
+  auto reset(this auto self) { self = std::nullopt; }
 };
 
 #undef PREGO_DEFINE_MAGIC_MEMBER
