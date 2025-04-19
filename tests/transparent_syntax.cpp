@@ -270,6 +270,9 @@ static suite<"transparent syntax"> _ = [] {
 
     calc c = y.value_or(w);
     expect(c == 1729);
+
+    x.reset();
+    expect(x == std::nullopt);
   };
 
   "optional_string"_test = [] {
