@@ -38,36 +38,39 @@ nick_name.reset();      // no change, nothing printed
 using prego::atom;
 
 // The following are equivalent
-auto first_name = atom<std::string>{"John"s}; // full declaration
-auto first_name = atom{"John"s};              // type is deduced (via ctad)
-atom first_name = "John"s;                    // terse form
+auto name = atom<std::string>{"John Doe"s}; // full declaration
+auto name = atom{"John Doe"s};              // type is deduced (via ctad)
+atom name = "John Doe"s;                    // terse form
 ```
 
 <details>
 <summary>Advanced</summary>
-  #### Immovable types
-  ```cpp
-  struct immovable {
-    immovable(int x) {}
-    immovable(int x, int y) {}
 
-    immovable(const immovable&) = delete;
-    immovable(immovable&&) = delete;
-    immovable& operator=(const immovable&) = delete;
-    immovable& operator=(immovable&&) = delete;
-  };
+#### Immovable types
 
-  atom a = atom<immovable>{42};
+```cpp
+struct immovable {
+  immovable(int x) {}
+  immovable(int x, int y) {}
 
-  // The following are equivalent
-  atom a = atom<immovable>{std::in_place, 42, 1729};
-  atom<immovable> a = {std::in_place, 42, 1729};
-  atom a = {std::in_place_type<immovable>, 42, 1729};
+  immovable(const immovable&) = delete;
+  immovable(immovable&&) = delete;
+  immovable& operator=(const immovable&) = delete;
+  immovable& operator=(immovable&&) = delete;
+};
 
-  // Alternatively, using a factory function
-  atom a = make_atom<immovable>(42, 1729);
+// The following are equivalent
+atom a = atom<immovable>{std::in_place, 42, 1729};
+atom<immovable> a = {std::in_place, 42, 1729};
+atom a = {std::in_place_type<immovable>, 42, 1729};
 
-  ```
+// Alternatively, using a factory function
+atom a = make_atom<immovable>(42, 1729);
+
+// Conversion is supported out of the box
+atom a = atom<immovable>{42};
+```
+
 </details>
 
 ### Using values
