@@ -27,3 +27,54 @@ nick_name = "John Doe";         // autorun not re-evaluated, nothing printed
 enabled = true;                 // autorun re-evaluated, prints "John Doe"
 nick_name.reset();              // no change, nothing printed
 ```
+
+## Introduction
+
+### Atomic values
+
+```cpp
+#include <prego/prego.h>
+using prego::atom;
+
+// The following are equivalent
+auto name = atom<std::string>{"John"s}; // full declaration
+auto name = atom{"John"s};              // type is deduced (via ctad)
+atom name = "John"s;                    // terse form
+```
+
+### Using values
+
+```cpp
+std::string value = name(); // access value
+std::string value = name;   // also fine: implicit conversion
+
+std::println("Name is {}", name());
+std::println("Name is {}", name); // builtin formatting support
+```
+
+### Combining values
+
+```cpp
+atom first_name = "John"s;
+atom last_name  = "Doe"s;
+
+// The following are equivalent
+auto full_name = first_name() + " " + last_name();
+auto full_name = first_name + " " + last_name;
+
+auto length = (first_name + " " + last_name).size();
+std::println("Length: {}", length);
+```
+
+> Note: `auto length = ...` does not deduce to size_t, but _acts_ like it.
+
+### Shared reference semantics
+
+```cpp
+auto copy = name;
+name = "Jane";
+assert(copy == "Jane");
+
+copy = "John";
+assert(name == "John");
+```
