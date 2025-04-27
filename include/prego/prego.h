@@ -723,7 +723,7 @@ auto autorun(auto f, scope_manager_t *scope_manager = &global_scope_manager) {
   // is not reactive.
   // Note that this node itself is not reactive,
   // because it has no observers.
-  auto reaction = calc{[=](auto get) {
+  auto reaction = calc{[c = std::move(c)](auto get) {
     get(c);
     return 0;
   }};
