@@ -203,8 +203,8 @@ template <typename T> struct atom_state : observable_t {
 
   atom_state() = default;
 
-  atom_state(convertible_to<T> auto &&value)
-      : atom_state{std::in_place, FWD(value)} {}
+  atom_state(convertible_to<T> auto value)
+      : atom_state{std::in_place, std::move(value)} {}
 
   atom_state(std::in_place_t, auto &&...args)
     requires(immovable<T>)
@@ -353,9 +353,9 @@ public:
   // The std::convertible_to is necessary to support:
   // auto c = atom<foo>{42};
   // auto d = atom<immovable>{42};
-  atom(convertible_to<T> auto &&value)
-    requires(not std::same_as<std::remove_cvref_t<decltype(value)>, atom>)
-      : atom{std::in_place, FWD(value)} {}
+  atom(convertible_to<T> auto value)
+    requires(not std::same_as<decltype(value), atom>)
+      : atom{std::in_place, std::move(value)} {}
 
   atom(std::in_place_type_t<T>, auto &&...args)
       : atom{std::in_place, FWD(args)...} {}
@@ -410,9 +410,7 @@ public:
   auto observers() const { return state->observers; }
 };
 
-template <typename T> atom(const T &) -> atom<T>;
-template <typename T> atom(T &) -> atom<T>;
-template <typename T> atom(T &&) -> atom<T>;
+template <typename T> atom(T) -> atom<T>;
 template <typename T> atom(std::in_place_type_t<T>, auto &&...) -> atom<T>;
 
 template <typename T> auto make_atom(auto &&...args) {
