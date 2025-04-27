@@ -489,7 +489,7 @@ public:
   int stale_count = 0;
   bool maybe_changed = false;
 
-  explicit calc_state(auto &&f) : f{FWD(f)} {}
+  explicit calc_state(auto f) : f{std::move(f)} {}
   ~calc_state() {
     event("~calc_state()", *this);
     const auto observer = this->weak_from_this();
@@ -700,9 +700,7 @@ public:
   auto observers() const { return state->observers; }
 };
 
-template <typename F> calc(const F &) -> calc<F>;
-template <typename F> calc(F &) -> calc<F>;
-template <typename F> calc(F &&) -> calc<F>;
+template <typename F> calc(F) -> calc<F>;
 
 template <typename T> auto fwd_capture(T &&x) { return std::tuple<T>(FWD(x)); }
 
