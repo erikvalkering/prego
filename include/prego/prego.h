@@ -353,7 +353,7 @@ public:
   // The std::convertible_to is necessary to support:
   // auto c = atom<foo>{42};
   // auto d = atom<immovable>{42};
-  atom(convertible_to<T> auto value)
+  explicit(false) atom(convertible_to<T> auto value)
     requires(not std::same_as<decltype(value), atom>)
       : atom{std::in_place, std::move(value)} {}
 
