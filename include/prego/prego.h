@@ -702,24 +702,18 @@ public:
 
 template <typename F> calc(F) -> calc<F>;
 
-template <typename T> auto fwd_capture(T &&x) { return std::tuple<T>(FWD(x)); }
-
-template <typename T> decltype(auto) access(T &&x) {
-  return std::get<0>(FWD(x));
-}
-
-auto with_return(auto &&f) {
-  return [g = fwd_capture(FWD(f))](auto &&...args)
+auto with_return(auto f) {
+  return [g = std::move(f)](auto &&...args)
     requires requires { f(FWD(args)...); }
   {
-    access(g)(FWD(args)...);
+    g(FWD(args)...);
     return 0;
   };
 }
 
-auto autorun(auto &&f, scope_manager_t *scope_manager = &global_scope_manager) {
+auto autorun(auto f, scope_manager_t *scope_manager = &global_scope_manager) {
   // Insert a new calc node that simply calls f
-  auto c = calc{with_return(FWD(f))};
+  auto c = calc{with_return(std::move(f))};
 
   // Make sure that c becomes reactive by
   // adding a new calc node that depends on c.
@@ -748,8 +742,8 @@ auto autorun(auto &&f, scope_manager_t *scope_manager = &global_scope_manager) {
   return reaction;
 }
 
-[[nodiscard]] auto autorun(auto &&f, std::nullptr_t) {
-  return autorun(FWD(f), static_cast<scope_manager_t *>(nullptr));
+[[nodiscard]] auto autorun(auto f, std::nullptr_t) {
+  return autorun(std::move(f), static_cast<scope_manager_t *>(nullptr));
 }
 
 template <typename Class, auto thunk> struct Thunk {
