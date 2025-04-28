@@ -60,6 +60,7 @@ static suite<"transparent syntax"> _ = [] {
 
     atom missi = "Missi"s;
 
+    // simple lambdas
     auto a1 = missi;
     auto a2 = [=] { return missi; };
     auto a3 = [=] { return missi(); };
@@ -70,14 +71,18 @@ static suite<"transparent syntax"> _ = [] {
     static_assert(std::same_as<decltype(get_result_t(a3)), std::string>);
     static_assert(std::same_as<decltype(get_result_t(a4)), std::string>);
 
+    // lambdas with get
     auto a5 = [=](auto) { return missi; };
-    auto a6 = [=](auto get) { return get(missi); };
-    auto a7 = [=](auto) { return "Missi"s; };
+    auto a6 = [=](auto) { return missi(); };
+    auto a7 = [=](auto get) { return get(missi); };
+    auto a8 = [=](auto) { return "Missi"s; };
 
     static_assert(std::same_as<decltype(get_result_t(a5)), std::string>);
     static_assert(std::same_as<decltype(get_result_t(a6)), std::string>);
     static_assert(std::same_as<decltype(get_result_t(a7)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(a8)), std::string>);
 
+    // simple calc
     calc c1 = missi;
     calc c2 = [=] { return missi; };
     calc c3 = [=] { return missi(); };
@@ -88,12 +93,15 @@ static suite<"transparent syntax"> _ = [] {
     static_assert(std::same_as<decltype(get_result_t(c3)), std::string>);
     static_assert(std::same_as<decltype(get_result_t(c4)), std::string>);
 
-    calc c5 = [=] { return missi; };
-    calc c6 = [=](auto get) { return get(missi); };
-    calc c7 = [=](auto) { return "Missi"s; };
+    // calc with get
+    calc c5 = [=](auto) { return missi; };
+    calc c6 = [=](auto) { return missi(); };
+    calc c7 = [=](auto get) { return get(missi); };
+    calc c8 = [=](auto) { return "Missi"s; };
 
     static_assert(std::same_as<decltype(get_result_t(c5)), std::string>);
     static_assert(std::same_as<decltype(get_result_t(c6)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(c7)), std::string>);
     static_assert(std::same_as<decltype(get_result_t(c7)), std::string>);
   };
 
