@@ -361,19 +361,22 @@ static suite<"transparent syntax"> _ = [] {
 
   "calc_from_value"_test = [] {
     // TODO
-    // auto x = 42;
+    auto x = 42;
     // calc y = x;
     // expect(y() == 42_i);
-    //
-    // x = 1729;
+
+    x = 1729;
     // expect(y() == 42_i);
-    //
-    // auto z = 0;
-    // autorun([=, &z] { y(); ++z;});
-    // expect(z == 1_i);
-    //
-    // x = 42;
-    // expect(z == 2_i);
+
+    auto z = 0;
+    autorun([=, &z] {
+      // y();
+      ++z;
+    });
+    expect(z == 1_i);
+
+    x = 42;
+    expect(z == 2_i);
   };
 
   "calc_from_atom"_test = [] {
