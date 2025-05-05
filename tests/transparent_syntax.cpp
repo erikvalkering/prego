@@ -350,7 +350,7 @@ static suite<"transparent syntax"> _ = [] {
     expect(not destroyed);
   };
 
-  "calc_from_atom"_test = [] {
+  "calc_from_atom_lifetime_issue"_test = [] {
     atom x = 42;
     calc y = x;
 
