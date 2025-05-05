@@ -170,10 +170,6 @@ inline auto notify_observers(observable_t &state,
   }
 }
 
-template <typename From, typename To>
-concept convertible_to = std::is_convertible_v<From, To> &&
-                         requires { static_cast<To>(std::declval<From>()); };
-
 template <typename T>
 concept immovable = not(std::movable<T> or std::copyable<T>);
 
@@ -203,7 +199,7 @@ template <typename T> struct atom_state : observable_t {
 
   atom_state() = default;
 
-  atom_state(convertible_to<T> auto value)
+  atom_state(std::convertible_to<T> auto value)
       : atom_state{std::in_place, std::move(value)} {}
 
   atom_state(std::in_place_t, auto &&...args)
@@ -353,14 +349,14 @@ public:
   // The std::convertible_to is necessary to support:
   // auto c = atom<foo>{42};
   // auto d = atom<immovable>{42};
-  explicit(false) atom(convertible_to<T> auto value)
+  explicit(false) atom(std::convertible_to<T> auto value)
     requires(not std::same_as<decltype(value), atom>)
       : atom{std::in_place, std::move(value)} {}
 
   atom(std::in_place_type_t<T>, auto &&...args)
       : atom{std::in_place, FWD(args)...} {}
 
-  template <convertible_to<T> U>
+  template <std::convertible_to<T> U>
   atom(atom<U> &&src) : atom{std::move(src.state->holder)} {}
 
   auto set(auto &&holder) {
@@ -680,7 +676,7 @@ public:
   calc(calc &&) = default;
   calc &operator=(calc &&) = default;
 
-  calc(convertible_to<F> auto f)
+  calc(std::convertible_to<F> auto f)
       : state{std::make_shared<calc_state<F>>(std::move(f))} {}
 
   // TODO: reactive == true should not be accessible publicly,
