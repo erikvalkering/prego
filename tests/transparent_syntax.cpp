@@ -397,4 +397,24 @@ static suite<"transparent syntax"> _ = [] {
     x = 42;
     expect(z == 2_i);
   };
+
+  "calc_from_calc"_test = [] {
+    atom x = 42;
+    calc y = x;
+    calc z = y;
+    expect(z() == 42_i);
+
+    x = 1729;
+    expect(z() == 1729_i);
+
+    auto w = 0;
+    autorun([=, &w] {
+      z();
+      ++w;
+    });
+    expect(w == 1_i);
+
+    x = 42;
+    expect(w == 2_i);
+  };
 };
