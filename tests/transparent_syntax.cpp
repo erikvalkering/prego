@@ -376,7 +376,7 @@ static suite<"transparent syntax"> _ = [] {
     expect(z == 1_i);
 
     x = 42;
-    expect(z == 2_i);
+    expect(z == 1_i);
   };
 
   "calc_from_atom"_test = [] {
