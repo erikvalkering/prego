@@ -505,7 +505,7 @@ public:
 
     case notification_t::stale: {
       // Mark as stale and propagate only if
-      // we were visited for the first time
+      // we are visited for the first time
       // and only if we are reactive
       if (stale_count++ == 0 and is_reactive())
         notify_observers(*this, notification);
@@ -572,8 +572,7 @@ public:
       if (auto p = observable.lock()) {
         if (!p->is_up_to_date(reactive))
           // TODO: this hierarchy is still traversed twice in case an
-          // unobserved
-          //       atom was changed. Create a test for this
+          // unobserved atom was changed. Create a test for this
           return false;
         else if (reactive) {
           // if this subtree was up to date and we are currently reactive,
@@ -728,8 +727,10 @@ auto autorun(auto f, scope_manager_t *scope_manager = &global_scope_manager) {
   // through this additional calc node.
   // We should _not_ trigger this in the usual way
   // (i.e. reaction()), because that would eventually
-  // link this node as nonreactive from the perspective
-  // of c, after the calculation finished.
+  // mark the link between c and reaction as non-reactive,
+  // after the calculation finished, which would
+  // defeat the purpose of this additional node:
+  // keeping c reactive.
   reaction.internal_get(true);
 
   if (scope_manager)
