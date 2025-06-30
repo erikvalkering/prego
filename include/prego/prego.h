@@ -675,8 +675,10 @@ public:
   calc(calc &&) = default;
   calc &operator=(calc &&) = default;
 
-  calc(std::convertible_to<F> auto f)
-      : state{std::make_shared<calc_state<F>>(std::move(f))} {}
+  template <typename U>
+    requires(not std::same_as<std::remove_cvref_t<U>, calc>) and
+            std::convertible_to<U, F>
+  calc(U f) : state{std::make_shared<calc_state<F>>(std::move(f))} {}
 
   // TODO: reactive == true should not be accessible publicly,
   //       because there's no way to unsubscribe
