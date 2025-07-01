@@ -46,8 +46,6 @@ struct hooks_mixin {
   void before_is_up_to_date(bool reactive) const { ++is_up_to_date_counter; }
 };
 
-struct observable_t;
-
 template <typename Key, typename Value, typename Comparator = std::less<Key>>
 class insertion_order_map {
   std::vector<std::pair<Key, Value>> nodes;
