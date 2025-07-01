@@ -90,14 +90,15 @@ atom first_name = "John"s;
 atom last_name  = "Doe"s;
 
 // The following are equivalent
-auto full_name = first_name() + " " + last_name();
-auto full_name = first_name + " " + last_name;
+std::string full_name = first_name() + " " + last_name();
+std::string full_name = first_name + " " + last_name;
 
 auto length = (first_name + " " + last_name).size();
-std::println("Length: {}", length);
+std::println("Length: {}", length());
+std::println("Length: {}", length); // equivalent
 ```
 
-> Note: `auto length = ...` does not deduce to size_t, but _acts_ like it.
+> Note: `auto length = ...` does not deduce to `size_t`, but _acts_ like it.
 
 ### Shared reference semantics
 
