@@ -360,7 +360,7 @@ static suite<"transparent syntax"> _ = [] {
   };
 
   "calc_from_value"_test = [] {
-    // TODO
+    // TODO: implement support for calc from value
     auto x = 42;
     // calc y = x;
     // expect(y() == 42_i);
