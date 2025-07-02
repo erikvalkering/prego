@@ -124,7 +124,7 @@ calc full_name = [=] { return first_name + " " + last_name; };
 calc full_name = first_name + " " + last_name;
 
 full_name = "Jane Doe"; // ❌ calculated values are not assignable
-first_name = "Jane"; // ok 
+first_name = "Jane"; // ok
 
 std::string value = full_name(); // calculate and return value
 
@@ -150,7 +150,7 @@ calc is_writer  = full_name == "Jane Austen";
 
 std::println(f"{full_name} is not a writer");
 
-first_name = "Jane"; 
+first_name = "Jane";
 std::println(f"{full_name} is not a writer");
 
 last_name = "Austen";
@@ -245,14 +245,14 @@ calc business_card = [=] {
 };
 
 atom should_print_business_card = true;
-autorun([=] { 
+autorun([=] {
   if (should_print_business_card)
     std::println(f"{business_card}");
 });
 
 // simple unsubscribe based on flag no longer works
 atom should_mail_business_card = true;
-autorun([=] { 
+autorun([=] {
   if (should_mail_business_card)
     mail(business_card);
 });
@@ -283,9 +283,10 @@ last_name = "Doe";
   - local reasoning
   - at no point in the changes of the requirements did we have to come up with clever implementations, work arounds, or have to fix new issues later on: every change to the reactive data model is correct and efficient _by construction_.
   - Instead, with the incremental number of requirements, conventional designs (including the use of the observer pattern) require complete knowledge of the full data model, which makes bug-free extension very hard or impractical. The fundamental cause of these issues,
-  is the implicit dependencies between the different pieces of state in the data model.
+    is the implicit dependencies between the different pieces of state in the data model.
 
 ```
+
 ```
 
 ```cpp
@@ -306,13 +307,13 @@ calc business_card = [=] {
 };
 
 atom mail_opt_out = false;
-autorun([=] { 
+autorun([=] {
   if (mail_opt_out) return;
   std::println(f"physical mailing: {business_card}");
 });
 
 atom email_opt_out = false;
-autorun([=] { 
+autorun([=] {
   if (email_opt_out) return;
   std::println(f"electronic mailing: {business_card}");
 });
