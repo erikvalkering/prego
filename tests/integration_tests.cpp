@@ -6,6 +6,7 @@
 #include <optional>
 #include <print>
 #include <string>
+#include <vector>
 
 using namespace boost::ut;
 using namespace std::string_literals;
@@ -13,6 +14,20 @@ using namespace std::string_literals;
 using prego::atom;
 using prego::autorun;
 using prego::calc;
+
+template <typename F> struct spy {
+  F f;
+
+  friend auto operator+(const spy &self, auto &&other) {
+    self.f();
+    return std::forward<decltype(other)>(other);
+  }
+
+  friend auto operator+(auto &&other, const spy &self) {
+    self.f();
+    return std::forward<decltype(other)>(other);
+  }
+};
 
 static suite<"integration_tests"> _ = [] {
   "example_from_readme"_test = [] {
@@ -40,37 +55,63 @@ static suite<"integration_tests"> _ = [] {
   };
 
   "business card"_test = [] {
+    using msgs_t = std::vector<std::string>;
+    auto msgs = msgs_t{};
+
+    auto ship_via_dhl = [&](const std::string &msg) {
+      msgs.push_back(std::format("Shipping via DHL: {}", msg));
+    };
+    auto email = [&](const std::string &msg) {
+      msgs.push_back(std::format("Emailing: {}", msg));
+    };
+
     atom first_name = "John"s;
     atom last_name = "Doe"s;
-    calc full_name = first_name + " " + last_name;
+    calc full_name = first_name + " " + last_name +
+                     spy{[&] { msgs.push_back("Calculating full name"); }};
 
     atom pseudonym = std::optional<std::string>{};
-    calc display_name = pseudonym.value_or(full_name);
+    calc display_name = pseudonym.value_or(full_name) + spy{[&] {
+                          msgs.push_back("Calculating display name");
+                        }};
 
-    auto expensive_author_registry_lookup = [](const std::string &name) {
+    auto expensive_author_registry_lookup = [&](const std::string &name) {
       return name == "Jane Austen" or name == "J.K. Rowling";
     };
-    calc is_writer = [=] {
+    calc is_writer = [=, &msgs] {
+      msgs.push_back("Checking if author is a writer");
       return expensive_author_registry_lookup(display_name);
     };
 
-    calc business_card = [=] {
+    calc business_card = [=, &msgs] {
+      msgs.push_back("Creating business card");
       return std::format("Business card of {}{}", display_name,
                          is_writer ? ", writer" : "");
     };
 
+    expect(that % msgs == msgs_t{})
+        << "None of the calculations should have run yet";
+
     atom opt_out_mail = false;
-    autorun([=] {
-      auto ship_via_dhl = [](const std::string &msg) {};
+    autorun([=, &msgs] {
+      msgs.push_back("Running autorun for shipping via DHL");
       if (!opt_out_mail)
         ship_via_dhl(business_card);
     });
 
     atom opt_out_email = false;
-    autorun([=] {
-      auto email = [](const std::string &msg) {};
+    autorun([=, &msgs] {
+      msgs.push_back("Running autorun for emailing");
       if (!opt_out_email)
         email(business_card);
     });
+
+    expect(that % msgs ==
+           msgs_t{"Calculating full name", "Calculating display name",
+                  "Running autorun for shipping via DHL",
+                  "Creating business card", "Checking if author is a writer",
+                  "Shipping via DHL: Business card of John Doe",
+                  "Running autorun for emailing",
+                  "Emailing: Business card of John Doe"});
   };
 };
