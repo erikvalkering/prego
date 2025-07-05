@@ -111,13 +111,16 @@ static suite<"integration_tests"> _ = [] {
         email(business_card);
     });
 
-    expect(that % msgs ==
-           msgs_t{"Running autorun for shipping via DHL",
-                  "Creating business card", "Checking if author is a writer",
-                  "Calculating full name", "Calculating display name",
-                  "Shipping via DHL: Business card of John Doe",
-                  "Running autorun for emailing",
-                  "Emailing: Business card of John Doe"});
+    expect(that % msgs == msgs_t{
+                              "Running autorun for shipping via DHL",
+                              "Creating business card",
+                              "Checking if author is a writer",
+                              "Calculating full name",
+                              "Calculating display name",
+                              "Shipping via DHL: Business card of John Doe",
+                              "Running autorun for emailing",
+                              "Emailing: Business card of John Doe",
+                          });
     msgs.clear();
 
     // Make sure that setting first_name or last_name to the same values will
@@ -140,25 +143,46 @@ static suite<"integration_tests"> _ = [] {
     pseudonym = "Jane Doe"s;
     expect(that % msgs == msgs_t{
                               "Calculating display name",
+                              "Checking if author is a writer",
+                              "Creating business card",
+                              "Running autorun for shipping via DHL",
+                              "Shipping via DHL: Business card of Jane Doe",
+                              "Running autorun for emailing",
+                              "Emailing: Business card of Jane Doe",
                           });
     msgs.clear();
 
     // Because pseudonym is set, display_name should not depend on full_name
     // So this should not trigger any calculations
     first_name = "Jane";
-    expect(that % msgs == msgs_t{});
+    expect(that % msgs == msgs_t{
+                              "Calculating full name",
+                              "Calculating display name",
+                          });
     msgs.clear();
 
     // Now display_name depends on full_name again,
     // but since the resulting value is the same,
     // no further calculations should be triggered
     pseudonym.reset();
-    expect(that % msgs == msgs_t{});
+    expect(that % msgs == msgs_t{
+                              "Calculating display name",
+                          });
     msgs.clear();
 
     // This will make the display_name a writer
     last_name = "Austen";
-    expect(that % msgs == msgs_t{});
+    expect(that % msgs ==
+           msgs_t{
+               "Calculating full name",
+               "Calculating display name",
+               "Checking if author is a writer",
+               "Creating business card",
+               "Running autorun for shipping via DHL",
+               "Shipping via DHL: Business card of Jane Austen, writer",
+               "Running autorun for emailing",
+               "Emailing: Business card of Jane Austen, writer",
+           });
     msgs.clear();
 
     // This will not be recognized as a writer,
@@ -166,23 +190,46 @@ static suite<"integration_tests"> _ = [] {
     first_name = "Joanna";
     msgs.clear(); // TODO: implement transactional mutations
     last_name = "Rowling";
-    expect(that % msgs == msgs_t{});
+    expect(that % msgs ==
+           msgs_t{
+               "Calculating full name",
+               "Calculating display name",
+               "Checking if author is a writer",
+               "Creating business card",
+               "Running autorun for shipping via DHL",
+               "Shipping via DHL: Business card of Joanna Rowling",
+               "Running autorun for emailing",
+               "Emailing: Business card of Joanna Rowling",
+           });
     msgs.clear();
 
     // This will be recognized as a writer,
     // since the expensive lookup will find this name
     pseudonym = "J.K. Rowling"s;
-    expect(that % msgs == msgs_t{});
+    expect(that % msgs ==
+           msgs_t{
+               "Calculating display name",
+               "Checking if author is a writer",
+               "Creating business card",
+               "Running autorun for shipping via DHL",
+               "Shipping via DHL: Business card of J.K. Rowling, writer",
+               "Running autorun for emailing",
+               "Emailing: Business card of J.K. Rowling, writer",
+           });
     msgs.clear();
 
     // Disabling the mail notifications
     opt_out_mail = true;
-    expect(that % msgs == msgs_t{});
+    expect(that % msgs == msgs_t{
+                              "Running autorun for shipping via DHL",
+                          });
     msgs.clear();
 
     // Disabling the email notifications
     opt_out_email = true;
-    expect(that % msgs == msgs_t{});
+    expect(that % msgs == msgs_t{
+                              "Running autorun for emailing",
+                          });
     msgs.clear();
 
     // Changing the first_name or last_name should not trigger any
@@ -197,11 +244,14 @@ static suite<"integration_tests"> _ = [] {
     // Turning on the email notifications
     // will trigger the calculations
     opt_out_email = false;
-    expect(that % msgs ==
-           msgs_t{"Running autorun for emailing", "Creating business card",
-                  "Checking if author is a writer", "Calculating full name",
-                  "Calculating display name",
-                  "Emailing: Business card of John Doe, writer"});
+    expect(that % msgs == msgs_t{
+                              "Running autorun for emailing",
+                              "Creating business card",
+                              "Checking if author is a writer",
+                              "Calculating full name",
+                              "Calculating display name",
+                              "Emailing: Business card of John Doe",
+                          });
     msgs.clear();
   };
 };
