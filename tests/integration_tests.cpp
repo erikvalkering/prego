@@ -15,18 +15,23 @@ using prego::atom;
 using prego::autorun;
 using prego::calc;
 
-template <typename F> struct spy {
+template <typename F> struct spy_t {
   F f;
 
-  friend auto operator+(const spy &self, auto &&other) {
-    self.f();
+  bool operator==(const spy_t &) const { return true; }
+
+  friend auto operator+(const spy_t &self, auto &&other) {
     return std::forward<decltype(other)>(other);
   }
 
-  friend auto operator+(auto &&other, const spy &self) {
+  friend auto operator+(auto &&other, const spy_t &self) {
     self.f();
     return std::forward<decltype(other)>(other);
   }
+};
+
+auto spy(auto f) {
+  return calc{[=] { return spy_t{f}; }};
 };
 
 static suite<"integration_tests"> _ = [] {
@@ -68,12 +73,12 @@ static suite<"integration_tests"> _ = [] {
     atom first_name = "John"s;
     atom last_name = "Doe"s;
     calc full_name = first_name + " " + last_name +
-                     spy{[&] { msgs.push_back("Calculating full name"); }};
+                     spy([&] { msgs.push_back("Calculating full name"); });
 
     atom pseudonym = std::optional<std::string>{};
-    calc display_name = pseudonym.value_or(full_name) + spy{[&] {
+    calc display_name = pseudonym.value_or(full_name) + spy([&] {
                           msgs.push_back("Calculating display name");
-                        }};
+                        });
 
     auto expensive_author_registry_lookup = [&](const std::string &name) {
       return name == "Jane Austen" or name == "J.K. Rowling";
