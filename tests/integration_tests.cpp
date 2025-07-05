@@ -112,9 +112,9 @@ static suite<"integration_tests"> _ = [] {
     });
 
     expect(that % msgs ==
-           msgs_t{"Calculating full name", "Calculating display name",
-                  "Running autorun for shipping via DHL",
+           msgs_t{"Running autorun for shipping via DHL",
                   "Creating business card", "Checking if author is a writer",
+                  "Calculating full name", "Calculating display name",
                   "Shipping via DHL: Business card of John Doe",
                   "Running autorun for emailing",
                   "Emailing: Business card of John Doe"});
