@@ -118,5 +118,90 @@ static suite<"integration_tests"> _ = [] {
                   "Shipping via DHL: Business card of John Doe",
                   "Running autorun for emailing",
                   "Emailing: Business card of John Doe"});
+    msgs.clear();
+
+    // Make sure that setting first_name or last_name to the same values will
+    // not trigger any calculations
+    first_name = "John"s;
+    last_name = "Doe"s;
+    expect(that % msgs == msgs_t{});
+    msgs.clear();
+
+    // Setting the pseudonym to the same value as full_name should not trigger
+    // further calculations
+    pseudonym = "John Doe"s;
+    expect(that % msgs == msgs_t{
+                              "Calculating display name",
+                          });
+    msgs.clear();
+
+    // Change the pseudonym to a different value, which should trigger
+    // a calculation of display_name and all the dependent calculations
+    pseudonym = "Jane Doe"s;
+    expect(that % msgs == msgs_t{
+                              "Calculating display name",
+                          });
+    msgs.clear();
+
+    // Because pseudonym is set, display_name should not depend on full_name
+    // So this should not trigger any calculations
+    first_name = "Jane";
+    expect(that % msgs == msgs_t{});
+    msgs.clear();
+
+    // Now display_name depends on full_name again,
+    // but since the resulting value is the same,
+    // no further calculations should be triggered
+    pseudonym.reset();
+    expect(that % msgs == msgs_t{});
+    msgs.clear();
+
+    // This will make the display_name a writer
+    last_name = "Austen";
+    expect(that % msgs == msgs_t{});
+    msgs.clear();
+
+    // This will not be recognized as a writer,
+    // because the expensive lookup won't find this name
+    first_name = "Joanna";
+    msgs.clear(); // TODO: implement transactional mutations
+    last_name = "Rowling";
+    expect(that % msgs == msgs_t{});
+    msgs.clear();
+
+    // This will be recognized as a writer,
+    // since the expensive lookup will find this name
+    pseudonym = "J.K. Rowling"s;
+    expect(that % msgs == msgs_t{});
+    msgs.clear();
+
+    // Disabling the mail notifications
+    opt_out_mail = true;
+    expect(that % msgs == msgs_t{});
+    msgs.clear();
+
+    // Disabling the email notifications
+    opt_out_email = true;
+    expect(that % msgs == msgs_t{});
+    msgs.clear();
+
+    // Changing the first_name or last_name should not trigger any
+    // calculations, because the autoruns are not observing these
+    // values right now
+    first_name = "John"s;
+    last_name = "Doe"s;
+    pseudonym.reset();
+    expect(that % msgs == msgs_t{});
+    msgs.clear();
+
+    // Turning on the email notifications
+    // will trigger the calculations
+    opt_out_email = false;
+    expect(that % msgs ==
+           msgs_t{"Running autorun for emailing", "Creating business card",
+                  "Checking if author is a writer", "Calculating full name",
+                  "Calculating display name",
+                  "Emailing: Business card of John Doe, writer"});
+    msgs.clear();
   };
 };
