@@ -77,7 +77,7 @@ static suite<"integration_tests"> _ = [] {
 
     atom pseudonym = std::optional<std::string>{};
     calc display_name = [=, &msgs] {
-      auto result = pseudonym().has_value() ? pseudonym().value() : full_name;
+      auto result = pseudonym.has_value() ? pseudonym.value()() : full_name;
       msgs.push_back("Calculating display name");
       return result;
     };
