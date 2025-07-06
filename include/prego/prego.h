@@ -301,7 +301,16 @@ struct magic_mixin {
   PREGO_DEFINE_MAGIC_MEMBER(size);
   PREGO_DEFINE_MAGIC_MEMBER(has_value);
   PREGO_DEFINE_MAGIC_MEMBER(value);
-  PREGO_DEFINE_MAGIC_MEMBER(value_or);
+  // PREGO_DEFINE_MAGIC_MEMBER(value_or);
+  auto value_or(this auto self, auto arg) {
+    return magic_wrapper{[=] -> decltype(get_value_from_param(self).value_or(
+                                 get_value_from_param(arg))) {
+      if (get_value_from_param(self).has_value())
+        return get_value_from_param(self).value();
+      return get_value_from_param(arg);
+    }};
+  }
+
   // PREGO_DEFINE_MAGIC_MEMBER(reset);
   auto reset(this auto self) { self = std::nullopt; }
 };

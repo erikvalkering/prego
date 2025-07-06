@@ -1,11 +1,13 @@
 #include <boost/ut.hpp>
 
+#include <concepts>
 #include <prego/prego.h>
 
 #include <format>
 #include <optional>
 #include <print>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 using namespace boost::ut;
@@ -15,6 +17,8 @@ using prego::atom;
 using prego::autorun;
 using prego::calc;
 
+// This is a spy that can be used to observe
+// a calculation without affecting its result.
 template <typename F> struct spy_t {
   F f;
 
@@ -76,14 +80,9 @@ static suite<"integration_tests"> _ = [] {
                      spy([&] { msgs.push_back("Calculating full name"); });
 
     atom pseudonym = std::optional<std::string>{};
-    calc display_name = [=, &msgs] {
-      auto result = pseudonym.has_value() ? pseudonym.value()() : full_name;
-      msgs.push_back("Calculating display name");
-      return result;
-    };
-    // calc display_name = pseudonym.value_or(full_name) + spy([&] {
-    //                       msgs.push_back("Calculating display name");
-    //                     });
+    calc display_name = pseudonym.value_or(full_name) + spy([&] {
+                          msgs.push_back("Calculating display name");
+                        });
 
     auto expensive_author_registry_lookup = [&](const std::string &name) {
       return name == "Jane Austen" or name == "J.K. Rowling";
