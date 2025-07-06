@@ -76,9 +76,14 @@ static suite<"integration_tests"> _ = [] {
                      spy([&] { msgs.push_back("Calculating full name"); });
 
     atom pseudonym = std::optional<std::string>{};
-    calc display_name = pseudonym.value_or(full_name) + spy([&] {
-                          msgs.push_back("Calculating display name");
-                        });
+    calc display_name = [=, &msgs] {
+      auto result = pseudonym().has_value() ? pseudonym().value() : full_name;
+      msgs.push_back("Calculating display name");
+      return result;
+    };
+    // calc display_name = pseudonym.value_or(full_name) + spy([&] {
+    //                       msgs.push_back("Calculating display name");
+    //                     });
 
     auto expensive_author_registry_lookup = [&](const std::string &name) {
       return name == "Jane Austen" or name == "J.K. Rowling";
@@ -155,10 +160,7 @@ static suite<"integration_tests"> _ = [] {
     // Because pseudonym is set, display_name should not depend on full_name
     // So this should not trigger any calculations
     first_name = "Jane";
-    expect(that % msgs == msgs_t{
-                              "Calculating full name",
-                              "Calculating display name",
-                          });
+    expect(that % msgs == msgs_t{});
     msgs.clear();
 
     // Now display_name depends on full_name again,
@@ -166,6 +168,7 @@ static suite<"integration_tests"> _ = [] {
     // no further calculations should be triggered
     pseudonym.reset();
     expect(that % msgs == msgs_t{
+                              "Calculating full name",
                               "Calculating display name",
                           });
     msgs.clear();
