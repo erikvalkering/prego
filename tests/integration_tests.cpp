@@ -1,13 +1,11 @@
 #include <boost/ut.hpp>
 
-#include <concepts>
 #include <prego/prego.h>
 
 #include <format>
 #include <optional>
 #include <print>
 #include <string>
-#include <type_traits>
 #include <vector>
 
 using namespace boost::ut;
@@ -17,20 +15,26 @@ using prego::atom;
 using prego::autorun;
 using prego::calc;
 
-// This is a spy that can be used to observe
-// a calculation without affecting its result.
+// This is a spy that can be used to
+// observe a calculation without affecting its result.
 template <typename F> struct spy_t {
   F f;
 
   bool operator==(const spy_t &) const { return true; }
 
-  friend auto operator+(const spy_t &self, auto &&other) {
-    return std::forward<decltype(other)>(other);
-  }
-
   friend auto operator+(auto &&other, const spy_t &self) {
     self.f();
-    return std::forward<decltype(other)>(other);
+    if constexpr (std::invocable<decltype(other)>) {
+      if constexpr (std::is_same_v<std::invoke_result_t<decltype(other)>,
+                                   void>) {
+        other();
+        return 0;
+      } else {
+        return std::forward<decltype(other)>(other)();
+      }
+    } else {
+      return std::forward<decltype(other)>(other);
+    }
   }
 };
 
@@ -66,6 +70,15 @@ static suite<"integration_tests"> _ = [] {
   "business card"_test = [] {
     using msgs_t = std::vector<std::string>;
     auto msgs = msgs_t{};
+    auto tag = [&msgs](auto id) {
+      return spy([id, &msgs] { msgs.push_back(id); });
+    };
+
+    enum class shipment_t {
+      opt_out,
+      dhl,
+      print_at_home,
+    };
 
     auto ship_via_dhl = [&](const std::string &msg) {
       msgs.push_back(std::format("Shipping via DHL: {}", msg));
@@ -76,54 +89,45 @@ static suite<"integration_tests"> _ = [] {
 
     atom first_name = "John"s;
     atom last_name = "Doe"s;
-    calc full_name = first_name + " " + last_name +
-                     spy([&] { msgs.push_back("Calculating full name"); });
+    calc full_name = first_name + " " + last_name + tag("full_name");
 
     atom pseudonym = std::optional<std::string>{};
-    calc display_name = pseudonym.value_or(full_name) + spy([&] {
-                          msgs.push_back("Calculating display name");
-                        });
+    calc display_name = pseudonym.value_or(full_name) + tag("display_name");
 
     auto expensive_author_registry_lookup = [&](const std::string &name) {
       return name == "Jane Austen" or name == "J.K. Rowling";
     };
-    calc is_writer = [=, &msgs] {
-      msgs.push_back("Checking if author is a writer");
+    calc is_writer = [=] {
       return expensive_author_registry_lookup(display_name);
-    };
+    } + tag("is_writer");
 
-    calc business_card = [=, &msgs] {
-      msgs.push_back("Creating business card");
+    calc business_card = [=] {
       return std::format("Business card of {}{}", display_name,
                          is_writer ? ", writer" : "");
-    };
+    } + tag("business_card");
 
     expect(that % msgs == msgs_t{})
         << "None of the calculations should have run yet";
 
-    atom opt_out_mail = false;
-    autorun([=, &msgs] {
-      msgs.push_back("Running autorun for shipping via DHL");
-      if (!opt_out_mail)
+    atom shipment = shipment_t::dhl;
+    autorun([=] {
+      if (shipment == shipment_t::dhl)
         ship_via_dhl(business_card);
-    });
+    } + tag("autorun:dhl"));
 
-    atom opt_out_email = false;
-    autorun([=, &msgs] {
-      msgs.push_back("Running autorun for emailing");
-      if (!opt_out_email)
+    autorun([=] {
+      if (shipment == shipment_t::print_at_home)
         email(business_card);
-    });
+    } + tag("autorun:print_at_home"));
 
     expect(that % msgs == msgs_t{
-                              "Running autorun for shipping via DHL",
-                              "Creating business card",
-                              "Checking if author is a writer",
-                              "Calculating full name",
-                              "Calculating display name",
+                              "autorun:dhl",
+                              "business_card",
+                              "is_writer",
+                              "full_name",
+                              "display_name",
                               "Shipping via DHL: Business card of John Doe",
-                              "Running autorun for emailing",
-                              "Emailing: Business card of John Doe",
+                              "autorun:print_at_home",
                           });
     msgs.clear();
 
@@ -138,7 +142,7 @@ static suite<"integration_tests"> _ = [] {
     // further calculations
     pseudonym = "John Doe"s;
     expect(that % msgs == msgs_t{
-                              "Calculating display name",
+                              "display_name",
                           });
     msgs.clear();
 
@@ -146,13 +150,11 @@ static suite<"integration_tests"> _ = [] {
     // a calculation of display_name and all the dependent calculations
     pseudonym = "Jane Doe"s;
     expect(that % msgs == msgs_t{
-                              "Calculating display name",
-                              "Checking if author is a writer",
-                              "Creating business card",
-                              "Running autorun for shipping via DHL",
+                              "display_name",
+                              "is_writer",
+                              "business_card",
+                              "autorun:dhl",
                               "Shipping via DHL: Business card of Jane Doe",
-                              "Running autorun for emailing",
-                              "Emailing: Business card of Jane Doe",
                           });
     msgs.clear();
 
@@ -167,8 +169,8 @@ static suite<"integration_tests"> _ = [] {
     // no further calculations should be triggered
     pseudonym.reset();
     expect(that % msgs == msgs_t{
-                              "Calculating full name",
-                              "Calculating display name",
+                              "full_name",
+                              "display_name",
                           });
     msgs.clear();
 
@@ -176,14 +178,12 @@ static suite<"integration_tests"> _ = [] {
     last_name = "Austen";
     expect(that % msgs ==
            msgs_t{
-               "Calculating full name",
-               "Calculating display name",
-               "Checking if author is a writer",
-               "Creating business card",
-               "Running autorun for shipping via DHL",
+               "full_name",
+               "display_name",
+               "is_writer",
+               "business_card",
+               "autorun:dhl",
                "Shipping via DHL: Business card of Jane Austen, writer",
-               "Running autorun for emailing",
-               "Emailing: Business card of Jane Austen, writer",
            });
     msgs.clear();
 
@@ -194,14 +194,12 @@ static suite<"integration_tests"> _ = [] {
     last_name = "Rowling";
     expect(that % msgs ==
            msgs_t{
-               "Calculating full name",
-               "Calculating display name",
-               "Checking if author is a writer",
-               "Creating business card",
-               "Running autorun for shipping via DHL",
+               "full_name",
+               "display_name",
+               "is_writer",
+               "business_card",
+               "autorun:dhl",
                "Shipping via DHL: Business card of Joanna Rowling",
-               "Running autorun for emailing",
-               "Emailing: Business card of Joanna Rowling",
            });
     msgs.clear();
 
@@ -210,27 +208,28 @@ static suite<"integration_tests"> _ = [] {
     pseudonym = "J.K. Rowling"s;
     expect(that % msgs ==
            msgs_t{
-               "Calculating display name",
-               "Checking if author is a writer",
-               "Creating business card",
-               "Running autorun for shipping via DHL",
+               "display_name",
+               "is_writer",
+               "business_card",
+               "autorun:dhl",
                "Shipping via DHL: Business card of J.K. Rowling, writer",
-               "Running autorun for emailing",
-               "Emailing: Business card of J.K. Rowling, writer",
            });
     msgs.clear();
 
     // Disabling the mail notifications
-    opt_out_mail = true;
+    shipment = shipment_t::print_at_home;
     expect(that % msgs == msgs_t{
-                              "Running autorun for shipping via DHL",
+                              "autorun:dhl",
+                              "autorun:print_at_home",
+                              "Emailing: Business card of J.K. Rowling, writer",
                           });
     msgs.clear();
 
     // Disabling the email notifications
-    opt_out_email = true;
+    shipment = shipment_t::opt_out;
     expect(that % msgs == msgs_t{
-                              "Running autorun for emailing",
+                              "autorun:dhl",
+                              "autorun:print_at_home",
                           });
     msgs.clear();
 
@@ -245,13 +244,33 @@ static suite<"integration_tests"> _ = [] {
 
     // Turning on the email notifications
     // will trigger the calculations
-    opt_out_email = false;
+    shipment = shipment_t::print_at_home;
     expect(that % msgs == msgs_t{
-                              "Running autorun for emailing",
-                              "Creating business card",
-                              "Checking if author is a writer",
-                              "Calculating full name",
-                              "Calculating display name",
+                              "autorun:dhl",
+                              "autorun:print_at_home",
+                              "business_card",
+                              "is_writer",
+                              "full_name",
+                              "display_name",
+                              "Emailing: Business card of John Doe",
+                          });
+    msgs.clear();
+
+    shipment = shipment_t::opt_out;
+    expect(that % msgs == msgs_t{
+                              "autorun:dhl",
+                              "autorun:print_at_home",
+                          });
+    msgs.clear();
+
+    pseudonym = "John Doe"s;
+    first_name = "Jane"s;
+    shipment = shipment_t::print_at_home;
+    expect(that % msgs == msgs_t{
+                              "display_name",
+                              "is_writer",
+                              "business_card",
+                              "autorun:print_at_home",
                               "Emailing: Business card of John Doe",
                           });
     msgs.clear();
