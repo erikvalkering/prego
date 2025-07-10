@@ -138,8 +138,8 @@ static suite<"integration_tests"> _ = [] {
     expect(that % msgs == msgs_t{});
     msgs.clear();
 
-    // Setting the pseudonym to the same value as full_name should not trigger
-    // further calculations
+    // Setting the pseudonym to the same value as full_name should not
+    // trigger further calculations
     pseudonym = "John Doe"s;
     expect(that % msgs == msgs_t{
                               "display_name",
