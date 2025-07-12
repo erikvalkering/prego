@@ -146,7 +146,6 @@ static suite<"graph traversal efficiency"> _ = [] {
     expect(a.state->observe_counter == 0_i)
         << "[false] => [] => no propagation";
   };
-};
 
   // TODO: move to functional/correctness tests
   "negative_stale_count"_test = [] {
@@ -207,3 +206,4 @@ static suite<"graph traversal efficiency"> _ = [] {
     e = true;
     expect(z == true);
   };
+};
