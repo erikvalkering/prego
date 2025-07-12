@@ -148,3 +148,46 @@ static suite<"graph traversal efficiency"> _ = [] {
   };
 };
 
+  "negative_stale_count"_test = [] {
+    atom a = 42;
+    calc b = a - a;
+    atom c = true;
+
+    auto z = false;
+    autorun([=, &z] {
+      if (c)
+        b();
+    });
+
+    atom e = true;
+    autorun([=, &z] {
+      z = true;
+      if (e)
+        b();
+    });
+
+    e = false;
+
+    // disable observation of b
+    c = false;
+
+    // modify a, this will mark b as maybe_changed
+    a = 1729;
+
+    // re-enable observation of b
+    // the two notification sweeps from c will increment and subsequently
+    // decrement the stale_count of the autorun. However, during evaluation of
+    // b, because it had to be recalculated (maybe_changed was true), the
+    // stale_count of the autorun will be incremented again, such that when the
+    // autorun finishes, it will have a positive stale_count.
+    c = true;
+    // TODO: Maybe trigger negative stale_count by lazy-evaluating c.
+    // Also, it is already negative. Why? And is that a problem?
+    // Now, because after the two notification sweeps, the stale_count won't
+    // become zero, the autorun will not be executed.
+    z = false;
+    c = false;
+
+    e = true;
+    expect(z == true);
+  };
