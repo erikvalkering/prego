@@ -148,7 +148,7 @@ static suite<"graph traversal efficiency"> _ = [] {
   };
 
   // TODO: move to functional/correctness tests
-  "negative_stale_count"_test = [] {
+  "observing_autorun"_test = [] {
     atom a = 42;
     calc b = [=] {
       a();
@@ -207,7 +207,7 @@ static suite<"graph traversal efficiency"> _ = [] {
     expect(z == true);
   };
 
-  "nonreactive_autorun"_test = [] {
+  "nonobserving_autorun"_test = [] {
     atom a = true;
     atom b = 42;
 
