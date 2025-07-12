@@ -206,4 +206,26 @@ static suite<"graph traversal efficiency"> _ = [] {
     e = true;
     expect(z == true);
   };
+
+  "nonreactive_autorun"_test = [] {
+    atom a = true;
+    atom b = 42;
+
+    auto z = false;
+    autorun([=, &z] {
+      z = true;
+      if (a)
+        b();
+    });
+
+    // Disable autorun.
+    z = false;
+    a = false;
+    expect(z == true);
+
+    // Changing b should not trigger the autorun, which is disabled.
+    z = false;
+    b = 1729;
+    expect(z == false);
+  };
 };
