@@ -148,46 +148,62 @@ static suite<"graph traversal efficiency"> _ = [] {
   };
 };
 
+  // TODO: move to functional/correctness tests
   "negative_stale_count"_test = [] {
     atom a = 42;
-    calc b = a - a;
-    atom c = true;
+    calc b = [=] {
+      a();
+      return 0;
+    };
 
-    auto z = false;
-    autorun([=, &z] {
+    atom c = true;
+    autorun([=] {
       if (c)
         b();
     });
 
     atom e = true;
+    auto z = false;
     autorun([=, &z] {
       z = true;
       if (e)
         b();
     });
 
+    // At this point b is observed by both autoruns
+
+    // We disable both autoruns
+    c = false;
     e = false;
 
-    // disable observation of b
-    c = false;
-
-    // modify a, this will mark b as maybe_changed
+    // We modify a, which should mark b as maybe_changed (after two notification
+    // sweeps, the stale_count is zero, but since a changed the second sweep
+    // will mark b as maybe_changed).
+    // Note that b is not recalculated yet, because it is not reactive.
     a = 1729;
 
-    // re-enable observation of b
-    // the two notification sweeps from c will increment and subsequently
-    // decrement the stale_count of the autorun. However, during evaluation of
-    // b, because it had to be recalculated (maybe_changed was true), the
-    // stale_count of the autorun will be incremented again, such that when the
-    // autorun finishes, it will have a positive stale_count.
+    // Re-enable the first autorun. This will recalculate b, as it is directly
+    // used in the autorun.
+    // A side-effect of b being recalculated, is that it will notify
+    // all its observers. The first autorun will therefore be notified, but with
+    // the message that b did not change (it always returns 0). This means that
+    // the stale_count will be decremented, resulting in a negative stale_count
+    // of -1. In the end, this turns out not to be an issue, because once the
+    // autorun finishes execution, the stale_count will be set to zero again.
+    // However, the second autorun, even though it is not reactive, still
+    // receives notifications. Its stale_count will therefore also become
+    // negative (-1), but in this case it will not be reset to zero, because it
+    // wasn't executing. As a result, it's left in an invalid state.
     c = true;
-    // TODO: Maybe trigger negative stale_count by lazy-evaluating c.
-    // Also, it is already negative. Why? And is that a problem?
-    // Now, because after the two notification sweeps, the stale_count won't
-    // become zero, the autorun will not be executed.
-    z = false;
-    c = false;
 
+    // Reset z so we can check whether the second autorun did run.
+    z = false;
+
+    // Now, by setting e to true, we should be triggering the second autorun.
+    // Unfortunately, because the stale_count is incremented
+    // during the first sweep and decremented during the second sweep, leaving
+    // it at -1, it will not run, because it will only be recalculated if it
+    // becomes zero.
     e = true;
     expect(z == true);
   };
