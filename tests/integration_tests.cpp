@@ -20,27 +20,15 @@ using prego::calc;
 template <typename F> struct spy_t {
   F f;
 
-  bool operator==(const spy_t &) const { return true; }
-
-  friend auto operator+(auto &&other, const spy_t &self) {
-    self.f();
-    if constexpr (std::invocable<decltype(other)>) {
-      if constexpr (std::is_same_v<std::invoke_result_t<decltype(other)>,
-                                   void>) {
-        other();
-        return 0;
-      } else {
-        return std::forward<decltype(other)>(other)();
-      }
-    } else {
-      return std::forward<decltype(other)>(other);
-    }
+  friend auto operator+(auto other, spy_t self) {
+    return [=] {
+      self.f();
+      return other();
+    };
   }
 };
 
-auto spy(auto f) {
-  return calc{[=] { return spy_t{f}; }};
-};
+auto spy(auto f) { return spy_t{f}; };
 
 static suite<"integration_tests"> _ = [] {
   "example_from_readme"_test = [] {
@@ -124,8 +112,8 @@ static suite<"integration_tests"> _ = [] {
                               "autorun:dhl",
                               "business_card",
                               "is_writer",
-                              "full_name",
                               "display_name",
+                              "full_name",
                               "Shipping via DHL: Business card of John Doe",
                               "autorun:print_at_home",
                           });
@@ -169,8 +157,8 @@ static suite<"integration_tests"> _ = [] {
     // no further calculations should be triggered
     pseudonym.reset();
     expect(that % msgs == msgs_t{
-                              "full_name",
                               "display_name",
+                              "full_name",
                           });
     msgs.clear();
 
@@ -250,8 +238,8 @@ static suite<"integration_tests"> _ = [] {
                               "autorun:print_at_home",
                               "business_card",
                               "is_writer",
-                              "full_name",
                               "display_name",
+                              "full_name",
                               "Emailing: Business card of John Doe",
                           });
     msgs.clear();
@@ -267,10 +255,11 @@ static suite<"integration_tests"> _ = [] {
     first_name = "Jane"s;
     shipment = shipment_t::print_at_home;
     expect(that % msgs == msgs_t{
-                              "display_name",
-                              "is_writer",
-                              "business_card",
+                              "autorun:dhl",
                               "autorun:print_at_home",
+                              "business_card",
+                              "is_writer",
+                              "display_name",
                               "Emailing: Business card of John Doe",
                           });
     msgs.clear();
