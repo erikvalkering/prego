@@ -228,4 +228,32 @@ static suite<"graph traversal efficiency"> _ = [] {
     b = 1729;
     expect(z == false);
   };
+
+  "nonobserving_calc"_test = [] {
+    atom a = true;
+    atom b = 42;
+
+    auto z = false;
+    calc c = [=, &z] {
+      z = true;
+      if (a)
+        b();
+      return 0;
+    };
+
+    c();
+
+    // Make c not observing b
+    z = false;
+    a = false;
+    c();
+    expect(z == true);
+
+    // Changing b should not result in c needing recalculation, because it is
+    // not observing b.
+    z = false;
+    b = 0;
+    c();
+    expect(z == false);
+  };
 };
