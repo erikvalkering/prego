@@ -291,6 +291,7 @@ auto make_magic_wrapper(F f, Args &&...args) {
 
 struct magic_mixin {
   PREGO_DEFINE_MAGIC_OPERATOR(+);
+  PREGO_DEFINE_MAGIC_OPERATOR(-);
   PREGO_DEFINE_MAGIC_OPERATOR(<=>);
   PREGO_DEFINE_MAGIC_OPERATOR(==);
   PREGO_DEFINE_MAGIC_OPERATOR(>);
