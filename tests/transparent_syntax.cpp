@@ -417,4 +417,46 @@ static suite<"transparent syntax"> _ = [] {
     x = 42;
     expect(w == 2_i);
   };
+
+  "magic_wrapper_raii"_test = [] {
+    auto z = false;
+    std::ignore = prego::magic_wrapper{[&] {
+      z = true;
+      return 42;
+    }};
+    expect(that % z == true);
+  };
+
+  "magic_wrapper_raii_expression"_test = [] {
+    auto z = 0;
+    struct foo {
+      int &z;
+      auto size() const {
+        z += 1;
+        return 42;
+      }
+    };
+
+    prego::magic_wrapper{[&] {
+      z += 2;
+      return foo{z};
+    }}.size();
+    expect(z == 3_i);
+  };
+
+  "optimizations"_test = [] {
+    atom a = std::optional{42};
+
+    auto z = false;
+    calc b = [&] {
+      z = true;
+      return 1729;
+    };
+
+    autorun([=] { a.value_or(b); });
+    expect(that % z == false);
+
+    a.reset();
+    expect(that % z == true);
+  };
 };
