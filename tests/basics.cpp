@@ -1,5 +1,7 @@
 #include "common.h"
 
+using prego::spy;
+
 static suite<"basics"> _ = [] {
   "atom"_test = [] {
     auto a = atom{42};
@@ -308,5 +310,31 @@ static suite<"basics"> _ = [] {
     order = "";
     b = 1;
     expect(that % order == "dc"s);
+  };
+
+  "not_so_deterministic_ordering_observers"_test = [] {
+    auto order = ""s;
+    auto tag = [&](auto name) {
+      return spy([name, &order] { order += name; });
+    };
+
+    atom a = 42;
+
+    atom x = true;
+    autorun([=] { x ? a() : 0; } + tag("x"));
+
+    atom y = true;
+    autorun([=] { y ? a() : 0; } + tag("y"));
+
+    order = "";
+    a = a + 1;
+    expect(that % order == "xy"s);
+
+    x = false;
+    x = true;
+
+    order = "";
+    a = a + 1;
+    expect(that % order == "yx"s);
   };
 };
