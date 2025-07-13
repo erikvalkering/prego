@@ -14,21 +14,7 @@ using namespace std::string_literals;
 using prego::atom;
 using prego::autorun;
 using prego::calc;
-
-// This is a spy that can be used to
-// observe a calculation without affecting its result.
-template <typename F> struct spy_t {
-  F f;
-
-  friend auto operator+(auto other, spy_t self) {
-    return [=] {
-      self.f();
-      return other();
-    };
-  }
-};
-
-auto spy(auto f) { return spy_t{f}; };
+using prego::spy;
 
 static suite<"integration_tests"> _ = [] {
   "example_from_readme"_test = [] {

@@ -36,6 +36,7 @@ add_executable(test_prego
   tests/transparent_syntax.cpp
   tests/integration_tests.cpp
   tests/mutations.cpp
+  tests/utilities.cpp
 )
 target_compile_features(test_prego PRIVATE cxx_std_23)
 target_link_libraries(test_prego PRIVATE prego)

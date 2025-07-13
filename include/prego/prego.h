@@ -755,6 +755,21 @@ auto autorun(auto f, scope_manager_t *scope_manager = &global_scope_manager) {
   return autorun(std::move(f), static_cast<scope_manager_t *>(nullptr));
 }
 
+// This is a spy that can be used to hook into an observable.
+// Each time it is evaluated, the specified function is called.
+template <typename F> struct spy_t {
+  F f;
+
+  friend auto operator+(auto other, spy_t self) {
+    return [=] {
+      self.f();
+      return other();
+    };
+  }
+};
+
+auto spy(auto f) { return spy_t{f}; };
+
 template <typename Class, auto thunk> struct Thunk {
   const Class *obj;
   Thunk(Class *obj) : obj{obj} {}
