@@ -34,6 +34,7 @@ struct observer_t {
 
 struct hooks_mixin {
   mutable int is_up_to_date_counter = 0;
+  mutable int is_up_to_date_hierarchy_traversal_counter = 0;
   mutable int observe_counter = 0;
   mutable std::vector<bool> observe_calls;
 
@@ -43,7 +44,12 @@ struct hooks_mixin {
     observe_calls.push_back(reactive);
   }
 
-  void before_is_up_to_date(bool reactive) const { ++is_up_to_date_counter; }
+  void before_is_up_to_date(bool hierarchy_traversal) const {
+    if (hierarchy_traversal)
+      ++is_up_to_date_hierarchy_traversal_counter;
+    else
+      ++is_up_to_date_counter;
+  }
 };
 
 template <typename Key, typename Value, typename Comparator = std::less<Key>>
@@ -210,7 +216,7 @@ template <typename T> struct atom_state : observable_t {
   ~atom_state() { event("~atom_state()", *this); }
 
   virtual bool is_up_to_date(bool reactive) override final {
-    before_is_up_to_date(reactive);
+    before_is_up_to_date(false);
 
     // We will end up here only if a direct
     // observer was not able to determine whether
@@ -564,7 +570,7 @@ public:
   }
 
   virtual bool is_up_to_date(bool reactive) override final {
-    before_is_up_to_date(reactive);
+    before_is_up_to_date(false);
 
     if (maybe_changed)
       return false;
@@ -573,14 +579,13 @@ public:
     if (is_reactive())
       return true;
 
+    before_is_up_to_date(true);
+
     // TODO: check correctness of stale_count check
-    // TODO: check correctness of this for-loop
     const auto observer = this->weak_from_this();
     for (auto &observable : observables)
       if (auto p = observable.lock()) {
         if (!p->is_up_to_date(reactive))
-          // TODO: this hierarchy is still traversed twice in case an
-          // unobserved atom was changed. Create a test for this
           return false;
         else if (reactive) {
           // if this subtree was up to date and we are currently reactive,

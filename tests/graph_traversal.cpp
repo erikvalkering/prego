@@ -147,6 +147,36 @@ static suite<"graph traversal efficiency"> _ = [] {
         << "[false] => [] => no propagation";
   };
 
+  "is_up_to_date_efficiency_outdated"_test = [] {
+    atom a = 42;
+    calc b = a;
+    calc c = b;
+
+    c();
+    expect(a.state->is_up_to_date_hierarchy_traversal_counter == 0_i);
+    expect(b.state->is_up_to_date_hierarchy_traversal_counter == 0_i);
+    expect(c.state->is_up_to_date_hierarchy_traversal_counter == 0_i);
+
+    a.state->is_up_to_date_hierarchy_traversal_counter = 0;
+    b.state->is_up_to_date_hierarchy_traversal_counter = 0;
+    c.state->is_up_to_date_hierarchy_traversal_counter = 0;
+
+    c();
+    expect(a.state->is_up_to_date_hierarchy_traversal_counter == 0_i);
+    expect(b.state->is_up_to_date_hierarchy_traversal_counter == 1_i);
+    expect(c.state->is_up_to_date_hierarchy_traversal_counter == 1_i);
+
+    a.state->is_up_to_date_hierarchy_traversal_counter = 0;
+    b.state->is_up_to_date_hierarchy_traversal_counter = 0;
+    c.state->is_up_to_date_hierarchy_traversal_counter = 0;
+
+    a = 1729;
+    c();
+    expect(a.state->is_up_to_date_hierarchy_traversal_counter == 0_i);
+    expect(b.state->is_up_to_date_hierarchy_traversal_counter == 0_i);
+    expect(c.state->is_up_to_date_hierarchy_traversal_counter == 0_i);
+  };
+
   // TODO: move to functional/correctness tests
   "observing_autorun"_test = [] {
     atom a = 42;
