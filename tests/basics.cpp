@@ -337,4 +337,19 @@ static suite<"basics"> _ = [] {
     a = a + 1;
     expect(that % order == "yx"s);
   };
+
+  "lazy"_test = [] {
+    auto z = false;
+    calc c = [&z] {
+      z = true;
+      return 42;
+    };
+
+    expect(that % c == 42_i);
+    expect(that % z == true);
+
+    z = false;
+    expect(that % c == 42_i);
+    expect(that % z == false);
+  };
 };

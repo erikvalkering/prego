@@ -493,7 +493,7 @@ public:
   holder_t holder;
   observables_t observables;
   int stale_count = 0;
-  bool maybe_changed = false;
+  bool maybe_changed = true;
 
   explicit calc_state(auto f) : f{std::move(f)} {}
   ~calc_state() {
@@ -566,8 +566,6 @@ public:
   virtual bool is_up_to_date(bool reactive) override final {
     before_is_up_to_date(reactive);
 
-    if (!holder)
-      return false;
     if (maybe_changed)
       return false;
     if (stale_count != 0)
