@@ -574,10 +574,10 @@ public:
 
     if (maybe_changed)
       return false;
-    if (stale_count != 0)
-      return false;
     if (is_reactive())
       return true;
+    if (stale_count != 0)
+      return false;
 
     before_is_up_to_date(true);
 
