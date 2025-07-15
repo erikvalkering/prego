@@ -2,6 +2,18 @@
 
 using prego::spy;
 
+// TODO: 3 levels of tests:
+// 1. Consistency: values should always be up to date. If a calc is outdated, it
+// should recalculate. Efficiency is not important.
+// 2. Efficiency: values should be made up to date with the least amount of
+// recalculations.
+// 2.1. [Lazy] No repeated calculations: if a calc is up to date, it should not
+// be recalculated anymore.
+// 2.2. [Reactive] No unnecessary recalculations: if a calc is not reactive, it
+// should not be recalculated.
+// 3. Optimality: determine in as few steps as possible whether a calc is up to
+// date.
+
 static suite<"basics"> _ = [] {
   "atom"_test = [] {
     auto a = atom{42};
