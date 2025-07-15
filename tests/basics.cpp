@@ -364,4 +364,30 @@ static suite<"basics"> _ = [] {
     expect(that % c == 42_i);
     expect(that % z == false);
   };
+
+  "lazy_evaluating_reactive_calc"_test = [] {
+    atom a = true;
+
+    auto z = false;
+    calc b = [=, &z] {
+      z = true;
+      // TODO: returning a doesn't observe a
+      return a();
+    };
+
+    // observe a (reactively)
+    autorun([=] { a() ? true : b(); });
+
+    // observe a indirectly (reactively)
+    autorun([=] { b(); });
+
+    // now the first autorun will also observe b (reactively)
+    a = false;
+
+    // because b is reactive, it should be up to date and not recalculate should
+    // be needed.
+    z = false;
+    b();
+    expect(that % z == false);
+  };
 };
