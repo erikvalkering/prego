@@ -390,4 +390,33 @@ static suite<"basics"> _ = [] {
     b();
     expect(that % z == false);
   };
+
+  "lazy_evaluating_nonreactive_calc"_test = [] {
+    atom a = true;
+
+    auto z = false;
+    calc b = [=] {
+      a();
+      return 42;
+    };
+    calc c = [=, &z] {
+      z = true;
+      return b();
+    };
+
+    // observe a (reactively)
+    autorun([=] { a() ? 1729 : b(); });
+
+    // Make sure c is created and observes b
+    c();
+
+    // now the first autorun will also observe b (reactively)
+    a = false;
+
+    // because c was calculated before and b did not change,
+    // it should not recalculate.
+    z = false;
+    c();
+    expect(that % z == false);
+  };
 };
