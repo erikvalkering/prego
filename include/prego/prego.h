@@ -639,7 +639,7 @@ public:
           continue;
 
         if (auto p = observable.lock())
-          p->observe(observer, false);
+          p->unobserve(observer);
         else
           assert(false);
       }
