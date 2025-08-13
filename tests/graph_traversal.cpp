@@ -254,6 +254,9 @@ static suite<"graph traversal efficiency"> _ = [] {
     expect(z == true);
   };
 
+  // TODO: add a test that makes sure that we won't evaluate an observer before
+  // all observables are guaranteed to be up to date.
+
   "nonobserving_autorun"_test = [] {
     atom a = true;
     atom b = 42;
