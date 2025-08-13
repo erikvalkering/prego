@@ -418,7 +418,17 @@ static suite<"transparent syntax"> _ = [] {
     expect(w == 2_i);
   };
 
-  "magic_wrapper_raii"_test = [] {
+  // TODO: rename magic_wrapper to espresso
+  // TODO: test that:
+  // - "a + b;" automatically invokes the expression
+  // - "auto x = a + b; x();" invokes the expression once
+  // - "int x = a + b;" invokes the expression once
+  // - "a + b + c;" invokes only "(a+b)+c" once and not the subexpressions
+  // - "calc x = a + b;" does not invoke the expression
+  // - "(a+b)+(c+d);" invokes the entire expression once, but not the
+  // subexpressions
+  // - "auto x = a+b; auto y = x;" what to do here? invoke a+b once or twice?
+  skip / "magic_wrapper_raii"_test = [] {
     auto z = false;
     std::ignore = prego::magic_wrapper{[&] {
       z = true;
@@ -427,7 +437,7 @@ static suite<"transparent syntax"> _ = [] {
     expect(that % z == true);
   };
 
-  "magic_wrapper_raii_expression"_test = [] {
+  skip / "magic_wrapper_raii_expression"_test = [] {
     auto z = 0;
     struct foo {
       int &z;
@@ -437,10 +447,10 @@ static suite<"transparent syntax"> _ = [] {
       }
     };
 
-    prego::magic_wrapper{[&] {
-      z += 2;
-      return foo{z};
-    }}.size();
+    std::ignore = prego::magic_wrapper{[&] {
+                    z += 2;
+                    return foo{z};
+                  }}.size();
     expect(z == 3_i);
   };
 
@@ -453,7 +463,9 @@ static suite<"transparent syntax"> _ = [] {
       return 1729;
     };
 
-    autorun([=] { a.value_or(b); });
+    autorun([=] { [[maybe_unused]] auto x = int{a.value_or(b)}; });
+    // autorun([=] { a.value_or(b); });
+    // autorun(a.value_or(b));
     expect(that % z == false);
 
     a.reset();

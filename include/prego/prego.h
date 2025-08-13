@@ -325,7 +325,7 @@ struct magic_mixin {
 #undef PREGO_DEFINE_MAGIC_MEMBER
 #undef PREGO_DEFINE_MAGIC_OPERATOR
 
-template <typename F> struct magic_wrapper : F, magic_mixin {
+template <typename F> struct [[nodiscard]] magic_wrapper : F, magic_mixin {
   using F::operator();
 
   using T = std::invoke_result_t<F>;

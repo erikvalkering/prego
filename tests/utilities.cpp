@@ -29,7 +29,8 @@ static suite<"utilities_tests"> _ = [] {
   "spy_autorun"_test = [] {
     atom a = 42;
     auto z = false;
-    autorun([=] { a + 1729; } + spy([&] { z = true; }));
+    autorun([=] { [[maybe_unused]] auto x = int{a + 1729}; } +
+            spy([&] { z = true; }));
     expect(that % z == true);
   };
 };
