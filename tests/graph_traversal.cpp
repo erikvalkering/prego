@@ -147,6 +147,23 @@ static suite<"graph traversal efficiency"> _ = [] {
         << "[false] => [] => no propagation";
   };
 
+  "observing_autorun_efficiency"_test = [] {
+    atom a = 42;
+    calc b = [=] { return a(); };
+
+    // This autorun is only to ensure that b is observed.
+    // We don't really care whether the autorun itself gets
+    // re-evaluated or not. So, if b after being
+    // re-evaluated did not change, it's not a problem that this
+    // won't propagate upwards.
+    autorun([=] { b(); });
+
+    a.state->is_up_to_date_counter = 0;
+    expect(a.state->is_up_to_date_counter == 0_i)
+        << "b should not need to check a for determining whether it is up to "
+           "date, because it was reactive after all";
+  };
+
   "is_up_to_date_efficiency_outdated"_test = [] {
     atom a = 42;
     calc b = a;
