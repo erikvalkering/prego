@@ -428,4 +428,46 @@ static suite<"basics"> _ = [] {
     c();
     expect(that % z == false);
   };
+
+  "stale_count_nonzero_requires_uptodate_traversal"_test = [] {
+    atom a = true;
+
+    calc b = [=] { return a(); };
+
+    auto x = true;
+    autorun([=, &x] { a() ? true : x = b(); });
+
+    autorun([=] { b(); });
+
+    a = false;
+
+    // The first autorun should calculate b because it might be changed
+    // (stale_count is 1, so an is_up_to_date traversal is necessary).
+    expect(that % x == false);
+  };
+
+  "changed_notification_should_not_mark_previously_calculated_calcs_as_maybe_changed"_test =
+      [] {
+        atom a = true;
+
+        auto b_count = 0;
+        calc b = [=, &b_count] {
+          ++b_count;
+          return a();
+        };
+
+        autorun([=] { a() ? true : b(); });
+        autorun([=] { b(); });
+
+        b_count = 0;
+        a = false;
+
+        // The first autorun should calculate b because it might be changed
+        // (stale_count is 1, so an is_up_to_date traversal is necessary).
+        // However, because the second autorun is also indirectly
+        // observing a, it will notify b that a changed.
+        // This should however *not* result in b being marked maybe_changed,
+        // because it was just calculated.
+        expect(b_count == 1_i);
+      };
 };
