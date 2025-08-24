@@ -384,7 +384,7 @@ static suite<"basics"> _ = [] {
     // now the first autorun will also observe b (reactively)
     a = false;
 
-    // because b is reactive, it should be up to date and not recalculate should
+    // because b is reactive, it should be up to date and no recalculate should
     // be needed.
     z = false;
     b();
