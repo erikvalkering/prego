@@ -442,7 +442,7 @@ static suite<"basics"> _ = [] {
     a = false;
 
     // The first autorun should calculate b because it might be changed
-    // (stale_count is 1, so an is_up_to_date traversal is necessary).
+    // (stale_count is 1, so we don't yet know whether a changed).
     expect(that % x == false);
   };
 
@@ -463,7 +463,7 @@ static suite<"basics"> _ = [] {
         a = false;
 
         // The first autorun should calculate b because it might be changed
-        // (stale_count is 1, so an is_up_to_date traversal is necessary).
+        // (stale_count is 1, so we don't yet know whether a changed).
         // However, because the second autorun is also indirectly
         // observing a, it will notify b that a changed.
         // This should however *not* result in b being marked maybe_changed,
