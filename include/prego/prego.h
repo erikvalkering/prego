@@ -37,6 +37,7 @@ struct hooks_mixin {
   mutable int is_up_to_date_hierarchy_traversal_counter = 0;
   mutable int observe_counter = 0;
   mutable std::vector<bool> observe_calls;
+  mutable int notify_counter = 0;
 
   void before_observe(const std::weak_ptr<prego::observer_t> &observer,
                       bool reactive) const {
@@ -50,6 +51,8 @@ struct hooks_mixin {
     else
       ++is_up_to_date_counter;
   }
+
+  void on_notify() const { ++notify_counter; }
 };
 
 template <typename Key, typename Value, typename Comparator = std::less<Key>>
@@ -514,6 +517,8 @@ public:
   }
 
   virtual void notify(const notification_t notification) override final {
+    on_notify();
+
     event(".notify()", *this, notification);
     switch (notification) {
     default:
