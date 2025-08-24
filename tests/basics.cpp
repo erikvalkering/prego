@@ -450,24 +450,31 @@ static suite<"basics"> _ = [] {
       [] {
         atom a = true;
 
-        auto b_count = 0;
-        calc b = [=, &b_count] {
-          ++b_count;
+        auto counter_idx = 0;
+        auto counters = std::array{0, 0};
+        calc b = [&, a] {
+          ++counters[counter_idx];
           return a();
         };
 
-        autorun([=] { a() ? true : b(); });
+        autorun([&, a, b] {
+          counter_idx = 1;
+          a() ? true : b();
+          counter_idx = 0;
+        });
         autorun([=] { b(); });
 
-        b_count = 0;
+        counters = {};
         a = false;
 
         // The first autorun should calculate b because it might be changed
         // (stale_count is 1, so we don't yet know whether a changed).
+        expect(counters[1] == 1_i);
+
         // However, because the second autorun is also indirectly
         // observing a, it will notify b that a changed.
         // This should however *not* result in b being marked maybe_changed,
         // because it was just calculated.
-        expect(b_count == 1_i);
+        expect(counters[0] == 0_i);
       };
 };
