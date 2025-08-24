@@ -394,11 +394,12 @@ static suite<"basics"> _ = [] {
   "lazy_evaluating_nonreactive_calc"_test = [] {
     atom a = true;
 
-    auto z = false;
     calc b = [=] {
       a();
       return 42;
     };
+
+    auto z = false;
     calc c = [=, &z] {
       z = true;
       return b();
@@ -406,12 +407,20 @@ static suite<"basics"> _ = [] {
 
     // observe a (reactively)
     autorun([=] { a() ? 1729 : b(); });
+    expect(that % z == false);
 
-    // Make sure c is created and observes b
+    // Make sure c is calculated and observes b
     c();
+    expect(that % z == true);
+
+    // Sanity check: c should be up to date
+    z = false;
+    c();
+    expect(that % z == false);
 
     // now the first autorun will also observe b (reactively)
     a = false;
+    expect(that % z == false);
 
     // because c was calculated before and b did not change,
     // it should not recalculate.
