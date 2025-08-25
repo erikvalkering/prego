@@ -432,18 +432,28 @@ static suite<"basics"> _ = [] {
   "stale_count_nonzero_requires_uptodate_traversal"_test = [] {
     atom a = true;
 
-    calc b = [=] { return a(); };
+    auto enabled = false;
+    auto x = false;
+    calc b = [&, a] {
+      if (enabled)
+        x = true;
+      return a();
+    };
 
-    auto x = true;
-    autorun([=, &x] { a() ? true : x = b(); });
+    autorun([&, a, b] {
+      enabled = true;
+      a() ? true : b();
+      enabled = false;
+    });
 
     autorun([=] { b(); });
 
+    expect(that % x == false);
     a = false;
 
     // The first autorun should calculate b because it might be changed
     // (stale_count is 1, so we don't yet know whether a changed).
-    expect(that % x == false);
+    expect(that % x == true);
   };
 
   "changed_notification_should_not_mark_previously_calculated_calcs_as_maybe_changed"_test =
