@@ -487,4 +487,27 @@ static suite<"basics"> _ = [] {
         // because it was just calculated.
         expect(counters[0] == 0_i);
       };
+
+  "is_up_to_date_not_changed"_test = [] {
+    atom a = 42;
+    calc b = [=] {
+      a();
+      return 0;
+    };
+
+    auto x = false;
+    calc c = [=, &x] {
+      x = true;
+      return b();
+    };
+
+    c(); // Make sure b and c are calculated
+
+    a = 1729; // invalidate b
+
+    x = false;
+    c(); // b gets recalculated but doesn't change. Therefore, c doesn't need to
+         // be recalculated.
+    expect(that % x == false);
+  };
 };
