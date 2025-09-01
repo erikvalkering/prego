@@ -577,6 +577,8 @@ public:
   virtual bool is_up_to_date(bool reactive) override final {
     before_is_up_to_date(false);
 
+    // If dependencies have changed, we should have been marked with
+    // maybe_changed = true so we definitely need to recalculate.
     if (maybe_changed) {
       return recalculate(reactive);
     }
@@ -585,6 +587,10 @@ public:
     // propgation, we are up-to-date.
     if (is_reactive() and stale_count == 0)
       return true;
+
+    // Otherwise, we are either not reactive, or we are in the middle of a
+    // staleness propgation, which means we haven't determined yet whether we
+    // need to recalculate.
 
     before_is_up_to_date(true);
 
