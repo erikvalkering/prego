@@ -24,6 +24,8 @@ auto event(const auto &...args) {
 
 enum class notification_t {
   stale,
+  unstale,
+  stale_and_maybe_changed,
   changed,
   unchanged,
 };
@@ -386,11 +388,11 @@ public:
     state->holder = FWD(holder);
     event(".set/changed()", *this);
 
-    // First sweep: mark all as stale
-    notify_observers(*state, notification_t::stale);
+    // First sweep: mark all as stale and set maybe_changed
+    notify_observers(*state, notification_t::stale_and_maybe_changed);
 
     // Second sweep: update observers
-    notify_observers(*state, notification_t::changed);
+    notify_observers(*state, notification_t::unstale);
   }
 
   auto emplace(auto &&...args) {
@@ -524,12 +526,15 @@ public:
     default:
       assert(false);
 
+    case notification_t::stale_and_maybe_changed: {
+      maybe_changed = true;
+    }
     case notification_t::stale: {
       // Mark as stale and propagate only if
       // we are visited for the first time
       // and only if we are reactive
       if (stale_count++ == 0 and is_reactive())
-        notify_observers(*this, notification);
+        notify_observers(*this, notification_t::stale);
 
       break;
     }
@@ -540,7 +545,9 @@ public:
       // we need to recalculate as well
       maybe_changed |= notification == notification_t::changed;
       event(".notify/maybe_changed()", *this, maybe_changed);
+    }
 
+    case notification_t::unstale: {
       // Only continue when all observables have been updated
       if (--stale_count != 0)
         break;
