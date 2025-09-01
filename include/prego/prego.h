@@ -579,7 +579,10 @@ public:
 
     if (maybe_changed)
       return false;
-    if (is_reactive())
+
+    // If we are reactive and we are not in the middle of the staleness
+    // propgation, we are up-to-date.
+    if (is_reactive() and stale_count == 0)
       return true;
     if (stale_count != 0)
       return false;
