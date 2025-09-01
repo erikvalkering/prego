@@ -577,15 +577,14 @@ public:
   virtual bool is_up_to_date(bool reactive) override final {
     before_is_up_to_date(false);
 
-    if (maybe_changed)
-      return false;
+    if (maybe_changed) {
+      return recalculate(reactive);
+    }
 
     // If we are reactive and we are not in the middle of the staleness
     // propgation, we are up-to-date.
     if (is_reactive() and stale_count == 0)
       return true;
-    if (stale_count != 0)
-      return false;
 
     before_is_up_to_date(true);
 
@@ -593,9 +592,9 @@ public:
     const auto observer = this->weak_from_this();
     for (auto &observable : observables)
       if (auto p = observable.lock()) {
-        if (!p->is_up_to_date(reactive))
-          return false;
-        else if (reactive) {
+        if (!p->is_up_to_date(reactive)) {
+          return recalculate(reactive);
+        } else if (reactive) {
           // if this subtree was up to date and we are currently reactive,
           // mark it as reactive, such that the next time the subtree is
           // checked, it immediately returns true
@@ -680,6 +679,8 @@ public:
     // Finally notify all the observers that we are up to date
     notify_observers(*this, changed ? notification_t::changed
                                     : notification_t::unchanged);
+
+    return not changed;
   }
 };
 
@@ -704,9 +705,7 @@ public:
   // TODO: reactive == true should not be accessible publicly,
   //       because there's no way to unsubscribe
   const auto &internal_get(bool reactive = false) const {
-    if (!state->is_up_to_date(reactive))
-      state->recalculate(reactive);
-
+    state->is_up_to_date(reactive);
     return *state->holder;
   }
 
