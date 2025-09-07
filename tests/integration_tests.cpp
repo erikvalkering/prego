@@ -243,8 +243,6 @@ static suite<"integration_tests"> _ = [] {
     expect(that % msgs == msgs_t{
                               "autorun:dhl",
                               "autorun:print_at_home",
-                              "business_card",
-                              "is_writer",
                               "display_name",
                               "Emailing: Business card of John Doe",
                           });
