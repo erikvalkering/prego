@@ -237,6 +237,11 @@ static suite<"integration_tests"> _ = [] {
                           });
     msgs.clear();
 
+    // NOTE: setting pseudonym and first_name will not trigger
+    // a recalculation of display_name and full_name, because those are not
+    // reactive.
+    // Changing shipment does and will trigger the revaluation (only of
+    // display_name).
     pseudonym = "John Doe"s;
     first_name = "Jane"s;
     shipment = shipment_t::print_at_home;
