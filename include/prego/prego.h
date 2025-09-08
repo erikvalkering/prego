@@ -539,14 +539,13 @@ public:
       break;
     }
 
-    case notification_t::changed:
-    case notification_t::unchanged: {
+    case notification_t::changed: {
       // If an observable was changed,
       // we need to recalculate as well
-      maybe_changed |= notification == notification_t::changed;
-      event(".notify/maybe_changed()", *this, maybe_changed);
+      maybe_changed = true;
     }
-
+    case notification_t::unchanged: {
+    }
     case notification_t::unstale: {
       // Only continue when all observables have been updated
       if (--stale_count != 0)
