@@ -577,6 +577,24 @@ public:
         assert(false);
   }
 
+  auto are_observables_up_to_date(bool reactive) {
+    const auto observer = this->weak_from_this();
+    for (auto &observable : observables)
+      if (auto p = observable.lock()) {
+        if (!p->is_up_to_date(reactive)) {
+          return false;
+        } else if (reactive) {
+          // if this subtree was up to date and we are currently reactive,
+          // mark it as reactive, such that the next time the subtree is
+          // checked, it immediately returns true
+          p->observe(observer, true);
+        }
+      } else
+        assert(false);
+
+    return true;
+  }
+
   virtual bool is_up_to_date(bool reactive) override final {
     before_is_up_to_date(false);
 
@@ -598,21 +616,7 @@ public:
     before_is_up_to_date(true);
 
     // TODO: check correctness of stale_count check
-    const auto observer = this->weak_from_this();
-    for (auto &observable : observables)
-      if (auto p = observable.lock()) {
-        if (!p->is_up_to_date(reactive)) {
-          return recalculate(reactive);
-        } else if (reactive) {
-          // if this subtree was up to date and we are currently reactive,
-          // mark it as reactive, such that the next time the subtree is
-          // checked, it immediately returns true
-          p->observe(observer, true);
-        }
-      } else
-        assert(false);
-
-    return true;
+    return are_observables_up_to_date(reactive) or recalculate(reactive);
   }
 
   decltype(auto) calculate(bool reactive) {
