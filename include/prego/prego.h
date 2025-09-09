@@ -27,7 +27,6 @@ enum class notification_t {
   mark_stale_and_maybe_changed,
   unmark_stale,
   unmark_stale_and_maybe_changed,
-  unchanged,
 };
 
 struct observer_t {
@@ -544,8 +543,6 @@ public:
       // we need to recalculate as well
       maybe_changed = true;
     }
-    case notification_t::unchanged: {
-    }
     case notification_t::unmark_stale: {
       // Only continue when all observables have been updated
       if (--stale_count != 0)
@@ -559,7 +556,7 @@ public:
       // If all observables are up to date
       // and unchanged, propagate and early-exit
       if (!maybe_changed) {
-        notify_observers(*this, notification_t::unchanged);
+        notify_observers(*this, notification_t::unmark_stale);
         break;
       }
 
@@ -691,7 +688,7 @@ public:
     // Finally notify all the observers that we are up to date
     notify_observers(*this, changed
                                 ? notification_t::unmark_stale_and_maybe_changed
-                                : notification_t::unchanged);
+                                : notification_t::unmark_stale);
 
     return not changed;
   }
