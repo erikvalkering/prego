@@ -545,8 +545,9 @@ public:
     }
     case notification_t::unmark_stale: {
       // Only continue when all observables have been updated
-      if (--stale_count != 0)
+      if (--stale_count != 0) {
         break;
+      }
 
       // If we are not reactive,
       // don't propagate nor recalculate
