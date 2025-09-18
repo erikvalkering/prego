@@ -306,4 +306,27 @@ static suite<"graph traversal efficiency"> _ = [] {
     c();
     expect(z == false);
   };
+
+  "inplace_observers_mutation"_test = [] {
+    atom a = false;
+    calc b = [=] { return not a; };
+    autorun([=] {
+      if (b)
+        a();
+    });
+
+    // TODO:
+    // Setting a to true toggles b, which in turn should make the autorun stop
+    // observing a, however that will likely invalidate the iterator that is
+    // currently notifying b (and indirectly the autorun).
+    a = true;
+
+    // TODO:
+    // observables is a set, arbitrarily ordered based on pointer address. That
+    // might result in non-deterministic behavior, because we iterate through
+    // the observables in order to find out if we are up-to-date.
+    // TODO: also, if an observable is recalculated during that process and it
+    // was changed, won't that trigger a recalc of the current observer
+    // (directly or indirectly)?
+  };
 };
