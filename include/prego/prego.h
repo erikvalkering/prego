@@ -120,7 +120,7 @@ struct observable_t : hooks_mixin {
   size_t reactive_observers_count = 0;
 
   virtual void on_nonreactive() {}
-  virtual bool is_up_to_date(bool reactive) = 0;
+  virtual void ensure_up_to_date(bool reactive) = 0;
 
   auto is_reactive() const { return reactive_observers_count != 0; }
 
@@ -219,7 +219,7 @@ template <typename T> struct atom_state : observable_t {
 
   ~atom_state() { event("~atom_state()", *this); }
 
-  virtual bool is_up_to_date(bool reactive) override final {
+  virtual void ensure_up_to_date(bool reactive) override final {
     before_is_up_to_date(false);
 
     // We will end up here only if a direct
@@ -232,7 +232,7 @@ template <typename T> struct atom_state : observable_t {
     // did not change with respect to the previous time
     // that the observer was calculated, and
     // must therefore be considered up-to-date.
-    return true;
+    return;
   }
 };
 
@@ -582,7 +582,8 @@ public:
     const auto observer = this->weak_from_this();
     for (auto &observable : observables)
       if (auto p = observable.lock()) {
-        if (!p->is_up_to_date(reactive)) {
+        p->ensure_up_to_date(reactive);
+        if (maybe_changed) {
           return false;
         } else if (reactive) {
           // if this subtree was up to date and we are currently reactive,
@@ -593,22 +594,26 @@ public:
       } else
         assert(false);
 
+    // If we reach this point, all observables are up to date and should have
+    // decremented this observer.
+    assert(stale_count == 0);
     return true;
   }
 
-  virtual bool is_up_to_date(bool reactive) override final {
+  virtual void ensure_up_to_date(bool reactive) override final {
     before_is_up_to_date(false);
 
     // If dependencies have changed, we should have been marked with
     // maybe_changed = true so we definitely need to recalculate.
     if (maybe_changed) {
-      return recalculate(reactive);
+      recalculate(reactive);
+      return;
     }
 
     // If we are reactive and we are not in the middle of the staleness
     // propgation, we are up-to-date.
     if (is_reactive() and stale_count == 0)
-      return true;
+      return;
 
     // Otherwise, we are either not reactive, or we are in the middle of a
     // staleness propgation, which means we haven't determined yet whether we
@@ -617,7 +622,9 @@ public:
     before_is_up_to_date(true);
 
     // TODO: check correctness of stale_count check
-    return are_observables_up_to_date(reactive) or recalculate(reactive);
+    if (not are_observables_up_to_date(reactive)) {
+      recalculate(reactive);
+    }
   }
 
   decltype(auto) calculate(bool reactive) {
@@ -720,7 +727,7 @@ public:
   // TODO: reactive == true should not be accessible publicly,
   //       because there's no way to unsubscribe
   const auto &internal_get(bool reactive = false) const {
-    state->is_up_to_date(reactive);
+    state->ensure_up_to_date(reactive);
     return *state->holder;
   }
 
