@@ -329,4 +329,27 @@ static suite<"graph traversal efficiency"> _ = [] {
     // was changed, won't that trigger a recalc of the current observer
     // (directly or indirectly)?
   };
+
+  "eager_and_minimal_recalculation"_test = [] {
+    atom a = true;
+
+    auto x = false;
+    calc b = [=, &x] {
+      x = true;
+      return a();
+    };
+
+    autorun([=] {
+      if (a)
+        b();
+    });
+
+    x = false;
+    a = false;
+
+    expect(that % x == false)
+        << "b should not be recalculated, because a is "
+           "false, so b is not observed and therefore not "
+           "reactive";
+  };
 };
