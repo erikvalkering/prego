@@ -169,7 +169,12 @@ inline auto global_scope_manager = scope_manager_t{};
 inline auto notify_observers(observable_t &state,
                              const notification_t notification) {
   event("notify()", state, notification);
-  for (auto &observer : state.observers | std::views::keys) {
+  auto observers = state.observers; // copy, because it might be modified
+  for (auto &observer : observers | std::views::keys) {
+    if (not state.observers.contains(observer)) {
+      continue;
+    }
+
     if (auto p = observer.lock()) {
       p->notify(notification);
     } else {
