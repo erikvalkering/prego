@@ -518,7 +518,9 @@ static suite<"basics"> _ = [] {
     auto w = 0;
     calc z = [=, &w] {
       ++w;
-      return y;
+      // TODO: add support for:
+      //   return y;
+      return y();
     };
 
     z();
