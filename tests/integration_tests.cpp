@@ -69,7 +69,7 @@ static suite<"integration_tests"> _ = [] {
     calc display_name = pseudonym.value_or(full_name) + tag("display_name");
 
     auto expensive_author_registry_lookup = [&](const std::string &name) {
-      return name == "Jane Austen" or name == "J.K. Rowling";
+      return name == "Jane Austen" or name == "Multatuli";
     };
     calc is_writer = [=] {
       return expensive_author_registry_lookup(display_name);
@@ -163,9 +163,9 @@ static suite<"integration_tests"> _ = [] {
 
     // This will not be recognized as a writer,
     // because the expensive lookup won't find this name
-    first_name = "Joanna";
+    first_name = "Eduard Douwes";
     msgs.clear(); // TODO: implement transactional mutations
-    last_name = "Rowling";
+    last_name = "Dekker";
     expect(that % msgs ==
            msgs_t{
                "full_name",
@@ -173,20 +173,20 @@ static suite<"integration_tests"> _ = [] {
                "is_writer",
                "business_card",
                "autorun:dhl",
-               "Shipping via DHL: Business card of Joanna Rowling",
+               "Shipping via DHL: Business card of Eduard Douwes Dekker",
            });
     msgs.clear();
 
     // This will be recognized as a writer,
     // since the expensive lookup will find this name
-    pseudonym = "J.K. Rowling"s;
+    pseudonym = "Multatuli"s;
     expect(that % msgs ==
            msgs_t{
                "display_name",
                "is_writer",
                "business_card",
                "autorun:dhl",
-               "Shipping via DHL: Business card of J.K. Rowling, writer",
+               "Shipping via DHL: Business card of Multatuli, writer",
            });
     msgs.clear();
 
@@ -195,7 +195,7 @@ static suite<"integration_tests"> _ = [] {
     expect(that % msgs == msgs_t{
                               "autorun:dhl",
                               "autorun:print_at_home",
-                              "Emailing: Business card of J.K. Rowling, writer",
+                              "Emailing: Business card of Multatuli, writer",
                           });
     msgs.clear();
 
