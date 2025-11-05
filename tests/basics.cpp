@@ -510,4 +510,22 @@ static suite<"basics"> _ = [] {
          // be recalculated.
     expect(that % x == false);
   };
+
+  "lazy_calc_recalculates_on_dependency_change"_test = [] {
+    atom x = 42;
+    calc y = x + 1;
+
+    auto w = 0;
+    calc z = [=, &w] {
+      ++w;
+      return y;
+    };
+
+    z();
+
+    w = 0;
+    x = 1729;
+    z();
+    expect(w == 1_i);
+  };
 };
