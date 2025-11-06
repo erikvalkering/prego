@@ -576,16 +576,17 @@ public:
 
   virtual void on_nonreactive() override final {
     const auto observer = this->weak_from_this();
-    for (auto &observable : observables)
+    for (auto &observable : observables) {
       if (auto p = observable.lock())
         p->observe(observer, false);
       else
         assert(false);
+    }
   }
 
   auto are_observables_up_to_date(bool reactive) {
     const auto observer = this->weak_from_this();
-    for (auto &observable : observables)
+    for (auto &observable : observables) {
       if (auto p = observable.lock()) {
         p->ensure_up_to_date(reactive);
         if (maybe_changed) {
@@ -598,6 +599,7 @@ public:
         }
       } else
         assert(false);
+    }
 
     // If we reach this point, all observables are up to date and should have
     // decremented this observer.
@@ -616,7 +618,7 @@ public:
     }
 
     // If we are reactive and we are not in the middle of the staleness
-    // propgation, we are up-to-date.
+    // propagation, we are up-to-date.
     if (is_reactive() and stale_count == 0)
       return;
 
