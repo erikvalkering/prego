@@ -530,4 +530,34 @@ static suite<"basics"> _ = [] {
     z();
     expect(w == 1_i);
   };
+
+  "reactive_single_recalc_from_atom"_test = [] {
+    atom x = 42;
+    calc y = [=] { return x() + 1; };
+
+    auto w = 0;
+    autorun([=, &w] {
+      ++w;
+      return x() + y();
+    });
+
+    w = 0;
+    x = 1729;
+    expect(w == 1_i);
+  };
+
+  "reactive_single_recalc_from_calc"_test = [] {
+    atom x = 42;
+    calc y = [=] { return x() + 1; };
+
+    auto w = 0;
+    autorun([=, &w] {
+      ++w;
+      return y() + x();
+    });
+
+    w = 0;
+    x = 1729;
+    expect(w == 1_i);
+  };
 };
