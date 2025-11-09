@@ -630,7 +630,7 @@ public:
     }
 
     // If we reach this point, all observables are up to date and should have
-    // decremented this observer.
+    // decremented the stale_count of this observer.
     assert(stale_count == 0);
     return true;
   }
