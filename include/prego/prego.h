@@ -342,8 +342,9 @@ struct magic_mixin {
   auto value_or(this auto self, auto arg) {
     return magic_wrapper{[=] -> decltype(get_value_from_param(self).value_or(
                                  get_value_from_param(arg))) {
-      if (get_value_from_param(self).has_value())
-        return get_value_from_param(self).value();
+      const auto value = get_value_from_param(self);
+      if (value.has_value())
+        return value.value();
       return get_value_from_param(arg);
     }};
   }
