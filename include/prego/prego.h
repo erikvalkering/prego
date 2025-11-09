@@ -574,6 +574,7 @@ public:
     case notification_t::unmark_stale: {
       // Only continue when all observables have been updated
       if (--stale_count != 0) {
+        stale_count = std::max(stale_count, 0);
         break;
       }
 
