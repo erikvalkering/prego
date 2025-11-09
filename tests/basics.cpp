@@ -357,11 +357,11 @@ static suite<"basics"> _ = [] {
       return 42;
     };
 
-    expect(that % c == 42_i);
+    expect(c() == 42_i);
     expect(that % z == true);
 
     z = false;
-    expect(that % c == 42_i);
+    expect(c() == 42_i);
     expect(that % z == false);
   };
 
