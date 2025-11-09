@@ -114,6 +114,27 @@ public:
   }
 };
 
+template <typename T, typename Comparator = std::less<T>>
+struct insertion_order_set {
+  std::vector<T> nodes;
+
+  auto size() const { return nodes.size(); }
+  auto begin() const { return nodes.begin(); }
+  auto end() const { return nodes.end(); }
+  auto contains(const T &value) const {
+    return std::ranges::find_if(nodes, [&](auto &k) {
+             auto cmp = Comparator{};
+             return not cmp(k, value) and not cmp(value, k);
+           }) != nodes.end();
+  }
+  auto insert(const T &value) {
+    if (contains(value))
+      return;
+
+    nodes.push_back(value);
+  }
+};
+
 struct observable_t : hooks_mixin {
   insertion_order_map<std::weak_ptr<observer_t>, bool, std::owner_less<>>
       observers = {};
