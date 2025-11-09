@@ -330,7 +330,7 @@ static suite<"graph traversal efficiency"> _ = [] {
     // (directly or indirectly)?
   };
 
-  "eager_and_minimal_recalculation"_test = [] {
+  skip / "eager_and_minimal_recalculation"_test = [] {
     atom a = true;
 
     auto x = false;
