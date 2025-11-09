@@ -294,7 +294,11 @@ get_value_from_param(prego::derived_from<magic_mixin> auto &&param) {
 decltype(auto) get_value_from_param(auto &&param) { return FWD(param); }
 
 template <typename F> struct magic_wrapper;
-
+// TODO: new simplified design:
+//   Wrap each arg into a callable if its not derived from magic_mixin already,
+//   otherwise just use the arg itself.
+//   Subsequently, pass these wrapped args to the expression.
+//   This should support lazy evaluation out of the box.
 template <typename F, typename... Args>
 auto make_magic_wrapper(F f, Args &&...args) {
   return magic_wrapper{
