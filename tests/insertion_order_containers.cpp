@@ -1,6 +1,8 @@
 #include "common.h"
 
-static suite<"insertion_order_map"> _ = [] {
+using prego::insertion_order_map;
+
+static suite<"insertion_order_containers"> _ = [] {
   auto x = std::make_shared<int>(42);
   auto y = std::make_shared<int>(1729);
 
@@ -20,6 +22,7 @@ static suite<"insertion_order_map"> _ = [] {
         expect(m.begin() == m.end());
         expect(not m.contains(key0));
         expect(that % m[key0] == 0);
+
         expect(m.size() == 1_i);
         expect(m.begin() != m.end());
         expect(m.contains(key0));

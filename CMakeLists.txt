@@ -30,7 +30,7 @@ add_executable(test_prego
   tests/basics.cpp
   tests/lifetimes.cpp
   tests/syntaxes.cpp
-  tests/insertion_order_map.cpp
+  tests/insertion_order_containers.cpp
   tests/graph_traversal.cpp
   tests/types.cpp
   tests/transparent_syntax.cpp
