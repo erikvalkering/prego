@@ -60,6 +60,7 @@ static suite<"transparent syntax"> _ = [] {
 
     atom missi = "Missi"s;
 
+    // simple lambdas
     auto a1 = missi;
     auto a2 = [=] { return missi; };
     auto a3 = [=] { return missi(); };
@@ -70,14 +71,18 @@ static suite<"transparent syntax"> _ = [] {
     static_assert(std::same_as<decltype(get_result_t(a3)), std::string>);
     static_assert(std::same_as<decltype(get_result_t(a4)), std::string>);
 
+    // lambdas with get
     auto a5 = [=](auto) { return missi; };
-    auto a6 = [=](auto get) { return get(missi); };
-    auto a7 = [=](auto) { return "Missi"s; };
+    auto a6 = [=](auto) { return missi(); };
+    auto a7 = [=](auto get) { return get(missi); };
+    auto a8 = [=](auto) { return "Missi"s; };
 
     static_assert(std::same_as<decltype(get_result_t(a5)), std::string>);
     static_assert(std::same_as<decltype(get_result_t(a6)), std::string>);
     static_assert(std::same_as<decltype(get_result_t(a7)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(a8)), std::string>);
 
+    // simple calc
     calc c1 = missi;
     calc c2 = [=] { return missi; };
     calc c3 = [=] { return missi(); };
@@ -88,12 +93,15 @@ static suite<"transparent syntax"> _ = [] {
     static_assert(std::same_as<decltype(get_result_t(c3)), std::string>);
     static_assert(std::same_as<decltype(get_result_t(c4)), std::string>);
 
-    calc c5 = [=] { return missi; };
-    calc c6 = [=](auto get) { return get(missi); };
-    calc c7 = [=](auto) { return "Missi"s; };
+    // calc with get
+    calc c5 = [=](auto) { return missi; };
+    calc c6 = [=](auto) { return missi(); };
+    calc c7 = [=](auto get) { return get(missi); };
+    calc c8 = [=](auto) { return "Missi"s; };
 
     static_assert(std::same_as<decltype(get_result_t(c5)), std::string>);
     static_assert(std::same_as<decltype(get_result_t(c6)), std::string>);
+    static_assert(std::same_as<decltype(get_result_t(c7)), std::string>);
     static_assert(std::same_as<decltype(get_result_t(c7)), std::string>);
   };
 
@@ -270,6 +278,9 @@ static suite<"transparent syntax"> _ = [] {
 
     calc c = y.value_or(w);
     expect(c == 1729);
+
+    x.reset();
+    expect(x == std::nullopt);
   };
 
   "optional_string"_test = [] {
@@ -339,12 +350,125 @@ static suite<"transparent syntax"> _ = [] {
     expect(not destroyed);
   };
 
-  "calc_from_atom"_test = [] {
+  "calc_from_atom_lifetime_issue"_test = [] {
     atom x = 42;
     calc y = x;
 
     // Executing this autorun triggered a bug in the assignment of an atom to
     // the previous calc
     auto r = autorun([=] { y(); }, nullptr);
+  };
+
+  "calc_from_value"_test = [] {
+    // TODO: implement support for calc from value
+    auto x = 42;
+    // calc y = x;
+    // expect(y() == 42_i);
+
+    x = 1729;
+    // expect(y() == 42_i);
+
+    auto z = 0;
+    autorun([=, &z] {
+      // y();
+      ++z;
+    });
+    expect(z == 1_i);
+
+    x = 42;
+    expect(z == 1_i);
+  };
+
+  "calc_from_atom"_test = [] {
+    atom x = 42;
+    calc y = x;
+    expect(y() == 42_i);
+
+    x = 1729;
+    expect(y() == 1729_i);
+
+    auto z = 0;
+    autorun([=, &z] {
+      y();
+      ++z;
+    });
+    expect(z == 1_i);
+
+    x = 42;
+    expect(z == 2_i);
+  };
+
+  "calc_from_calc"_test = [] {
+    atom x = 42;
+    calc y = x;
+    calc z = y;
+    expect(z() == 42_i);
+
+    x = 1729;
+    expect(z() == 1729_i);
+
+    auto w = 0;
+    autorun([=, &w] {
+      z();
+      ++w;
+    });
+    expect(w == 1_i);
+
+    x = 42;
+    expect(w == 2_i);
+  };
+
+  // TODO: rename magic_wrapper to espresso
+  // TODO: test that:
+  // - "a + b;" automatically invokes the expression
+  // - "auto x = a + b; x();" invokes the expression once
+  // - "int x = a + b;" invokes the expression once
+  // - "a + b + c;" invokes only "(a+b)+c" once and not the subexpressions
+  // - "calc x = a + b;" does not invoke the expression
+  // - "(a+b)+(c+d);" invokes the entire expression once, but not the
+  // subexpressions
+  // - "auto x = a+b; auto y = x;" what to do here? invoke a+b once or twice?
+  skip / "magic_wrapper_raii"_test = [] {
+    auto z = false;
+    std::ignore = prego::magic_wrapper{[&] {
+      z = true;
+      return 42;
+    }};
+    expect(that % z == true);
+  };
+
+  skip / "magic_wrapper_raii_expression"_test = [] {
+    auto z = 0;
+    struct foo {
+      int &z;
+      auto size() const {
+        z += 1;
+        return 42;
+      }
+    };
+
+    std::ignore = prego::magic_wrapper{[&] {
+                    z += 2;
+                    return foo{z};
+                  }}.size();
+    expect(z == 3_i);
+  };
+
+  "optimizations"_test = [] {
+    atom a = std::optional{42};
+
+    auto z = false;
+    calc b = [&] {
+      z = true;
+      return 1729;
+    };
+
+    autorun([=] { [[maybe_unused]] auto x = int{a.value_or(b)}; });
+    // autorun([=] { a.value_or(b); });
+    // autorun(a.value_or(b));
+    expect(that % z == false);
+
+    a.reset();
+    expect(that % z == true);
   };
 };

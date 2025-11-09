@@ -13,7 +13,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(cmake/CPM.cmake)
 
-cpmaddpackage("gh:fmtlib/fmt#11.0.1")
 cpmaddpackage("gh:boost-ext/ut#v2.3.0")
 
 set(clang18 "$<AND:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_VERSION:18>>")
@@ -31,15 +30,16 @@ add_executable(test_prego
   tests/basics.cpp
   tests/lifetimes.cpp
   tests/syntaxes.cpp
-  tests/insertion_order_map.cpp
+  tests/insertion_order_containers.cpp
   tests/graph_traversal.cpp
   tests/types.cpp
   tests/transparent_syntax.cpp
   tests/integration_tests.cpp
+  tests/mutations.cpp
+  tests/utilities.cpp
 )
 target_compile_features(test_prego PRIVATE cxx_std_23)
 target_link_libraries(test_prego PRIVATE prego)
-target_link_libraries(test_prego PRIVATE fmt::fmt)
 target_link_libraries(test_prego PRIVATE ut)
 target_compile_definitions(test_prego PRIVATE BOOST_UT_DISABLE_MODULE)
 target_compile_options(test_prego PRIVATE
@@ -48,4 +48,3 @@ target_compile_options(test_prego PRIVATE
   $<$<CXX_COMPILER_ID:MSVC>:/bigobj>
 )
 add_test(NAME prego_test_suite COMMAND test_prego)
-

@@ -1,5 +1,19 @@
 #include "common.h"
 
+using prego::spy;
+
+// TODO: 3 levels of tests:
+// 1. Consistency: values should always be up to date. If a calc is outdated, it
+// should recalculate. Efficiency is not important.
+// 2. Efficiency: values should be made up to date with the least amount of
+// recalculations.
+// 2.1. [Lazy] No repeated calculations: if a calc is up to date, it should not
+// be recalculated anymore.
+// 2.2. [Reactive] No unnecessary recalculations: if a calc is not reactive, it
+// should not be recalculated.
+// 3. Optimality: determine in as few steps as possible whether a calc is up to
+// date.
+
 static suite<"basics"> _ = [] {
   "atom"_test = [] {
     auto a = atom{42};
@@ -308,5 +322,242 @@ static suite<"basics"> _ = [] {
     order = "";
     b = 1;
     expect(that % order == "dc"s);
+  };
+
+  "not_so_deterministic_ordering_observers"_test = [] {
+    auto order = ""s;
+    auto tag = [&](auto name) {
+      return spy([name, &order] { order += name; });
+    };
+
+    atom a = 42;
+
+    atom x = true;
+    autorun([=] { x ? a() : 0; } + tag("x"));
+
+    atom y = true;
+    autorun([=] { y ? a() : 0; } + tag("y"));
+
+    order = "";
+    a = a + 1;
+    expect(that % order == "xy"s);
+
+    x = false;
+    x = true;
+
+    order = "";
+    a = a + 1;
+    expect(that % order == "yx"s);
+  };
+
+  "lazy"_test = [] {
+    auto z = false;
+    calc c = [&z] {
+      z = true;
+      return 42;
+    };
+
+    expect(c() == 42_i);
+    expect(that % z == true);
+
+    z = false;
+    expect(c() == 42_i);
+    expect(that % z == false);
+  };
+
+  "lazy_evaluating_reactive_calc"_test = [] {
+    atom a = true;
+
+    auto z = false;
+    calc b = [=, &z] {
+      z = true;
+      // TODO: returning a doesn't observe a
+      return a();
+    };
+
+    // observe a (reactively)
+    autorun([=] { a() ? true : b(); });
+
+    // observe a indirectly (reactively)
+    autorun([=] { b(); });
+
+    // now the first autorun will also observe b (reactively)
+    a = false;
+
+    // because b is reactive, it should be up to date and no recalculate should
+    // be needed.
+    z = false;
+    b();
+    expect(that % z == false);
+  };
+
+  "lazy_evaluating_nonreactive_calc"_test = [] {
+    atom a = true;
+
+    calc b = [=] {
+      a();
+      return 42;
+    };
+
+    auto z = false;
+    calc c = [=, &z] {
+      z = true;
+      return b();
+    };
+
+    // observe a (reactively)
+    autorun([=] { a() ? 1729 : b(); });
+    expect(that % z == false);
+
+    // Make sure c is calculated and observes b
+    c();
+    expect(that % z == true);
+
+    // Sanity check: c should be up to date
+    z = false;
+    c();
+    expect(that % z == false);
+
+    // now the first autorun will also observe b (reactively)
+    a = false;
+    expect(that % z == false);
+
+    // because c was calculated before and b did not change,
+    // it should not recalculate.
+    z = false;
+    c();
+    expect(that % z == false);
+  };
+
+  "stale_count_nonzero_requires_uptodate_traversal"_test = [] {
+    atom a = true;
+
+    auto enabled = false;
+    auto x = false;
+    calc b = [&, a] {
+      if (enabled)
+        x = true;
+      return a();
+    };
+
+    autorun([&, a, b] {
+      enabled = true;
+      a() ? true : b();
+      enabled = false;
+    });
+
+    autorun([=] { b(); });
+
+    expect(that % x == false);
+    a = false;
+
+    // The first autorun should calculate b because it might be changed
+    // (stale_count is 1, so we don't yet know whether a changed).
+    expect(that % x == true);
+  };
+
+  "changed_notification_should_not_mark_previously_calculated_calcs_as_maybe_changed"_test =
+      [] {
+        atom a = true;
+
+        auto counter_idx = 0;
+        auto counters = std::array{0, 0};
+        calc b = [&, a] {
+          ++counters[counter_idx];
+          return a();
+        };
+
+        autorun([&, a, b] {
+          counter_idx = 1;
+          a() ? true : b();
+          counter_idx = 0;
+        });
+        autorun([=] { b(); });
+
+        counters = {};
+        a = false;
+
+        // The first autorun should calculate b because it might be changed
+        // (stale_count is 1, so we don't yet know whether a changed).
+        expect(counters[1] == 1_i);
+
+        // However, because the second autorun is also indirectly
+        // observing a, it will notify b that a changed.
+        // This should however *not* result in b being marked maybe_changed,
+        // because it was just calculated.
+        expect(counters[0] == 0_i);
+      };
+
+  "is_up_to_date_not_changed"_test = [] {
+    atom a = 42;
+    calc b = [=] {
+      a();
+      return 0;
+    };
+
+    auto x = false;
+    calc c = [=, &x] {
+      x = true;
+      return b();
+    };
+
+    c(); // Make sure b and c are calculated
+
+    a = 1729; // invalidate b
+
+    x = false;
+    c(); // b gets recalculated but doesn't change. Therefore, c doesn't need to
+         // be recalculated.
+    expect(that % x == false);
+  };
+
+  "lazy_calc_recalculates_on_dependency_change"_test = [] {
+    atom x = 42;
+    calc y = x + 1;
+
+    auto w = 0;
+    calc z = [=, &w] {
+      ++w;
+      // TODO: add support for:
+      //   return y;
+      return y();
+    };
+
+    z();
+
+    w = 0;
+    x = 1729;
+    z();
+    expect(w == 1_i);
+  };
+
+  "reactive_single_recalc_from_atom"_test = [] {
+    atom x = 42;
+    calc y = [=] { return x() + 1; };
+
+    auto w = 0;
+    autorun([=, &w] {
+      ++w;
+      return x() + y();
+    });
+
+    w = 0;
+    x = 1729;
+    expect(w == 1_i);
+  };
+
+  "reactive_single_recalc_from_calc"_test = [] {
+    atom x = 42;
+    calc y = [=] { return x() + 1; };
+
+    auto w = 0;
+    autorun([=, &w] {
+      ++w;
+      return y() + x();
+    });
+
+    w = 0;
+    x = 1729;
+    expect(w == 1_i);
   };
 };

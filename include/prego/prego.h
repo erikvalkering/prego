@@ -8,7 +8,6 @@
 #include <memory>
 #include <optional>
 #include <ranges>
-#include <set>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -23,9 +22,10 @@ auto event(const auto &...args) {
 }
 
 enum class notification_t {
-  stale,
-  changed,
-  unchanged,
+  mark_stale,
+  mark_stale_and_maybe_changed,
+  unmark_stale,
+  unmark_stale_and_maybe_changed,
 };
 
 struct observer_t {
@@ -34,8 +34,10 @@ struct observer_t {
 
 struct hooks_mixin {
   mutable int is_up_to_date_counter = 0;
+  mutable int is_up_to_date_hierarchy_traversal_counter = 0;
   mutable int observe_counter = 0;
   mutable std::vector<bool> observe_calls;
+  mutable int notify_counter = 0;
 
   void before_observe(const std::weak_ptr<prego::observer_t> &observer,
                       bool reactive) const {
@@ -43,10 +45,15 @@ struct hooks_mixin {
     observe_calls.push_back(reactive);
   }
 
-  void before_is_up_to_date(bool reactive) const { ++is_up_to_date_counter; }
-};
+  void before_is_up_to_date(bool hierarchy_traversal) const {
+    if (hierarchy_traversal)
+      ++is_up_to_date_hierarchy_traversal_counter;
+    else
+      ++is_up_to_date_counter;
+  }
 
-struct observable_t;
+  void on_notify() const { ++notify_counter; }
+};
 
 template <typename Key, typename Value, typename Comparator = std::less<Key>>
 class insertion_order_map {
@@ -106,13 +113,34 @@ public:
   }
 };
 
+template <typename T, typename Comparator = std::less<T>>
+struct insertion_order_set {
+  std::vector<T> nodes;
+
+  auto size() const { return nodes.size(); }
+  auto begin() const { return nodes.begin(); }
+  auto end() const { return nodes.end(); }
+  auto contains(const T &value) const {
+    return std::ranges::find_if(nodes, [&](auto &k) {
+             auto cmp = Comparator{};
+             return not cmp(k, value) and not cmp(value, k);
+           }) != nodes.end();
+  }
+  auto insert(const T &value) {
+    if (contains(value))
+      return;
+
+    nodes.push_back(value);
+  }
+};
+
 struct observable_t : hooks_mixin {
   insertion_order_map<std::weak_ptr<observer_t>, bool, std::owner_less<>>
       observers = {};
   size_t reactive_observers_count = 0;
 
   virtual void on_nonreactive() {}
-  virtual bool is_up_to_date(bool reactive) = 0;
+  virtual void ensure_up_to_date(bool reactive) = 0;
 
   auto is_reactive() const { return reactive_observers_count != 0; }
 
@@ -150,7 +178,8 @@ struct observable_t : hooks_mixin {
   }
 };
 
-using observables_t = std::set<std::weak_ptr<observable_t>, std::owner_less<>>;
+using observables_t =
+    insertion_order_set<std::weak_ptr<observable_t>, std::owner_less<>>;
 
 inline auto active_observers =
     std::vector<std::tuple<std::weak_ptr<observer_t>, observables_t *, bool>>{};
@@ -161,7 +190,12 @@ inline auto global_scope_manager = scope_manager_t{};
 inline auto notify_observers(observable_t &state,
                              const notification_t notification) {
   event("notify()", state, notification);
-  for (auto &observer : state.observers | std::views::keys) {
+  auto observers = state.observers; // copy, because it might be modified
+  for (auto &observer : observers | std::views::keys) {
+    if (not state.observers.contains(observer)) {
+      continue;
+    }
+
     if (auto p = observer.lock()) {
       p->notify(notification);
     } else {
@@ -169,10 +203,6 @@ inline auto notify_observers(observable_t &state,
     }
   }
 }
-
-template <typename From, typename To>
-concept convertible_to = std::is_convertible_v<From, To> &&
-                         requires { static_cast<To>(std::declval<From>()); };
 
 template <typename T>
 concept immovable = not(std::movable<T> or std::copyable<T>);
@@ -203,8 +233,8 @@ template <typename T> struct atom_state : observable_t {
 
   atom_state() = default;
 
-  atom_state(convertible_to<T> auto &&value)
-      : atom_state{std::in_place, FWD(value)} {}
+  atom_state(std::convertible_to<T> auto value)
+      : atom_state{std::in_place, std::move(value)} {}
 
   atom_state(std::in_place_t, auto &&...args)
     requires(immovable<T>)
@@ -215,8 +245,8 @@ template <typename T> struct atom_state : observable_t {
 
   ~atom_state() { event("~atom_state()", *this); }
 
-  virtual bool is_up_to_date(bool reactive) override final {
-    before_is_up_to_date(reactive);
+  virtual void ensure_up_to_date(bool reactive) override final {
+    before_is_up_to_date(false);
 
     // We will end up here only if a direct
     // observer was not able to determine whether
@@ -228,7 +258,7 @@ template <typename T> struct atom_state : observable_t {
     // did not change with respect to the previous time
     // that the observer was calculated, and
     // must therefore be considered up-to-date.
-    return true;
+    return;
   }
 };
 
@@ -264,7 +294,11 @@ get_value_from_param(prego::derived_from<magic_mixin> auto &&param) {
 decltype(auto) get_value_from_param(auto &&param) { return FWD(param); }
 
 template <typename F> struct magic_wrapper;
-
+// TODO: new simplified design:
+//   Wrap each arg into a callable if its not derived from magic_mixin already,
+//   otherwise just use the arg itself.
+//   Subsequently, pass these wrapped args to the expression.
+//   This should support lazy evaluation out of the box.
 template <typename F, typename... Args>
 auto make_magic_wrapper(F f, Args &&...args) {
   return magic_wrapper{
@@ -297,6 +331,7 @@ auto make_magic_wrapper(F f, Args &&...args) {
 
 struct magic_mixin {
   PREGO_DEFINE_MAGIC_OPERATOR(+);
+  PREGO_DEFINE_MAGIC_OPERATOR(-);
   PREGO_DEFINE_MAGIC_OPERATOR(<=>);
   PREGO_DEFINE_MAGIC_OPERATOR(==);
   PREGO_DEFINE_MAGIC_OPERATOR(>);
@@ -305,14 +340,27 @@ struct magic_mixin {
   PREGO_DEFINE_MAGIC_OPERATOR(>=);
 
   PREGO_DEFINE_MAGIC_MEMBER(size);
-  PREGO_DEFINE_MAGIC_MEMBER(value_or);
-  PREGO_DEFINE_MAGIC_MEMBER(reset);
+  PREGO_DEFINE_MAGIC_MEMBER(has_value);
+  PREGO_DEFINE_MAGIC_MEMBER(value);
+  // PREGO_DEFINE_MAGIC_MEMBER(value_or);
+  auto value_or(this auto self, auto arg) {
+    return magic_wrapper{[=] -> decltype(get_value_from_param(self).value_or(
+                                 get_value_from_param(arg))) {
+      const auto value = get_value_from_param(self);
+      if (value.has_value())
+        return value.value();
+      return get_value_from_param(arg);
+    }};
+  }
+
+  // PREGO_DEFINE_MAGIC_MEMBER(reset);
+  auto reset(this auto self) { self = std::nullopt; }
 };
 
 #undef PREGO_DEFINE_MAGIC_MEMBER
 #undef PREGO_DEFINE_MAGIC_OPERATOR
 
-template <typename F> struct magic_wrapper : F, magic_mixin {
+template <typename F> struct [[nodiscard]] magic_wrapper : F, magic_mixin {
   using F::operator();
 
   using T = std::invoke_result_t<F>;
@@ -352,14 +400,14 @@ public:
   // The std::convertible_to is necessary to support:
   // auto c = atom<foo>{42};
   // auto d = atom<immovable>{42};
-  atom(convertible_to<T> auto &&value)
-    requires(not std::same_as<std::remove_cvref_t<decltype(value)>, atom>)
-      : atom{std::in_place, FWD(value)} {}
+  explicit(false) atom(std::convertible_to<T> auto value)
+    requires(not std::same_as<decltype(value), atom>)
+      : atom{std::in_place, std::move(value)} {}
 
   atom(std::in_place_type_t<T>, auto &&...args)
       : atom{std::in_place, FWD(args)...} {}
 
-  template <convertible_to<T> U>
+  template <std::convertible_to<T> U>
   atom(atom<U> &&src) : atom{std::move(src.state->holder)} {}
 
   auto set(auto &&holder) {
@@ -370,11 +418,11 @@ public:
     state->holder = FWD(holder);
     event(".set/changed()", *this);
 
-    // First sweep: mark all as stale
-    notify_observers(*state, notification_t::stale);
+    // First sweep: mark all as stale and set maybe_changed
+    notify_observers(*state, notification_t::mark_stale_and_maybe_changed);
 
     // Second sweep: update observers
-    notify_observers(*state, notification_t::changed);
+    notify_observers(*state, notification_t::unmark_stale);
   }
 
   auto emplace(auto &&...args) {
@@ -409,9 +457,7 @@ public:
   auto observers() const { return state->observers; }
 };
 
-template <typename T> atom(const T &) -> atom<T>;
-template <typename T> atom(T &) -> atom<T>;
-template <typename T> atom(T &&) -> atom<T>;
+template <typename T> atom(T) -> atom<T>;
 template <typename T> atom(std::in_place_type_t<T>, auto &&...) -> atom<T>;
 
 template <typename T> auto make_atom(auto &&...args) {
@@ -488,46 +534,55 @@ public:
   holder_t holder;
   observables_t observables;
   int stale_count = 0;
-  bool maybe_changed = false;
+  bool maybe_changed = true;
 
-  explicit calc_state(auto &&f) : f{FWD(f)} {}
+  explicit calc_state(auto f) : f{std::move(f)} {}
   ~calc_state() {
     event("~calc_state()", *this);
     const auto observer = this->weak_from_this();
     for (auto &observable : observables) {
       if (auto p = observable.lock()) {
         p->unobserve(observer);
-      } else
+      } else {
         assert(false);
+      }
     }
   }
 
   virtual void notify(const notification_t notification) override final {
+    on_notify();
+
+    assert(stale_count >= 0);
+
     event(".notify()", *this, notification);
     switch (notification) {
     default:
       assert(false);
 
-    case notification_t::stale: {
+    case notification_t::mark_stale_and_maybe_changed: {
+      maybe_changed = true;
+    }
+    case notification_t::mark_stale: {
       // Mark as stale and propagate only if
-      // we were visited for the first time
+      // we are visited for the first time
       // and only if we are reactive
       if (stale_count++ == 0 and is_reactive())
-        notify_observers(*this, notification);
+        notify_observers(*this, notification_t::mark_stale);
 
       break;
     }
 
-    case notification_t::changed:
-    case notification_t::unchanged: {
+    case notification_t::unmark_stale_and_maybe_changed: {
       // If an observable was changed,
       // we need to recalculate as well
-      maybe_changed |= notification == notification_t::changed;
-      event(".notify/maybe_changed()", *this, maybe_changed);
-
+      maybe_changed = true;
+    }
+    case notification_t::unmark_stale: {
       // Only continue when all observables have been updated
-      if (--stale_count != 0)
+      if (--stale_count != 0) {
+        stale_count = std::max(stale_count, 0);
         break;
+      }
 
       // If we are not reactive,
       // don't propagate nor recalculate
@@ -537,7 +592,7 @@ public:
       // If all observables are up to date
       // and unchanged, propagate and early-exit
       if (!maybe_changed) {
-        notify_observers(*this, notification_t::unchanged);
+        notify_observers(*this, notification_t::unmark_stale);
         break;
       }
 
@@ -551,45 +606,64 @@ public:
 
   virtual void on_nonreactive() override final {
     const auto observer = this->weak_from_this();
-    for (auto &observable : observables)
+    for (auto &observable : observables) {
       if (auto p = observable.lock())
         p->observe(observer, false);
-      else
+      else {
         assert(false);
+      }
+    }
   }
 
-  virtual bool is_up_to_date(bool reactive) override final {
-    before_is_up_to_date(reactive);
-
-    if (!holder)
-      return false;
-    if (maybe_changed)
-      return false;
-    if (stale_count != 0)
-      return false;
-    if (is_reactive())
-      return true;
-
-    // TODO: check correctness of stale_count check
-    // TODO: check correctness of this for-loop
+  auto are_observables_up_to_date(bool reactive) {
     const auto observer = this->weak_from_this();
-    for (auto &observable : observables)
+    for (auto &observable : observables) {
       if (auto p = observable.lock()) {
-        if (!p->is_up_to_date(reactive))
-          // TODO: this hierarchy is still traversed twice in case an
-          // unobserved
-          //       atom was changed. Create a test for this
+        p->ensure_up_to_date(reactive);
+        if (maybe_changed) {
           return false;
-        else if (reactive) {
+        } else if (reactive) {
           // if this subtree was up to date and we are currently reactive,
           // mark it as reactive, such that the next time the subtree is
           // checked, it immediately returns true
           p->observe(observer, true);
         }
-      } else
+      } else {
         assert(false);
+      }
+    }
 
+    // If we reach this point, all observables are up to date and should have
+    // decremented the stale_count of this observer.
+    assert(stale_count == 0);
     return true;
+  }
+
+  virtual void ensure_up_to_date(bool reactive) override final {
+    before_is_up_to_date(false);
+
+    // If dependencies have changed, we should have been marked with
+    // maybe_changed = true so we definitely need to recalculate.
+    if (maybe_changed) {
+      recalculate(reactive);
+      return;
+    }
+
+    // If we are reactive and we are not in the middle of the staleness
+    // propagation, we are up-to-date.
+    if (is_reactive() and stale_count == 0)
+      return;
+
+    // Otherwise, we are either not reactive, or we are in the middle of a
+    // staleness propgation, which means we haven't determined yet whether we
+    // need to recalculate.
+
+    before_is_up_to_date(true);
+
+    // TODO: check correctness of stale_count check
+    if (not are_observables_up_to_date(reactive)) {
+      recalculate(reactive);
+    }
   }
 
   decltype(auto) calculate(bool reactive) {
@@ -632,9 +706,10 @@ public:
           continue;
 
         if (auto p = observable.lock())
-          p->observe(observer, false);
-        else
+          p->unobserve(observer);
+        else {
           assert(false);
+        }
       }
     }};
 
@@ -663,8 +738,11 @@ public:
     event(".recalculate()", *this, reactive, changed);
 
     // Finally notify all the observers that we are up to date
-    notify_observers(*this, changed ? notification_t::changed
-                                    : notification_t::unchanged);
+    notify_observers(*this, changed
+                                ? notification_t::unmark_stale_and_maybe_changed
+                                : notification_t::unmark_stale);
+
+    return not changed;
   }
 };
 
@@ -681,15 +759,15 @@ public:
   calc(calc &&) = default;
   calc &operator=(calc &&) = default;
 
-  calc(convertible_to<F> auto f)
-      : state{std::make_shared<calc_state<F>>(std::move(f))} {}
+  template <typename U>
+    requires(not std::same_as<std::remove_cvref_t<U>, calc>) and
+            std::convertible_to<U, F>
+  calc(U f) : state{std::make_shared<calc_state<F>>(std::move(f))} {}
 
   // TODO: reactive == true should not be accessible publicly,
   //       because there's no way to unsubscribe
   const auto &internal_get(bool reactive = false) const {
-    if (!state->is_up_to_date(reactive))
-      state->recalculate(reactive);
-
+    state->ensure_up_to_date(reactive);
     return *state->holder;
   }
 
@@ -701,28 +779,20 @@ public:
   auto observers() const { return state->observers; }
 };
 
-template <typename F> calc(const F &) -> calc<F>;
-template <typename F> calc(F &) -> calc<F>;
-template <typename F> calc(F &&) -> calc<F>;
+template <typename F> calc(F) -> calc<F>;
 
-template <typename T> auto fwd_capture(T &&x) { return std::tuple<T>(FWD(x)); }
-
-template <typename T> decltype(auto) access(T &&x) {
-  return std::get<0>(FWD(x));
-}
-
-auto with_return(auto &&f) {
-  return [g = fwd_capture(FWD(f))](auto &&...args)
+auto with_return(auto f) {
+  return [g = std::move(f)](auto &&...args)
     requires requires { f(FWD(args)...); }
   {
-    access(g)(FWD(args)...);
+    g(FWD(args)...);
     return 0;
   };
 }
 
-auto autorun(auto &&f, scope_manager_t *scope_manager = &global_scope_manager) {
+auto autorun(auto f, scope_manager_t *scope_manager = &global_scope_manager) {
   // Insert a new calc node that simply calls f
-  auto c = calc{with_return(FWD(f))};
+  auto c = calc{with_return(std::move(f))};
 
   // Make sure that c becomes reactive by
   // adding a new calc node that depends on c.
@@ -732,7 +802,7 @@ auto autorun(auto &&f, scope_manager_t *scope_manager = &global_scope_manager) {
   // is not reactive.
   // Note that this node itself is not reactive,
   // because it has no observers.
-  auto reaction = calc{[=](auto get) {
+  auto reaction = calc{[c = std::move(c)](auto get) {
     get(c);
     return 0;
   }};
@@ -741,8 +811,10 @@ auto autorun(auto &&f, scope_manager_t *scope_manager = &global_scope_manager) {
   // through this additional calc node.
   // We should _not_ trigger this in the usual way
   // (i.e. reaction()), because that would eventually
-  // link this node as nonreactive from the perspective
-  // of c, after the calculation finished.
+  // mark the link between c and reaction as non-reactive,
+  // after the calculation finished, which would
+  // defeat the purpose of this additional node:
+  // keeping c reactive.
   reaction.internal_get(true);
 
   if (scope_manager)
@@ -751,9 +823,24 @@ auto autorun(auto &&f, scope_manager_t *scope_manager = &global_scope_manager) {
   return reaction;
 }
 
-[[nodiscard]] auto autorun(auto &&f, std::nullptr_t) {
-  return autorun(FWD(f), static_cast<scope_manager_t *>(nullptr));
+[[nodiscard]] auto autorun(auto f, std::nullptr_t) {
+  return autorun(std::move(f), static_cast<scope_manager_t *>(nullptr));
 }
+
+// This is a spy that can be used to hook into an observable.
+// Each time it is evaluated, the specified function is called.
+template <typename F> struct spy_t {
+  F f;
+
+  friend auto operator+(auto other, spy_t self) {
+    return [=] {
+      self.f();
+      return other();
+    };
+  }
+};
+
+auto spy(auto f) { return spy_t{f}; };
 
 template <typename Class, auto thunk> struct Thunk {
   const Class *obj;

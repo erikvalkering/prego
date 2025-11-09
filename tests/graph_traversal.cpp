@@ -146,5 +146,210 @@ static suite<"graph traversal efficiency"> _ = [] {
     expect(a.state->observe_counter == 0_i)
         << "[false] => [] => no propagation";
   };
-};
 
+  "observing_autorun_efficiency"_test = [] {
+    atom a = 42;
+    calc b = [=] { return a(); };
+
+    // This autorun is only to ensure that b is observed.
+    // We don't really care whether the autorun itself gets
+    // re-evaluated or not. So, if b after being
+    // re-evaluated did not change, it's not a problem that this
+    // won't propagate upwards.
+    autorun([=] { b(); });
+
+    a.state->is_up_to_date_counter = 0;
+    expect(a.state->is_up_to_date_counter == 0_i)
+        << "b should not need to check a for determining whether it is up to "
+           "date, because it was reactive after all";
+  };
+
+  "is_up_to_date_efficiency_outdated"_test = [] {
+    atom a = 42;
+    calc b = a;
+    calc c = b;
+
+    c();
+    expect(a.state->is_up_to_date_hierarchy_traversal_counter == 0_i);
+    expect(b.state->is_up_to_date_hierarchy_traversal_counter == 0_i);
+    expect(c.state->is_up_to_date_hierarchy_traversal_counter == 0_i);
+
+    a.state->is_up_to_date_hierarchy_traversal_counter = 0;
+    b.state->is_up_to_date_hierarchy_traversal_counter = 0;
+    c.state->is_up_to_date_hierarchy_traversal_counter = 0;
+
+    c();
+    expect(a.state->is_up_to_date_hierarchy_traversal_counter == 0_i);
+    expect(b.state->is_up_to_date_hierarchy_traversal_counter == 1_i);
+    expect(c.state->is_up_to_date_hierarchy_traversal_counter == 1_i);
+
+    a.state->is_up_to_date_hierarchy_traversal_counter = 0;
+    b.state->is_up_to_date_hierarchy_traversal_counter = 0;
+    c.state->is_up_to_date_hierarchy_traversal_counter = 0;
+
+    a = 1729;
+    c();
+    expect(a.state->is_up_to_date_hierarchy_traversal_counter == 0_i);
+    expect(b.state->is_up_to_date_hierarchy_traversal_counter == 0_i);
+    expect(c.state->is_up_to_date_hierarchy_traversal_counter == 0_i);
+  };
+
+  // TODO: move to functional/correctness tests
+  "observing_autorun"_test = [] {
+    atom a = 42;
+    calc b = [=] {
+      a();
+      return 0;
+    };
+
+    atom c = true;
+    autorun([=] {
+      if (c)
+        b();
+    });
+
+    atom e = true;
+    auto z = false;
+    autorun([=, &z] {
+      z = true;
+      if (e)
+        b();
+    });
+
+    // At this point b is observed by both autoruns
+
+    // We disable both autoruns
+    c = false;
+    e = false;
+
+    // We modify a, which should mark b as maybe_changed (after two notification
+    // sweeps, the stale_count is zero, but since a changed the second sweep
+    // will mark b as maybe_changed).
+    // Note that b is not recalculated yet, because it is not reactive.
+    a = 1729;
+
+    // Re-enable the first autorun. This will recalculate b, as it is directly
+    // used in the autorun.
+    // A side-effect of b being recalculated, is that it will notify
+    // all its observers. The first autorun will therefore be notified, but with
+    // the message that b did not change (it always returns 0). This means that
+    // the stale_count will be decremented, resulting in a negative stale_count
+    // of -1. In the end, this turns out not to be an issue, because once the
+    // autorun finishes execution, the stale_count will be set to zero again.
+    // However, the second autorun, even though it is not reactive, still
+    // receives notifications. Its stale_count will therefore also become
+    // negative (-1), but in this case it will not be reset to zero, because it
+    // wasn't executing. As a result, it's left in an invalid state.
+    c = true;
+
+    // Reset z so we can check whether the second autorun did run.
+    z = false;
+
+    // Now, by setting e to true, we should be triggering the second autorun.
+    // Unfortunately, because the stale_count is incremented
+    // during the first sweep and decremented during the second sweep, leaving
+    // it at -1, it will not run, because it will only be recalculated if it
+    // becomes zero.
+    e = true;
+    expect(z == true);
+  };
+
+  // TODO: add a test that makes sure that we won't evaluate an observer before
+  // all observables are guaranteed to be up to date.
+
+  "nonobserving_autorun"_test = [] {
+    atom a = true;
+    atom b = 42;
+
+    auto z = false;
+    autorun([=, &z] {
+      z = true;
+      if (a)
+        b();
+    });
+
+    // Disable autorun.
+    z = false;
+    a = false;
+    expect(z == true);
+
+    // Changing b should not trigger the autorun, which is disabled.
+    z = false;
+    b = 1729;
+    expect(z == false);
+  };
+
+  "nonobserving_calc"_test = [] {
+    atom a = true;
+    atom b = 42;
+
+    auto z = false;
+    calc c = [=, &z] {
+      z = true;
+      if (a)
+        b();
+      return 0;
+    };
+
+    c();
+
+    // Make c not observing b
+    z = false;
+    a = false;
+    c();
+    expect(z == true);
+
+    // Changing b should not result in c needing recalculation, because it is
+    // not observing b.
+    z = false;
+    b = 0;
+    c();
+    expect(z == false);
+  };
+
+  "inplace_observers_mutation"_test = [] {
+    atom a = false;
+    calc b = [=] { return not a; };
+    autorun([=] {
+      if (b)
+        a();
+    });
+
+    // TODO:
+    // Setting a to true toggles b, which in turn should make the autorun stop
+    // observing a, however that will likely invalidate the iterator that is
+    // currently notifying b (and indirectly the autorun).
+    a = true;
+
+    // TODO:
+    // observables is a set, arbitrarily ordered based on pointer address. That
+    // might result in non-deterministic behavior, because we iterate through
+    // the observables in order to find out if we are up-to-date.
+    // TODO: also, if an observable is recalculated during that process and it
+    // was changed, won't that trigger a recalc of the current observer
+    // (directly or indirectly)?
+  };
+
+  skip / "eager_and_minimal_recalculation"_test = [] {
+    atom a = true;
+
+    auto x = false;
+    calc b = [=, &x] {
+      x = true;
+      return a();
+    };
+
+    autorun([=] {
+      if (a)
+        b();
+    });
+
+    x = false;
+    a = false;
+
+    expect(that % x == false)
+        << "b should not be recalculated, because a is "
+           "false, so b is not observed and therefore not "
+           "reactive";
+  };
+};

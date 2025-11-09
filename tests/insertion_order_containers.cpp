@@ -1,6 +1,9 @@
 #include "common.h"
 
-static suite<"insertion_order_map"> _ = [] {
+using prego::insertion_order_map;
+using prego::insertion_order_set;
+
+static suite<"insertion_order_containers"> _ = [] {
   auto x = std::make_shared<int>(42);
   auto y = std::make_shared<int>(1729);
 
@@ -20,6 +23,7 @@ static suite<"insertion_order_map"> _ = [] {
         expect(m.begin() == m.end());
         expect(not m.contains(key0));
         expect(that % m[key0] == 0);
+
         expect(m.size() == 1_i);
         expect(m.begin() != m.end());
         expect(m.contains(key0));
@@ -41,6 +45,41 @@ static suite<"insertion_order_map"> _ = [] {
         expect(m.begin() != m.end());
 
         auto keys = to_vector(m | std::views::keys);
+        expect(that % eq(keys[0], key0));
+        expect(that % eq(keys[1], key1));
+      } |
+      std::tuple{
+          std::tuple{42, 1729, std::less{}},
+          std::tuple{std::weak_ptr{x}, std::weak_ptr{y}, std::owner_less{}},
+      };
+
+  "insertion_order_set"_test =
+      [](auto data) {
+        auto [key0, key1, cmp] = data;
+        using key_t = decltype(key0);
+        using cmp_t = decltype(cmp);
+
+        auto eq = [=](auto lhs, auto rhs) {
+          return not cmp(lhs, rhs) and not cmp(rhs, lhs);
+        };
+
+        auto m = insertion_order_set<key_t, cmp_t>{};
+
+        expect(m.size() == 0_i);
+        expect(m.begin() == m.end());
+        expect(not m.contains(key0));
+
+        m.insert(key0);
+        expect(m.size() == 1_i);
+        expect(m.begin() != m.end());
+        expect(m.contains(key0));
+
+        m.insert(key1);
+        expect(m.size() == 2_i);
+        expect(m.begin() != m.end());
+        expect(m.contains(key1));
+
+        auto keys = to_vector(m);
         expect(that % eq(keys[0], key0));
         expect(that % eq(keys[1], key1));
       } |
