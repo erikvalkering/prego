@@ -538,8 +538,9 @@ public:
     for (auto &observable : observables) {
       if (auto p = observable.lock()) {
         p->unobserve(observer);
-      } else
+      } else {
         assert(false);
+      }
     }
   }
 
@@ -600,8 +601,9 @@ public:
     for (auto &observable : observables) {
       if (auto p = observable.lock())
         p->observe(observer, false);
-      else
+      else {
         assert(false);
+      }
     }
   }
 
@@ -618,8 +620,9 @@ public:
           // checked, it immediately returns true
           p->observe(observer, true);
         }
-      } else
+      } else {
         assert(false);
+      }
     }
 
     // If we reach this point, all observables are up to date and should have
@@ -696,8 +699,9 @@ public:
 
         if (auto p = observable.lock())
           p->unobserve(observer);
-        else
+        else {
           assert(false);
+        }
       }
     }};
 
