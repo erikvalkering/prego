@@ -548,6 +548,8 @@ public:
   virtual void notify(const notification_t notification) override final {
     on_notify();
 
+    assert(stale_count >= 0);
+
     event(".notify()", *this, notification);
     switch (notification) {
     default:
