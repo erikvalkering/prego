@@ -8,7 +8,6 @@
 #include <memory>
 #include <optional>
 #include <ranges>
-#include <set>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -179,7 +178,8 @@ struct observable_t : hooks_mixin {
   }
 };
 
-using observables_t = std::set<std::weak_ptr<observable_t>, std::owner_less<>>;
+using observables_t =
+    insertion_order_set<std::weak_ptr<observable_t>, std::owner_less<>>;
 
 inline auto active_observers =
     std::vector<std::tuple<std::weak_ptr<observer_t>, observables_t *, bool>>{};
