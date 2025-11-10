@@ -53,10 +53,10 @@ struct immovable {
   immovable(int x) {}
   immovable(int x, int y) {}
 
-  immovable(const immovable&) = delete;
-  immovable(immovable&&) = delete;
-  immovable& operator=(const immovable&) = delete;
-  immovable& operator=(immovable&&) = delete;
+  immovable(const immovable &) = delete;
+  immovable(immovable &&) = delete;
+  immovable &operator=(const immovable &) = delete;
+  immovable &operator=(immovable &&) = delete;
 };
 
 // The following are equivalent
