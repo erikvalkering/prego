@@ -120,8 +120,9 @@ creates a _lazily evaluated expression_. It will only be evaluated if called (i.
 ```cpp
 atom name = "John Doe"s;
 
-auto copy = name; // copy and name reference the same underlying value
-name = "Jane Doe";
+auto copy = name;  // copy and name re-
+name = "Jane Doe"; // ference the same
+                   // underlying value
 assert(copy == "Jane Doe");
 
 copy = "John Doe";
