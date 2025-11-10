@@ -111,7 +111,7 @@ auto length = (first_name + " " + last_name).size();
 
 ```
 
-creates a _lazily evaluated expression_. It will only be evaluated if called (i.e. `length()` or when implicitly (or explicitly) converted to its underlying value (i.e. `std::size_t l = length;`).
+creates a _lazily evaluated expression_. It will only be evaluated if called (i.e. `length()`) or when implicitly (or explicitly) converted to its underlying type (i.e. `std::size_t l = length;`).
 
 </details>
 
@@ -120,7 +120,7 @@ creates a _lazily evaluated expression_. It will only be evaluated if called (i.
 ```cpp
 atom name = "John Doe"s;
 
-auto copy = name;
+auto copy = name; // copy and name reference the same underlying value
 name = "Jane Doe";
 assert(copy == "Jane Doe");
 
