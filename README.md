@@ -14,8 +14,8 @@ calc display_name = nick_name.value_or(full_name);
 
 atom enabled = true;
 autorun([=] {
-  if (enabled)
-    std::println("{}", display_name); // prints "Mr Unknown"
+  if (not enabled) return;
+  std::println("{}", display_name); // prints "Mr Unknown"
 });
 
 nick_name.reset();      // prints "John Doe"
