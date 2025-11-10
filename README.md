@@ -95,16 +95,19 @@ atom last_name  = "Doe"s;
 std::string full_name = first_name() + " " + last_name();
 std::string full_name = first_name + " " + last_name;
 
+// As well as the following
+std::size_t length = (first_name() + " " + last_name()).size();
 std::size_t length = (first_name + " " + last_name).size();
 ```
 
 <details>
 <summary>Advanced</summary>
-Note: we rely on implicit conversions here. For example, `auto length = ...` would not deduce to `size_t`, but would _act_ like it.
+
+Note: we rely on implicit conversions here. For example, `auto length = ...` would _not_ deduce to `size_t`, but would _act_ like it.
 In fact, the following:
 
 ```cpp
-std::size_t length = (first_name + " " + last_name).size();
+auto length = (first_name + " " + last_name).size();
 
 ```
 
