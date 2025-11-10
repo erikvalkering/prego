@@ -141,15 +141,21 @@ calc full_name = [=] { return first_name() + " " + last_name(); };
 calc full_name = [=] { return first_name + " " + last_name; };
 calc full_name = first_name + " " + last_name;
 
-full_name = "Jane Doe"; // ❌ calculated values are not assignable
-first_name = "Jane"; // ok
+// Only atomic values can be assigned to.
+// Calculated values cannot.
+full_name  = "Jane Doe"; // ❌
+first_name = "Jane";     // ok
 
 std::string value = full_name(); // calculate and return value
+std::string value = full_name;   // or, with implicit conversion
 
-std::println(f"Name is {full_name}"); // uses previously-cached value
+// Calculated values cache their value once calculated
+std::println(f"Name is {full_name}"); // uses cached value
 
+// Calculated values automatically track their dependencies
+// and only recalculate if absolutely necessary.
 last_name = "Austen";
-std::println(f"{full_name} is a writer"); // calculates a new value
+std::println(f"{full_name} is a writer"); // (re)calculates a new value
 ```
 
 ## Complex calculated values
