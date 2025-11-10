@@ -15,17 +15,17 @@ calc display_name = nick_name.value_or(full_name);
 atom enabled = true;
 autorun([=] {
   if (not enabled) return;
-  std::println("{}", display_name); // prints "Mr Unknown"
+  std::println("{}", display_name); // "Mr Unknown"
 });
 
-nick_name.reset();       // prints "John Doe"
-first_name = "Jane";     // prints "Jane Doe"
-nick_name  = "Jane Doe"; // no change, nothing printed
-first_name = "John";     // no change, nothing printed
-enabled    = false;      // autorun re-evaluated, nothing printed
-nick_name  = "John Doe"; // autorun not re-evaluated, nothing printed
-enabled    = true;       // autorun re-evaluated, prints "John Doe"
-nick_name.reset();       // no change, nothing printed
+nick_name.reset();       // "John Doe"
+first_name = "Jane";     // "Jane Doe"
+nick_name  = "Jane Doe"; // -
+first_name = "John";     // -
+enabled    = false;      // -
+nick_name  = "John Doe"; // -
+enabled    = true;       // "John Doe"
+nick_name.reset();       // -
 ```
 
 ## Introduction
