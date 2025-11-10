@@ -95,12 +95,22 @@ atom last_name  = "Doe"s;
 std::string full_name = first_name() + " " + last_name();
 std::string full_name = first_name + " " + last_name;
 
-auto length = (first_name + " " + last_name).size();
-std::println("Length: {}", length());
-std::println("Length: {}", length); // equivalent
+std::size_t length = (first_name + " " + last_name).size();
 ```
 
-> Note: `auto length = ...` does not deduce to `size_t`, but _acts_ like it.
+<details>
+<summary>Advanced</summary>
+Note: we rely on implicit conversions here. For example, `auto length = ...` would not deduce to `size_t`, but would _act_ like it.
+In fact, the following:
+
+```cpp
+std::size_t length = (first_name + " " + last_name).size();
+
+```
+
+creates a _lazily evaluated expression_. It will only be evaluated if called (i.e. `length()` or when implicitly (or explicitly) converted to its underlying value (i.e. `std::size_t l = length;`).
+
+</details>
 
 ### Shared reference semantics
 
