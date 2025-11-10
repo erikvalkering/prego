@@ -137,6 +137,7 @@ using prego::calc;
 atom first_name = "John"s;
 atom last_name  = "Doe"s;
 
+// The following are equivalent
 calc full_name = [=] { return first_name() + " " + last_name(); };
 calc full_name = [=] { return first_name + " " + last_name; };
 calc full_name = first_name + " " + last_name;
@@ -146,16 +147,22 @@ calc full_name = first_name + " " + last_name;
 full_name  = "Jane Doe"; // ❌
 first_name = "Jane";     // ok
 
+// The following are equivalent
 std::string value = full_name(); // calculate and return value
 std::string value = full_name;   // or, with implicit conversion
 
 // Calculated values cache their value once calculated
-std::println(f"Name is {full_name}"); // uses cached value
+std::println("Name is {}", full_name); // uses cached value
 
 // Calculated values automatically track their dependencies
-// and only recalculate if absolutely necessary.
+// and recalculate only if necessary and when requested.
 last_name = "Austen";
-std::println(f"{full_name} is a writer"); // (re)calculates a new value
+std::println("{} is a writer", full_name); // (re)calculates a new value
+
+// But if nothing changed,
+// nothing needs to be recalculated.
+first_name = "Jane";
+std::println("{} is a writer", full_name); // uses cached value
 ```
 
 ## Complex calculated values
