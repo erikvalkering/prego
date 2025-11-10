@@ -76,6 +76,8 @@ atom a = atom<immovable>{42};
 ### Using values
 
 ```cpp
+atom name = "John Doe"s;
+
 std::string value = name(); // access value
 std::string value = name;   // also fine: implicit conversion
 
@@ -103,12 +105,14 @@ std::println("Length: {}", length); // equivalent
 ### Shared reference semantics
 
 ```cpp
-auto copy = name;
-name = "Jane";
-assert(copy == "Jane");
+atom name = "John Doe"s;
 
-copy = "John";
-assert(name == "John");
+auto copy = name;
+name = "Jane Doe";
+assert(copy == "Jane Doe");
+
+copy = "John Doe";
+assert(name == "John Doe");
 ```
 
 ## Calculated values
