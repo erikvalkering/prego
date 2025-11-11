@@ -203,6 +203,9 @@ enabled = false;
 // nor is_writer
 first_name = "John";
 
+// invokes autorun,
+// recalculates full_name,
+// recalculates is_writer,
 // prints "Name: John Austen"
 enabled = true;
 ```
