@@ -30,7 +30,7 @@ nick_name.reset();       // -
 
 ## Introduction
 
-### Atomic values
+## Atomic values
 
 ```cpp
 #include <prego/prego.h>
