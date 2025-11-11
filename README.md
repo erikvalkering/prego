@@ -206,25 +206,3 @@ first_name = "John";
 // prints "Name: John Austen"
 enabled = true;
 ```
-
-## Requirements
-
-- Send business card via mail each time it changes
-- Allow user to opt out of mail delivery
-- Send business card via email each time it changes (user can print at home)
-- Allow user to opt out of email delivery
-- user can change:
-  - first name
-  - last name
-  - opt out settings
-- technical:
-  - reacts to modifications
-  - reacts only to _changes_
-  - does not perform repeated calculates
-  - avoids expensive calculations if unnecessary
-  - easy to extend
-  - no implicit dependencies
-  - local reasoning
-  - at no point in the changes of the requirements did we have to come up with clever implementations, work arounds, or have to fix new issues later on: every change to the reactive data model is correct and efficient _by construction_.
-  - Instead, with the incremental number of requirements, conventional designs (including the use of the observer pattern) require complete knowledge of the full data model, which makes bug-free extension very hard or impractical. The fundamental cause of these issues,
-    is the implicit dependencies between the different pieces of state in the data model.
