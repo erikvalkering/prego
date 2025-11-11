@@ -165,133 +165,46 @@ first_name = "Jane";
 std::println("{} is a writer", full_name); // uses cached value
 ```
 
-## Complex calculated values
+## Reactions
 
 ```cpp
 using prego::calc;
 
 atom first_name = "John"s;
 atom last_name  = "Doe"s;
-calc full_name  = first_name + " " + last_name;
 
-calc is_writer  = [=] { return full_name().contains("Jane Austen"); };
-calc is_writer  = [=] { return full_name.contains("Jane Austen"); };
-calc is_writer  = full_name.contains("Jane Austen");
+calc full_name  = first_name + " " + last_name;
 calc is_writer  = full_name == "Jane Austen";
 
-std::println(f"{full_name} is not a writer");
-
-first_name = "Jane";
-std::println(f"{full_name} is not a writer");
-
-last_name = "Austen";
-std::println(f"{full_name} is a writer");
-
-auto print_business_card = [=] {
-  std::println(f"{full_name}");
-  const auto line = std::string{full_name.size(), '-'};
-  std::println(f"{line}");
-  if (full_name == "Jane Austen")
-    std::println(f"Profession: writer");
-};
-
-first_name = "John";
-print_business_card();
-
-last_name = "Doe";
-print_business_card();
-
-calc business_card = [=] {
-  const auto line = std::string{full_name.size(), '-'};
-  auto result = std::format(f"{full_name}\n{line}");
-  if (full_name == "Jane Austen")
-    result = std::format(f"{result}\nProfession: writer");
-
-  return result;
-};
-
-first_name = "Jane";
-std::println(f"{business_card}");
-
-last_name = "Austen";
-std::println(f"{business_card}");
-```
-
-## Even more complex calculated values
-
-```cpp
-using prego::calc;
-
-atom first_name = "John"s;
-atom last_name  = "Doe"s;
-atom nick_name  = ""s;
-calc full_name  = first_name + " " + last_name;
-calc display_name = [=] {
-  return !nick_name.empty() ? nick_name : full_name;
-};
-
-calc business_card = [=] {
-  const auto line = std::string{display_name.size(), '-'};
-  auto result = std::format(f"{display_name}\n{line}");
-  if (full_name == "Jane Austen")
-    result = std::format(f"{result}\nProfession: writer");
-
-  return result;
-};
-
-first_name = "Jane";
-std::println(f"{business_card}");
-
-last_name = "Austen";
-std::println(f"{business_card}");
-
-nick_name = "Jane Austen";
-std::println(f"{business_card}"); // unnecessary
-```
-
-```cpp
-using prego::autorun;
-
-atom first_name = "John"s;
-atom last_name  = "Doe"s;
-atom nick_name  = ""s;
-calc full_name  = first_name + " " + last_name;
-calc display_name = [=] {
-  return !nick_name.empty() ? nick_name : full_name;
-};
-
-calc profession = [=] {
-  return is_writer
-       ? "writer"
-       : get_profession_from_db(full_name);
-};
-
-calc business_card = [=] {
-  const auto line = std::string{display_name.size(), '-'};
-  auto result = std::format(f"{display_name}\n{line}");
-  if (full_name == "Jane Austen")
-    result = std::format(f"{result}\nProfession: writer");
-
-  return result;
-};
-
-atom should_print_business_card = true;
+atom enabled = true;
 autorun([=] {
-  if (should_print_business_card)
-    std::println(f"{business_card}");
+  // This will be invoked immediately,
+  // as well as each time a dependency changed.
+  if (not enabled) return;
+
+  // prints "Name: John Doe"
+  std::println("Name: {}{}",
+               full_name,
+               is_writer ? ", writer" : "");
 });
 
-// simple unsubscribe based on flag no longer works
-atom should_mail_business_card = true;
-autorun([=] {
-  if (should_mail_business_card)
-    mail(business_card);
-});
+// prints "Name: Jane Doe"
+first_name = "Jane";
 
+// prints "Name: Jane Austen, writer"
+last_name  = "Austen";
 
-nick_name = "John Doe";
+// still invokes autorun,
+// but early-exits
+enabled = false;
+
+// does not invoke autorun,
+// and does not recalculate full_name
+// nor is_writer
 first_name = "John";
-last_name = "Doe";
+
+// prints "Name: John Austen"
+enabled = true;
 ```
 
 ## Requirements
@@ -315,45 +228,3 @@ last_name = "Doe";
   - at no point in the changes of the requirements did we have to come up with clever implementations, work arounds, or have to fix new issues later on: every change to the reactive data model is correct and efficient _by construction_.
   - Instead, with the incremental number of requirements, conventional designs (including the use of the observer pattern) require complete knowledge of the full data model, which makes bug-free extension very hard or impractical. The fundamental cause of these issues,
     is the implicit dependencies between the different pieces of state in the data model.
-
-```
-
-```
-
-```cpp
-atom first_name = "John"s;
-atom last_name  = "Doe"s;
-calc full_name  = first_name + " " + last_name;
-atom pseudonym  = std::optional<std::string>{};
-
-calc display_name = pseudonym.value_or(full_name);
-
-calc is_writer = display_name == "Jane Austen"
-              or display_name == "J.K. Rowling";
-              or db_lookup(display_name);
-
-calc business_card = [=] {
-  return display_name
-       + (is_writer ? ", writer" : "");
-};
-
-atom mail_opt_out = false;
-autorun([=] {
-  if (mail_opt_out) return;
-  std::println(f"physical mailing: {business_card}");
-});
-
-atom email_opt_out = false;
-autorun([=] {
-  if (email_opt_out) return;
-  std::println(f"electronic mailing: {business_card}");
-});
-
-first_name = "Jane";
-last_name  = "Austen";
-
-pseudonym  = "J.K. Rowling";
-first_name = "Joane";
-last_name  = "Rowling";
-`
-```
