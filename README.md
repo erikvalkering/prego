@@ -6,31 +6,31 @@
 
 ```cpp
 atom first_name = "John"s;
-atom last_name = "Doe"s;
-atom nick_name = std::optional{"Mr Unknown"s};
+atom last_name  = "Doe"s;
+atom nick_name  = std::optional{"Mr Unknown"s};
 
-calc full_name = first_name + " " + last_name;
+calc full_name    = first_name + " " + last_name;
 calc display_name = nick_name.value_or(full_name);
 
 atom enabled = true;
 autorun([=] {
-  if (enabled)
-    std::println("{}", display_name); // prints "Mr Unknown"
+  if (not enabled) return;
+  std::println("{}", display_name); // "Mr Unknown"
 });
 
-nick_name.reset();      // prints "John Doe"
-first_name = "Jane";    // prints "Jane Doe"
-nick_name = "Jane Doe"; // no change, nothing printed
-first_name = "John";    // no change, nothing printed
-enabled = false;        // autorun re-evaluated, nothing printed
-nick_name = "John Doe"; // autorun not re-evaluated, nothing printed
-enabled = true;         // autorun re-evaluated, prints "John Doe"
-nick_name.reset();      // no change, nothing printed
+nick_name.reset();       // "John Doe"
+first_name = "Jane";     // "Jane Doe"
+nick_name  = "Jane Doe"; // -
+first_name = "John";     // -
+enabled    = false;      // -
+nick_name  = "John Doe"; // -
+enabled    = true;       // "John Doe"
+nick_name.reset();       // -
 ```
 
 ## Introduction
 
-### Atomic values
+## Atomic values
 
 ```cpp
 #include <prego/prego.h>
@@ -53,10 +53,10 @@ struct immovable {
   immovable(int x) {}
   immovable(int x, int y) {}
 
-  immovable(const immovable&) = delete;
-  immovable(immovable&&) = delete;
-  immovable& operator=(const immovable&) = delete;
-  immovable& operator=(immovable&&) = delete;
+  immovable(const immovable &) = delete;
+  immovable(immovable &&) = delete;
+  immovable &operator=(const immovable &) = delete;
+  immovable &operator=(immovable &&) = delete;
 };
 
 // The following are equivalent
@@ -76,6 +76,8 @@ atom a = atom<immovable>{42};
 ### Using values
 
 ```cpp
+atom name = "John Doe"s;
+
 std::string value = name(); // access value
 std::string value = name;   // also fine: implicit conversion
 
@@ -93,22 +95,38 @@ atom last_name  = "Doe"s;
 std::string full_name = first_name() + " " + last_name();
 std::string full_name = first_name + " " + last_name;
 
-auto length = (first_name + " " + last_name).size();
-std::println("Length: {}", length());
-std::println("Length: {}", length); // equivalent
+// As well as the following
+std::size_t length = (first_name() + " " + last_name()).size();
+std::size_t length = (first_name + " " + last_name).size();
 ```
 
-> Note: `auto length = ...` does not deduce to `size_t`, but _acts_ like it.
+<details>
+<summary>Advanced</summary>
+
+Note: we rely on implicit conversions here. For example, `auto length = ...` would _not_ deduce to `size_t`, but would _act_ like it.
+In fact, the following:
+
+```cpp
+auto length = (first_name + " " + last_name).size();
+
+```
+
+creates a _lazily evaluated expression_. It will only be evaluated if called (i.e. `length()`) or when implicitly (or explicitly) converted to its underlying type (i.e. `std::size_t l = length;`).
+
+</details>
 
 ### Shared reference semantics
 
 ```cpp
-auto copy = name;
-name = "Jane";
-assert(copy == "Jane");
+atom name = "John Doe"s;
 
-copy = "John";
-assert(name == "John");
+auto copy = name;  // copy and name re-
+name = "Jane Doe"; // ference the same
+                   // underlying value
+assert(copy == "Jane Doe");
+
+copy = "John Doe";
+assert(name == "John Doe");
 ```
 
 ## Calculated values
@@ -119,210 +137,75 @@ using prego::calc;
 atom first_name = "John"s;
 atom last_name  = "Doe"s;
 
+// The following are equivalent
 calc full_name = [=] { return first_name() + " " + last_name(); };
 calc full_name = [=] { return first_name + " " + last_name; };
 calc full_name = first_name + " " + last_name;
 
-full_name = "Jane Doe"; // ❌ calculated values are not assignable
-first_name = "Jane"; // ok
+// Only atomic values can be assigned to.
+// Calculated values cannot.
+full_name  = "Jane Doe"; // ❌
+first_name = "Jane";     // ok
 
+// The following are equivalent
 std::string value = full_name(); // calculate and return value
+std::string value = full_name;   // or, with implicit conversion
 
-std::println(f"Name is {full_name}"); // uses previously-cached value
+// Calculated values cache their value once calculated
+std::println("Name is {}", full_name); // uses cached value
 
+// Calculated values automatically track their dependencies
+// and recalculate only if necessary and when requested.
 last_name = "Austen";
-std::println(f"{full_name} is a writer"); // calculates a new value
+std::println("{} is a writer", full_name); // (re)calculates a new value
+
+// But if nothing changed,
+// nothing needs to be recalculated.
+first_name = "Jane";
+std::println("{} is a writer", full_name); // uses cached value
 ```
 
-## Complex calculated values
+## Reactions
 
 ```cpp
 using prego::calc;
 
 atom first_name = "John"s;
 atom last_name  = "Doe"s;
-calc full_name  = first_name + " " + last_name;
 
-calc is_writer  = [=] { return full_name().contains("Jane Austen"); };
-calc is_writer  = [=] { return full_name.contains("Jane Austen"); };
-calc is_writer  = full_name.contains("Jane Austen");
+calc full_name  = first_name + " " + last_name;
 calc is_writer  = full_name == "Jane Austen";
 
-std::println(f"{full_name} is not a writer");
-
-first_name = "Jane";
-std::println(f"{full_name} is not a writer");
-
-last_name = "Austen";
-std::println(f"{full_name} is a writer");
-
-auto print_business_card = [=] {
-  std::println(f"{full_name}");
-  const auto line = std::string{full_name.size(), '-'};
-  std::println(f"{line}");
-  if (full_name == "Jane Austen")
-    std::println(f"Profession: writer");
-};
-
-first_name = "John";
-print_business_card();
-
-last_name = "Doe";
-print_business_card();
-
-calc business_card = [=] {
-  const auto line = std::string{full_name.size(), '-'};
-  auto result = std::format(f"{full_name}\n{line}");
-  if (full_name == "Jane Austen")
-    result = std::format(f"{result}\nProfession: writer");
-
-  return result;
-};
-
-first_name = "Jane";
-std::println(f"{business_card}");
-
-last_name = "Austen";
-std::println(f"{business_card}");
-```
-
-## Even more complex calculated values
-
-```cpp
-using prego::calc;
-
-atom first_name = "John"s;
-atom last_name  = "Doe"s;
-atom nick_name  = ""s;
-calc full_name  = first_name + " " + last_name;
-calc display_name = [=] {
-  return !nick_name.empty() ? nick_name : full_name;
-};
-
-calc business_card = [=] {
-  const auto line = std::string{display_name.size(), '-'};
-  auto result = std::format(f"{display_name}\n{line}");
-  if (full_name == "Jane Austen")
-    result = std::format(f"{result}\nProfession: writer");
-
-  return result;
-};
-
-first_name = "Jane";
-std::println(f"{business_card}");
-
-last_name = "Austen";
-std::println(f"{business_card}");
-
-nick_name = "Jane Austen";
-std::println(f"{business_card}"); // unnecessary
-```
-
-```cpp
-using prego::autorun;
-
-atom first_name = "John"s;
-atom last_name  = "Doe"s;
-atom nick_name  = ""s;
-calc full_name  = first_name + " " + last_name;
-calc display_name = [=] {
-  return !nick_name.empty() ? nick_name : full_name;
-};
-
-calc profession = [=] {
-  return is_writer
-       ? "writer"
-       : get_profession_from_db(full_name);
-};
-
-calc business_card = [=] {
-  const auto line = std::string{display_name.size(), '-'};
-  auto result = std::format(f"{display_name}\n{line}");
-  if (full_name == "Jane Austen")
-    result = std::format(f"{result}\nProfession: writer");
-
-  return result;
-};
-
-atom should_print_business_card = true;
+atom enabled = true;
 autorun([=] {
-  if (should_print_business_card)
-    std::println(f"{business_card}");
+  // This will be invoked immediately,
+  // as well as each time a dependency changed.
+  if (not enabled) return;
+
+  // prints "Name: John Doe"
+  std::println("Name: {}{}",
+               full_name,
+               is_writer ? ", writer" : "");
 });
 
-// simple unsubscribe based on flag no longer works
-atom should_mail_business_card = true;
-autorun([=] {
-  if (should_mail_business_card)
-    mail(business_card);
-});
-
-
-nick_name = "John Doe";
-first_name = "John";
-last_name = "Doe";
-```
-
-## Requirements
-
-- Send business card via mail each time it changes
-- Allow user to opt out of mail delivery
-- Send business card via email each time it changes (user can print at home)
-- Allow user to opt out of email delivery
-- user can change:
-  - first name
-  - last name
-  - opt out settings
-- technical:
-  - reacts to modifications
-  - reacts only to _changes_
-  - does not perform repeated calculates
-  - avoids expensive calculations if unnecessary
-  - easy to extend
-  - no implicit dependencies
-  - local reasoning
-  - at no point in the changes of the requirements did we have to come up with clever implementations, work arounds, or have to fix new issues later on: every change to the reactive data model is correct and efficient _by construction_.
-  - Instead, with the incremental number of requirements, conventional designs (including the use of the observer pattern) require complete knowledge of the full data model, which makes bug-free extension very hard or impractical. The fundamental cause of these issues,
-    is the implicit dependencies between the different pieces of state in the data model.
-
-```
-
-```
-
-```cpp
-atom first_name = "John"s;
-atom last_name  = "Doe"s;
-calc full_name  = first_name + " " + last_name;
-atom pseudonym  = std::optional<std::string>{};
-
-calc display_name = pseudonym.value_or(full_name);
-
-calc is_writer = display_name == "Jane Austen"
-              or display_name == "J.K. Rowling";
-              or db_lookup(display_name);
-
-calc business_card = [=] {
-  return display_name
-       + (is_writer ? ", writer" : "");
-};
-
-atom mail_opt_out = false;
-autorun([=] {
-  if (mail_opt_out) return;
-  std::println(f"physical mailing: {business_card}");
-});
-
-atom email_opt_out = false;
-autorun([=] {
-  if (email_opt_out) return;
-  std::println(f"electronic mailing: {business_card}");
-});
-
+// prints "Name: Jane Doe"
 first_name = "Jane";
+
+// prints "Name: Jane Austen, writer"
 last_name  = "Austen";
 
-pseudonym  = "J.K. Rowling";
-first_name = "Joane";
-last_name  = "Rowling";
-`
+// still invokes autorun,
+// but early-exits
+enabled = false;
+
+// does not invoke autorun,
+// and does not recalculate full_name
+// nor is_writer
+first_name = "John";
+
+// invokes autorun,
+// recalculates full_name,
+// recalculates is_writer,
+// prints "Name: John Austen"
+enabled = true;
 ```
