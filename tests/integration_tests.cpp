@@ -60,7 +60,7 @@ static suite<"integration_tests"> _ = [] {
     nick_name.reset();      // no change, nothing printed
   };
 
-  "business card"_test = [] {
+  "business card (prego)"_test = [] {
     auto msgs = msgs_t{};
     auto tag = [&msgs](auto id) {
       return spy([id, &msgs] { msgs.push_back(id); });
@@ -254,5 +254,30 @@ static suite<"integration_tests"> _ = [] {
                               "Emailing: Business card of John Doe",
                           });
     msgs.clear();
+  };
+
+  "business card (naive)"_test = [=] {
+    auto msgs = msgs_t{};
+
+    auto first_name = "John"s;
+    auto last_name = "Doe"s;
+    auto full_name = first_name + " " + last_name;
+
+    auto pseudonym = std::optional<std::string>{};
+    auto display_name = pseudonym.value_or(full_name);
+
+    auto is_writer = expensive_author_registry_lookup(display_name);
+
+    auto business_card = std::format("Business card of {}{}", display_name,
+                                     is_writer ? ", writer" : "");
+
+    auto shipment = shipment_t::dhl;
+    if (shipment == shipment_t::dhl)
+      ship_via_dhl(msgs, business_card);
+
+    if (shipment == shipment_t::print_at_home)
+      email(msgs, business_card);
+
+    expect(that % false) << "not yet implemented";
   };
 };
