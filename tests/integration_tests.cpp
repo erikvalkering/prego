@@ -16,6 +16,25 @@ using prego::autorun;
 using prego::calc;
 using prego::spy;
 
+enum class shipment_t {
+  opt_out,
+  dhl,
+  print_at_home,
+};
+
+using msgs_t = std::vector<std::string>;
+
+auto ship_via_dhl(msgs_t &msgs, const std::string &msg) {
+  msgs.push_back(std::format("Shipping via DHL: {}", msg));
+}
+
+auto email(msgs_t &msgs, const std::string &msg) {
+  msgs.push_back(std::format("Emailing: {}", msg));
+}
+auto expensive_author_registry_lookup(const std::string &name) {
+  return name == "Jane Austen" or name == "Multatuli";
+}
+
 static suite<"integration_tests"> _ = [] {
   "example_from_readme"_test = [] {
     atom first_name = "John"s;
@@ -42,23 +61,9 @@ static suite<"integration_tests"> _ = [] {
   };
 
   "business card"_test = [] {
-    using msgs_t = std::vector<std::string>;
     auto msgs = msgs_t{};
     auto tag = [&msgs](auto id) {
       return spy([id, &msgs] { msgs.push_back(id); });
-    };
-
-    enum class shipment_t {
-      opt_out,
-      dhl,
-      print_at_home,
-    };
-
-    auto ship_via_dhl = [&](const std::string &msg) {
-      msgs.push_back(std::format("Shipping via DHL: {}", msg));
-    };
-    auto email = [&](const std::string &msg) {
-      msgs.push_back(std::format("Emailing: {}", msg));
     };
 
     atom first_name = "John"s;
@@ -68,9 +73,6 @@ static suite<"integration_tests"> _ = [] {
     atom pseudonym = std::optional<std::string>{};
     calc display_name = pseudonym.value_or(full_name) + tag("display_name");
 
-    auto expensive_author_registry_lookup = [&](const std::string &name) {
-      return name == "Jane Austen" or name == "Multatuli";
-    };
     calc is_writer = [=] {
       return expensive_author_registry_lookup(display_name);
     } + tag("is_writer");
@@ -84,14 +86,14 @@ static suite<"integration_tests"> _ = [] {
         << "None of the calculations should have run yet";
 
     atom shipment = shipment_t::dhl;
-    autorun([=] {
+    autorun([=, &msgs] {
       if (shipment == shipment_t::dhl)
-        ship_via_dhl(business_card);
+        ship_via_dhl(msgs, business_card);
     } + tag("autorun:dhl"));
 
-    autorun([=] {
+    autorun([=, &msgs] {
       if (shipment == shipment_t::print_at_home)
-        email(business_card);
+        email(msgs, business_card);
     } + tag("autorun:print_at_home"));
 
     expect(that % msgs == msgs_t{
