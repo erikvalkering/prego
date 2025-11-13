@@ -35,6 +35,168 @@ auto expensive_author_registry_lookup(const std::string &name) {
   return name == "Jane Austen" or name == "Multatuli";
 }
 
+auto test_business_card(msgs_t &msgs, auto &first_name, auto &last_name,
+                        auto &pseudonym, auto &shipment) {
+  expect(that % msgs == msgs_t{
+                            "autorun:dhl",
+                            "business_card",
+                            "is_writer",
+                            "display_name",
+                            "full_name",
+                            "Shipping via DHL: Business card of John Doe",
+                            "autorun:print_at_home",
+                        });
+  msgs.clear();
+
+  // Make sure that setting first_name or last_name to the same values will
+  // not trigger any calculations
+  first_name = "John"s;
+  last_name = "Doe"s;
+  expect(that % msgs == msgs_t{});
+  msgs.clear();
+
+  // Setting the pseudonym to the same value as full_name should not
+  // trigger further calculations
+  pseudonym = "John Doe"s;
+  expect(that % msgs == msgs_t{
+                            "display_name",
+                        });
+  msgs.clear();
+
+  // Change the pseudonym to a different value, which should trigger
+  // a calculation of display_name and all the dependent calculations
+  pseudonym = "Jane Doe"s;
+  expect(that % msgs == msgs_t{
+                            "display_name",
+                            "is_writer",
+                            "business_card",
+                            "autorun:dhl",
+                            "Shipping via DHL: Business card of Jane Doe",
+                        });
+  msgs.clear();
+
+  // Because pseudonym is set, display_name should not depend on full_name
+  // So this should not trigger any calculations
+  first_name = "Jane";
+  expect(that % msgs == msgs_t{});
+  msgs.clear();
+
+  // Now display_name depends on full_name again,
+  // but since the resulting value is the same,
+  // no further calculations should be triggered
+  pseudonym.reset();
+  expect(that % msgs == msgs_t{
+                            "display_name",
+                            "full_name",
+                        });
+  msgs.clear();
+
+  // This will make the display_name a writer
+  last_name = "Austen";
+  expect(that % msgs ==
+         msgs_t{
+             "full_name",
+             "display_name",
+             "is_writer",
+             "business_card",
+             "autorun:dhl",
+             "Shipping via DHL: Business card of Jane Austen, writer",
+         });
+  msgs.clear();
+
+  // This will not be recognized as a writer,
+  // because the expensive lookup won't find this name
+  first_name = "Eduard Douwes";
+  msgs.clear();
+  last_name = "Dekker";
+  expect(that % msgs ==
+         msgs_t{
+             "full_name",
+             "display_name",
+             "is_writer",
+             "business_card",
+             "autorun:dhl",
+             "Shipping via DHL: Business card of Eduard Douwes Dekker",
+         });
+  msgs.clear();
+
+  // This will be recognized as a writer,
+  // since the expensive lookup will find this name
+  pseudonym = "Multatuli"s;
+  expect(that % msgs ==
+         msgs_t{
+             "display_name",
+             "is_writer",
+             "business_card",
+             "autorun:dhl",
+             "Shipping via DHL: Business card of Multatuli, writer",
+         });
+  msgs.clear();
+
+  // Disabling the mail notifications
+  shipment = shipment_t::print_at_home;
+  expect(that % msgs == msgs_t{
+                            "autorun:dhl",
+                            "autorun:print_at_home",
+                            "Emailing: Business card of Multatuli, writer",
+                        });
+  msgs.clear();
+
+  // Disabling the email notifications
+  shipment = shipment_t::opt_out;
+  expect(that % msgs == msgs_t{
+                            "autorun:dhl",
+                            "autorun:print_at_home",
+                        });
+  msgs.clear();
+
+  // Changing the first_name or last_name should not trigger any
+  // calculations, because the autoruns are not observing these
+  // values right now
+  first_name = "John"s;
+  last_name = "Doe"s;
+  pseudonym.reset();
+  expect(that % msgs == msgs_t{});
+  msgs.clear();
+
+  // Turning on the email notifications
+  // will trigger the calculations
+  shipment = shipment_t::print_at_home;
+  expect(that % msgs == msgs_t{
+                            "autorun:dhl",
+                            "autorun:print_at_home",
+                            "display_name",
+                            "full_name",
+                            "is_writer",
+                            "business_card",
+                            "Emailing: Business card of John Doe",
+                        });
+  msgs.clear();
+
+  shipment = shipment_t::opt_out;
+  expect(that % msgs == msgs_t{
+                            "autorun:dhl",
+                            "autorun:print_at_home",
+                        });
+  msgs.clear();
+
+  // NOTE: setting pseudonym and first_name will not trigger
+  // a recalculation of display_name and full_name, because those are not
+  // reactive.
+  // Changing shipment does and will trigger the revaluation (only of
+  // display_name).
+  pseudonym = "John Doe"s;
+  first_name = "Jane"s;
+  shipment = shipment_t::print_at_home;
+  expect(that % msgs == msgs_t{
+                            "autorun:dhl",
+                            "autorun:print_at_home",
+                            "display_name",
+                            "Emailing: Business card of John Doe",
+                        });
+  msgs.clear();
+}
+
 static suite<"integration_tests"> _ = [] {
   "example_from_readme"_test = [] {
     atom first_name = "John"s;
@@ -96,164 +258,9 @@ static suite<"integration_tests"> _ = [] {
         email(msgs, business_card);
     } + tag("autorun:print_at_home"));
 
-    expect(that % msgs == msgs_t{
-                              "autorun:dhl",
-                              "business_card",
-                              "is_writer",
-                              "display_name",
-                              "full_name",
-                              "Shipping via DHL: Business card of John Doe",
-                              "autorun:print_at_home",
-                          });
-    msgs.clear();
+    test_business_card(msgs, first_name, last_name, pseudonym, shipment);
 
-    // Make sure that setting first_name or last_name to the same values will
-    // not trigger any calculations
-    first_name = "John"s;
-    last_name = "Doe"s;
-    expect(that % msgs == msgs_t{});
-    msgs.clear();
-
-    // Setting the pseudonym to the same value as full_name should not
-    // trigger further calculations
-    pseudonym = "John Doe"s;
-    expect(that % msgs == msgs_t{
-                              "display_name",
-                          });
-    msgs.clear();
-
-    // Change the pseudonym to a different value, which should trigger
-    // a calculation of display_name and all the dependent calculations
-    pseudonym = "Jane Doe"s;
-    expect(that % msgs == msgs_t{
-                              "display_name",
-                              "is_writer",
-                              "business_card",
-                              "autorun:dhl",
-                              "Shipping via DHL: Business card of Jane Doe",
-                          });
-    msgs.clear();
-
-    // Because pseudonym is set, display_name should not depend on full_name
-    // So this should not trigger any calculations
-    first_name = "Jane";
-    expect(that % msgs == msgs_t{});
-    msgs.clear();
-
-    // Now display_name depends on full_name again,
-    // but since the resulting value is the same,
-    // no further calculations should be triggered
-    pseudonym.reset();
-    expect(that % msgs == msgs_t{
-                              "display_name",
-                              "full_name",
-                          });
-    msgs.clear();
-
-    // This will make the display_name a writer
-    last_name = "Austen";
-    expect(that % msgs ==
-           msgs_t{
-               "full_name",
-               "display_name",
-               "is_writer",
-               "business_card",
-               "autorun:dhl",
-               "Shipping via DHL: Business card of Jane Austen, writer",
-           });
-    msgs.clear();
-
-    // This will not be recognized as a writer,
-    // because the expensive lookup won't find this name
-    first_name = "Eduard Douwes";
-    msgs.clear(); // TODO: implement transactional mutations
-    last_name = "Dekker";
-    expect(that % msgs ==
-           msgs_t{
-               "full_name",
-               "display_name",
-               "is_writer",
-               "business_card",
-               "autorun:dhl",
-               "Shipping via DHL: Business card of Eduard Douwes Dekker",
-           });
-    msgs.clear();
-
-    // This will be recognized as a writer,
-    // since the expensive lookup will find this name
-    pseudonym = "Multatuli"s;
-    expect(that % msgs ==
-           msgs_t{
-               "display_name",
-               "is_writer",
-               "business_card",
-               "autorun:dhl",
-               "Shipping via DHL: Business card of Multatuli, writer",
-           });
-    msgs.clear();
-
-    // Disabling the mail notifications
-    shipment = shipment_t::print_at_home;
-    expect(that % msgs == msgs_t{
-                              "autorun:dhl",
-                              "autorun:print_at_home",
-                              "Emailing: Business card of Multatuli, writer",
-                          });
-    msgs.clear();
-
-    // Disabling the email notifications
-    shipment = shipment_t::opt_out;
-    expect(that % msgs == msgs_t{
-                              "autorun:dhl",
-                              "autorun:print_at_home",
-                          });
-    msgs.clear();
-
-    // Changing the first_name or last_name should not trigger any
-    // calculations, because the autoruns are not observing these
-    // values right now
-    first_name = "John"s;
-    last_name = "Doe"s;
-    pseudonym.reset();
-    expect(that % msgs == msgs_t{});
-    msgs.clear();
-
-    // Turning on the email notifications
-    // will trigger the calculations
-    shipment = shipment_t::print_at_home;
-    expect(that % msgs == msgs_t{
-                              "autorun:dhl",
-                              "autorun:print_at_home",
-                              "display_name",
-                              "full_name",
-                              "is_writer",
-                              "business_card",
-                              "Emailing: Business card of John Doe",
-                          });
-    msgs.clear();
-
-    shipment = shipment_t::opt_out;
-    expect(that % msgs == msgs_t{
-                              "autorun:dhl",
-                              "autorun:print_at_home",
-                          });
-    msgs.clear();
-
-    // NOTE: setting pseudonym and first_name will not trigger
-    // a recalculation of display_name and full_name, because those are not
-    // reactive.
-    // Changing shipment does and will trigger the revaluation (only of
-    // display_name).
-    pseudonym = "John Doe"s;
-    first_name = "Jane"s;
-    shipment = shipment_t::print_at_home;
-    expect(that % msgs == msgs_t{
-                              "autorun:dhl",
-                              "autorun:print_at_home",
-                              "display_name",
-                              "Emailing: Business card of John Doe",
-                          });
-    msgs.clear();
+    // TODO: implement transactional mutations
   };
 
   "business card (naive)"_test = [=] {
