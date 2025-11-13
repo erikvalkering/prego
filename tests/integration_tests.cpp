@@ -35,8 +35,16 @@ auto expensive_author_registry_lookup(const std::string &name) {
   return name == "Jane Austen" or name == "Multatuli";
 }
 
-auto test_business_card(msgs_t &msgs, auto &first_name, auto &last_name,
-                        auto &pseudonym, auto &shipment) {
+template <typename F> struct assigner {
+  F f;
+  decltype(auto) operator=(auto &&value) {
+    return f(std::forward<decltype(value)>(value));
+  }
+  auto reset() { (*this) = std::nullopt; }
+};
+
+auto test_business_card(msgs_t &msgs, auto &&first_name, auto &&last_name,
+                        auto &&pseudonym, auto &&shipment) {
   expect(that % msgs == msgs_t{
                             "autorun:dhl",
                             "business_card",
@@ -285,6 +293,12 @@ static suite<"integration_tests"> _ = [] {
     if (shipment == shipment_t::print_at_home)
       email(msgs, business_card);
 
-    test_business_card(msgs, first_name, last_name, pseudonym, shipment);
+    auto set_first_name = [&](auto value) { first_name = value; };
+    auto set_last_name = [&](auto value) { last_name = value; };
+    auto set_pseudonym = [&](auto value) { pseudonym = value; };
+    auto set_shipment = [&](auto value) { shipment = value; };
+
+    test_business_card(msgs, assigner{set_first_name}, assigner{set_last_name},
+                       assigner{set_pseudonym}, assigner{set_shipment});
   };
 };
