@@ -285,6 +285,6 @@ static suite<"integration_tests"> _ = [] {
     if (shipment == shipment_t::print_at_home)
       email(msgs, business_card);
 
-    expect(that % false) << "not yet implemented";
+    test_business_card(msgs, first_name, last_name, pseudonym, shipment);
   };
 };
