@@ -276,27 +276,48 @@ static suite<"integration_tests"> _ = [] {
 
     auto first_name = "John"s;
     auto last_name = "Doe"s;
-    auto full_name = first_name + " " + last_name;
-
     auto pseudonym = std::optional<std::string>{};
-    auto display_name = pseudonym.value_or(full_name);
-
-    auto is_writer = expensive_author_registry_lookup(display_name);
-
-    auto business_card = std::format("Business card of {}{}", display_name,
-                                     is_writer ? ", writer" : "");
-
     auto shipment = shipment_t::dhl;
-    if (shipment == shipment_t::dhl)
-      ship_via_dhl(msgs, business_card);
 
-    if (shipment == shipment_t::print_at_home)
-      email(msgs, business_card);
+    auto update = [&] {
+      msgs.push_back("full_name");
+      auto full_name = first_name + " " + last_name;
 
-    auto set_first_name = [&](auto value) { first_name = value; };
-    auto set_last_name = [&](auto value) { last_name = value; };
-    auto set_pseudonym = [&](auto value) { pseudonym = value; };
-    auto set_shipment = [&](auto value) { shipment = value; };
+      msgs.push_back("display_name");
+      auto display_name = pseudonym.value_or(full_name);
+
+      msgs.push_back("is_writer");
+      auto is_writer = expensive_author_registry_lookup(display_name);
+
+      msgs.push_back("business_card");
+      auto business_card = std::format("Business card of {}{}", display_name,
+                                       is_writer ? ", writer" : "");
+
+      msgs.push_back("autorun:dhl");
+      if (shipment == shipment_t::dhl)
+        ship_via_dhl(msgs, business_card);
+
+      msgs.push_back("autorun:print_at_home");
+      if (shipment == shipment_t::print_at_home)
+        email(msgs, business_card);
+    };
+
+    auto set_first_name = [&](auto value) {
+      first_name = value;
+      update();
+    };
+    auto set_last_name = [&](auto value) {
+      last_name = value;
+      update();
+    };
+    auto set_pseudonym = [&](auto value) {
+      pseudonym = value;
+      update();
+    };
+    auto set_shipment = [&](auto value) {
+      shipment = value;
+      update();
+    };
 
     test_business_card(msgs, assigner{set_first_name}, assigner{set_last_name},
                        assigner{set_pseudonym}, assigner{set_shipment});
