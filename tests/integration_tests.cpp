@@ -279,27 +279,42 @@ static suite<"integration_tests"> _ = [] {
     auto pseudonym = std::optional<std::string>{};
     auto shipment = shipment_t::dhl;
 
-    auto update = [&] {
+    auto full_name = [&] {
       msgs.push_back("full_name");
-      auto full_name = first_name + " " + last_name;
+      return first_name + " " + last_name;
+    };
 
+    auto display_name = [&] {
       msgs.push_back("display_name");
-      auto display_name = pseudonym.value_or(full_name);
+      return pseudonym.value_or(full_name());
+    };
 
+    auto is_writer = [&] {
       msgs.push_back("is_writer");
-      auto is_writer = expensive_author_registry_lookup(display_name);
+      return expensive_author_registry_lookup(display_name());
+    };
 
+    auto business_card = [&] {
       msgs.push_back("business_card");
-      auto business_card = std::format("Business card of {}{}", display_name,
-                                       is_writer ? ", writer" : "");
+      return std::format("Business card of {}{}", display_name(),
+                         is_writer() ? ", writer" : "");
+    };
 
+    auto autorun_dhl = [&] {
       msgs.push_back("autorun:dhl");
       if (shipment == shipment_t::dhl)
-        ship_via_dhl(msgs, business_card);
+        ship_via_dhl(msgs, business_card());
+    };
 
+    auto autorun_print_at_home = [&] {
       msgs.push_back("autorun:print_at_home");
       if (shipment == shipment_t::print_at_home)
-        email(msgs, business_card);
+        email(msgs, business_card());
+    };
+
+    auto update = [&] {
+      autorun_dhl();
+      autorun_print_at_home();
     };
 
     auto set_first_name = [&](auto value) {
