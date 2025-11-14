@@ -394,6 +394,8 @@ static suite<"integration_tests"> _ = [] {
       update();
     };
 
+    update();
+
     test_business_card(msgs, assigner{set_first_name}, assigner{set_last_name},
                        assigner{set_pseudonym}, assigner{set_shipment});
   };
