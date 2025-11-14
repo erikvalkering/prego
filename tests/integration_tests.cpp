@@ -361,6 +361,9 @@ static suite<"integration_tests"> _ = [] {
     };
 
     auto set_first_name = [&](auto value) {
+      if (value == first_name)
+        return;
+
       first_name = value;
 
       full_name_cache.reset();
@@ -373,6 +376,9 @@ static suite<"integration_tests"> _ = [] {
       update();
     };
     auto set_last_name = [&](auto value) {
+      if (value == last_name)
+        return;
+
       last_name = value;
 
       full_name_cache.reset();
@@ -385,6 +391,9 @@ static suite<"integration_tests"> _ = [] {
       update();
     };
     auto set_pseudonym = [&](auto value) {
+      if (value == pseudonym)
+        return;
+
       pseudonym = value;
 
       display_name_cache.reset();
@@ -396,6 +405,9 @@ static suite<"integration_tests"> _ = [] {
       update();
     };
     auto set_shipment = [&](auto value) {
+      if (value == shipment)
+        return;
+
       shipment = value;
 
       autorun_dhl_dirty = true;
