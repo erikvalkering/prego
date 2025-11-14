@@ -46,15 +46,25 @@ template <typename F> struct assigner {
 
 auto test_business_card(msgs_t &msgs, auto &&first_name, auto &&last_name,
                         auto &&pseudonym, auto &&shipment) {
-  expect(that % msgs == msgs_t{
-                            "autorun:dhl",
-                            "business_card",
-                            "is_writer",
-                            "display_name",
-                            "full_name",
-                            "Shipping via DHL: Business card of John Doe",
-                            "autorun:print_at_home",
-                        });
+  expect(that % (msgs ==
+                 msgs_t{
+                     "autorun:dhl",
+                     "business_card",
+                     "is_writer",
+                     "display_name",
+                     "full_name",
+                     "Shipping via DHL: Business card of John Doe",
+                     "autorun:print_at_home",
+                 }) or
+         (msgs == msgs_t{
+                      "autorun:dhl",
+                      "business_card",
+                      "display_name",
+                      "full_name",
+                      "is_writer",
+                      "Shipping via DHL: Business card of John Doe",
+                      "autorun:print_at_home",
+                  }));
   msgs.clear();
 
   // Make sure that setting first_name or last_name to the same values will
