@@ -13,7 +13,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(cmake/CPM.cmake)
 
-cpmaddpackage("gh:boost-ext/ut#v2.3.0")
+cpmaddpackage("gh:boost-ext/ut#v2.3.1")
 
 set(clang18 "$<AND:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_VERSION:18>>")
 set(clang19 "$<AND:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_VERSION:19>>")
