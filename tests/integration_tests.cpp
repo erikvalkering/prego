@@ -298,6 +298,7 @@ static suite<"integration_tests"> _ = [] {
     auto autorun_dhl_dirty = true;
     auto autorun_print_at_home_dirty = true;
 
+    auto full_name_observers_display_name = false;
     auto update_full_name = [&] {
       if (!std::exchange(full_name_dirty, false))
         return false;
@@ -307,7 +308,8 @@ static suite<"integration_tests"> _ = [] {
           std::exchange(full_name_cache, first_name + " " + last_name))
         return false;
 
-      display_name_dirty = true;
+      if (full_name_observers_display_name)
+        display_name_dirty = true;
 
       return true;
     };
@@ -317,13 +319,21 @@ static suite<"integration_tests"> _ = [] {
     };
 
     auto update_display_name = [&] {
-      update_full_name();
+      if (full_name_observers_display_name)
+        update_full_name();
       if (!std::exchange(display_name_dirty, false))
         return false;
 
+      full_name_observers_display_name = false;
+
       msgs.insert("display_name");
-      if (display_name_cache ==
-          std::exchange(display_name_cache, pseudonym.value_or(full_name())))
+      if (display_name_cache == std::exchange(display_name_cache, [&] {
+            if (pseudonym.has_value())
+              return pseudonym.value();
+            const auto res = full_name();
+            full_name_observers_display_name = true;
+            return res;
+          }()))
         return false;
 
       is_writer_dirty = true;
@@ -356,6 +366,8 @@ static suite<"integration_tests"> _ = [] {
       return is_writer_cache.value();
     };
 
+    auto business_card_observers_autorun_dhl = false;
+    auto business_card_observers_autorun_print_at_home = false;
     auto update_business_card = [&] {
       update_display_name();
       update_is_writer();
@@ -369,8 +381,10 @@ static suite<"integration_tests"> _ = [] {
                                     is_writer() ? ", writer" : "")))
         return false;
 
-      autorun_dhl_dirty = true;
-      autorun_print_at_home_dirty = true;
+      if (business_card_observers_autorun_dhl)
+        autorun_dhl_dirty = true;
+      if (business_card_observers_autorun_print_at_home)
+        autorun_print_at_home_dirty = true;
 
       return true;
     };
@@ -380,25 +394,33 @@ static suite<"integration_tests"> _ = [] {
     };
 
     auto autorun_dhl = [&] {
-      if (shipment == shipment_t::dhl)
+      if (business_card_observers_autorun_dhl)
         update_business_card();
       if (!std::exchange(autorun_dhl_dirty, false))
         return;
 
+      business_card_observers_autorun_dhl = false;
+
       msgs.insert("autorun:dhl");
-      if (shipment == shipment_t::dhl)
+      if (shipment == shipment_t::dhl) {
         ship_via_dhl(msgs, business_card());
+        business_card_observers_autorun_dhl = true;
+      }
     };
 
     auto autorun_print_at_home = [&] {
-      if (shipment == shipment_t::print_at_home)
+      if (business_card_observers_autorun_print_at_home)
         update_business_card();
       if (!std::exchange(autorun_print_at_home_dirty, false))
         return;
 
+      business_card_observers_autorun_print_at_home = false;
+
       msgs.insert("autorun:print_at_home");
-      if (shipment == shipment_t::print_at_home)
+      if (shipment == shipment_t::print_at_home) {
         email(msgs, business_card());
+        business_card_observers_autorun_print_at_home = true;
+      }
     };
 
     auto update = [&] {
