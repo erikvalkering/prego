@@ -23,14 +23,12 @@ enum class shipment_t {
   print_at_home,
 };
 
-using msgs_t = std::vector<std::string>;
-
-auto ship_via_dhl(msgs_t &msgs, const std::string &msg) {
-  msgs.push_back(std::format("Shipping via DHL: {}", msg));
+auto ship_via_dhl(auto &msgs, const std::string &msg) {
+  msgs.insert(msgs.end(), std::format("Shipping via DHL: {}", msg));
 }
 
-auto email(msgs_t &msgs, const std::string &msg) {
-  msgs.push_back(std::format("Emailing: {}", msg));
+auto email(auto &msgs, const std::string &msg) {
+  msgs.insert(msgs.end(), std::format("Emailing: {}", msg));
 }
 auto expensive_author_registry_lookup(const std::string &name) {
   return name == "Jane Austen" or name == "Multatuli";
@@ -44,27 +42,19 @@ template <typename F> struct assigner {
   auto reset() { (*this) = std::nullopt; }
 };
 
-auto test_business_card(msgs_t &msgs, auto &&first_name, auto &&last_name,
+auto test_business_card(auto &msgs, auto &&first_name, auto &&last_name,
                         auto &&pseudonym, auto &&shipment) {
-  expect(that % (msgs ==
-                 msgs_t{
-                     "autorun:dhl",
-                     "business_card",
-                     "is_writer",
-                     "display_name",
-                     "full_name",
-                     "Shipping via DHL: Business card of John Doe",
-                     "autorun:print_at_home",
-                 }) or
-         (msgs == msgs_t{
-                      "autorun:dhl",
-                      "business_card",
-                      "display_name",
-                      "full_name",
-                      "is_writer",
-                      "Shipping via DHL: Business card of John Doe",
-                      "autorun:print_at_home",
-                  }));
+  using msgs_t = std::remove_cvref_t<decltype(msgs)>;
+
+  expect(that % msgs == msgs_t{
+                            "autorun:dhl",
+                            "business_card",
+                            "is_writer",
+                            "display_name",
+                            "full_name",
+                            "Shipping via DHL: Business card of John Doe",
+                            "autorun:print_at_home",
+                        });
   msgs.clear();
 
   // Make sure that setting first_name or last_name to the same values will
@@ -242,7 +232,7 @@ static suite<"integration_tests"> _ = [] {
   };
 
   "business card (prego)"_test = [] {
-    auto msgs = msgs_t{};
+    auto msgs = std::vector<std::string>{};
     auto tag = [&msgs](auto id) {
       return spy([id, &msgs] { msgs.push_back(id); });
     };
@@ -263,7 +253,7 @@ static suite<"integration_tests"> _ = [] {
                          is_writer ? ", writer" : "");
     } + tag("business_card");
 
-    expect(that % msgs == msgs_t{})
+    expect(that % msgs.empty())
         << "None of the calculations should have run yet";
 
     atom shipment = shipment_t::dhl;
@@ -283,7 +273,7 @@ static suite<"integration_tests"> _ = [] {
   };
 
   "business card (naive)"_test = [=] {
-    auto msgs = msgs_t{};
+    auto msgs = std::vector<std::string>{};
 
     auto first_name = "John"s;
     auto last_name = "Doe"s;
