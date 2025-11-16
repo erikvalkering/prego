@@ -274,7 +274,7 @@ static suite<"integration_tests"> _ = [] {
   };
 
   "business card (naive)"_test = [=] {
-    auto msgs = std::set<std::string>{};
+    auto msgs = std::multiset<std::string>{};
 
     // atoms
     auto first_name = "John"s;
