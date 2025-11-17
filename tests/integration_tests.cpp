@@ -304,8 +304,8 @@ static suite<"integration_tests"> _ = [] {
         return false;
 
       msgs.insert("full_name");
-      if (full_name_cache ==
-          std::exchange(full_name_cache, first_name + " " + last_name))
+      const auto value = first_name + " " + last_name;
+      if (value == std::exchange(full_name_cache, value))
         return false;
 
       if (full_name_observers_display_name)
@@ -327,13 +327,14 @@ static suite<"integration_tests"> _ = [] {
       full_name_observers_display_name = false;
 
       msgs.insert("display_name");
-      if (display_name_cache == std::exchange(display_name_cache, [&] {
-            if (pseudonym.has_value())
-              return pseudonym.value();
-            const auto res = full_name();
-            full_name_observers_display_name = true;
-            return res;
-          }()))
+      const auto value = [&] {
+        if (pseudonym.has_value())
+          return pseudonym.value();
+        const auto res = full_name();
+        full_name_observers_display_name = true;
+        return res;
+      }();
+      if (value == std::exchange(display_name_cache, value))
         return false;
 
       is_writer_dirty = true;
@@ -352,9 +353,8 @@ static suite<"integration_tests"> _ = [] {
         return false;
 
       msgs.insert("is_writer");
-      if (is_writer_cache ==
-          std::exchange(is_writer_cache,
-                        expensive_author_registry_lookup(display_name())))
+      const auto value = expensive_author_registry_lookup(display_name());
+      if (value == std::exchange(is_writer_cache, value))
         return false;
 
       business_card_dirty = true;
@@ -375,10 +375,9 @@ static suite<"integration_tests"> _ = [] {
         return false;
 
       msgs.insert("business_card");
-      if (business_card_cache ==
-          std::exchange(business_card_cache,
-                        std::format("Business card of {}{}", display_name(),
-                                    is_writer() ? ", writer" : "")))
+      const auto value = std::format("Business card of {}{}", display_name(),
+                                     is_writer() ? ", writer" : "");
+      if (value == std::exchange(business_card_cache, value))
         return false;
 
       if (business_card_observers_autorun_dhl)
@@ -429,7 +428,7 @@ static suite<"integration_tests"> _ = [] {
     };
 
     auto set_first_name = [&](auto value) {
-      if (first_name == std::exchange(first_name, value))
+      if (value == std::exchange(first_name, value))
         return;
 
       full_name_dirty = true;
@@ -437,7 +436,7 @@ static suite<"integration_tests"> _ = [] {
       update();
     };
     auto set_last_name = [&](auto value) {
-      if (last_name == std::exchange(last_name, value))
+      if (value == std::exchange(last_name, value))
         return;
 
       full_name_dirty = true;
@@ -445,7 +444,7 @@ static suite<"integration_tests"> _ = [] {
       update();
     };
     auto set_pseudonym = [&](auto value) {
-      if (pseudonym == std::exchange(pseudonym, value))
+      if (value == std::exchange(pseudonym, value))
         return;
 
       display_name_dirty = true;
@@ -453,7 +452,7 @@ static suite<"integration_tests"> _ = [] {
       update();
     };
     auto set_shipment = [&](auto value) {
-      if (shipment == std::exchange(shipment, value))
+      if (value == std::exchange(shipment, value))
         return;
 
       autorun_dhl_dirty = true;
