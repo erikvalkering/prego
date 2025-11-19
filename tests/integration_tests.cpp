@@ -31,6 +31,7 @@ auto ship_via_dhl(auto &msgs, const std::string &msg) {
 auto email(auto &msgs, const std::string &msg) {
   msgs.insert(msgs.end(), std::format("Emailing: {}", msg));
 }
+
 auto expensive_author_registry_lookup(const std::string &name) {
   return name == "Jane Austen" or name == "Multatuli";
 }
