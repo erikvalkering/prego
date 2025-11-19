@@ -300,7 +300,7 @@ static suite<"integration_tests"> _ = [] {
 
     auto full_name_observers_display_name = false;
     auto update_full_name = [&] {
-      if (!std::exchange(full_name_dirty, false))
+      if (not std::exchange(full_name_dirty, false))
         return false;
 
       msgs.insert("full_name");
@@ -321,7 +321,7 @@ static suite<"integration_tests"> _ = [] {
     auto update_display_name = [&] {
       if (full_name_observers_display_name)
         update_full_name();
-      if (!std::exchange(display_name_dirty, false))
+      if (not std::exchange(display_name_dirty, false))
         return false;
 
       full_name_observers_display_name = false;
@@ -349,7 +349,7 @@ static suite<"integration_tests"> _ = [] {
 
     auto update_is_writer = [&] {
       update_display_name();
-      if (!std::exchange(is_writer_dirty, false))
+      if (not std::exchange(is_writer_dirty, false))
         return false;
 
       msgs.insert("is_writer");
@@ -371,7 +371,7 @@ static suite<"integration_tests"> _ = [] {
     auto update_business_card = [&] {
       update_display_name();
       update_is_writer();
-      if (!std::exchange(business_card_dirty, false))
+      if (not std::exchange(business_card_dirty, false))
         return false;
 
       msgs.insert("business_card");
@@ -395,7 +395,7 @@ static suite<"integration_tests"> _ = [] {
     auto autorun_dhl = [&] {
       if (business_card_observers_autorun_dhl)
         update_business_card();
-      if (!std::exchange(autorun_dhl_dirty, false))
+      if (not std::exchange(autorun_dhl_dirty, false))
         return;
 
       business_card_observers_autorun_dhl = false;
@@ -410,7 +410,7 @@ static suite<"integration_tests"> _ = [] {
     auto autorun_print_at_home = [&] {
       if (business_card_observers_autorun_print_at_home)
         update_business_card();
-      if (!std::exchange(autorun_print_at_home_dirty, false))
+      if (not std::exchange(autorun_print_at_home_dirty, false))
         return;
 
       business_card_observers_autorun_print_at_home = false;
