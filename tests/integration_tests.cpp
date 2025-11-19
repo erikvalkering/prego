@@ -469,4 +469,200 @@ static suite<"integration_tests"> _ = [] {
     test_business_card(msgs, assigner{set_first_name}, assigner{set_last_name},
                        assigner{set_pseudonym}, assigner{set_shipment});
   };
+
+  "business card (encapsulated)"_test = [=] {
+    auto msgs = std::multiset<std::string>{};
+
+    // atoms
+    auto first_name = "John"s;
+    auto last_name = "Doe"s;
+    auto pseudonym = std::optional<std::string>{};
+    auto shipment = shipment_t::dhl;
+
+    // calcs
+    auto full_name_dirty = true;
+    auto full_name_cache = std::optional<std::string>{};
+
+    auto display_name_dirty = true;
+    auto display_name_cache = std::optional<std::string>{};
+
+    auto is_writer_dirty = true;
+    auto is_writer_cache = std::optional<bool>{};
+
+    auto business_card_dirty = true;
+    auto business_card_cache = std::optional<std::string>{};
+
+    auto autorun_dhl_dirty = true;
+    auto autorun_print_at_home_dirty = true;
+
+    auto full_name_observers_display_name = false;
+    auto update_full_name = [&] {
+      if (not std::exchange(full_name_dirty, false))
+        return false;
+
+      msgs.insert("full_name");
+      const auto value = first_name + " " + last_name;
+      if (value == std::exchange(full_name_cache, value))
+        return false;
+
+      if (full_name_observers_display_name)
+        display_name_dirty = true;
+
+      return true;
+    };
+    auto full_name = [&] {
+      update_full_name();
+      return full_name_cache.value();
+    };
+
+    auto update_display_name = [&] {
+      if (not display_name_dirty) {
+        if (full_name_observers_display_name)
+          update_full_name();
+      }
+      if (not std::exchange(display_name_dirty, false))
+        return false;
+
+      full_name_observers_display_name = false;
+
+      msgs.insert("display_name");
+      const auto value = [&] {
+        if (pseudonym.has_value())
+          return pseudonym.value();
+        const auto res = full_name();
+        full_name_observers_display_name = true;
+        return res;
+      }();
+      if (value == std::exchange(display_name_cache, value))
+        return false;
+
+      is_writer_dirty = true;
+      business_card_dirty = true;
+
+      return true;
+    };
+    auto display_name = [&] {
+      update_display_name();
+      return display_name_cache.value();
+    };
+
+    auto update_is_writer = [&] {
+      update_display_name();
+      if (not std::exchange(is_writer_dirty, false))
+        return false;
+
+      msgs.insert("is_writer");
+      const auto value = expensive_author_registry_lookup(display_name());
+      if (value == std::exchange(is_writer_cache, value))
+        return false;
+
+      business_card_dirty = true;
+
+      return true;
+    };
+    auto is_writer = [&] {
+      update_is_writer();
+      return is_writer_cache.value();
+    };
+
+    auto business_card_observers_autorun_dhl = false;
+    auto business_card_observers_autorun_print_at_home = false;
+    auto update_business_card = [&] {
+      update_display_name();
+      update_is_writer();
+      if (not std::exchange(business_card_dirty, false))
+        return false;
+
+      msgs.insert("business_card");
+      const auto value = std::format("Business card of {}{}", display_name(),
+                                     is_writer() ? ", writer" : "");
+      if (value == std::exchange(business_card_cache, value))
+        return false;
+
+      if (business_card_observers_autorun_dhl)
+        autorun_dhl_dirty = true;
+      if (business_card_observers_autorun_print_at_home)
+        autorun_print_at_home_dirty = true;
+
+      return true;
+    };
+    auto business_card = [&] {
+      update_business_card();
+      return business_card_cache.value();
+    };
+
+    auto autorun_dhl = [&] {
+      if (business_card_observers_autorun_dhl)
+        update_business_card();
+      if (not std::exchange(autorun_dhl_dirty, false))
+        return;
+
+      business_card_observers_autorun_dhl = false;
+
+      msgs.insert("autorun:dhl");
+      if (shipment == shipment_t::dhl) {
+        ship_via_dhl(msgs, business_card());
+        business_card_observers_autorun_dhl = true;
+      }
+    };
+
+    auto autorun_print_at_home = [&] {
+      if (business_card_observers_autorun_print_at_home)
+        update_business_card();
+      if (not std::exchange(autorun_print_at_home_dirty, false))
+        return;
+
+      business_card_observers_autorun_print_at_home = false;
+
+      msgs.insert("autorun:print_at_home");
+      if (shipment == shipment_t::print_at_home) {
+        email(msgs, business_card());
+        business_card_observers_autorun_print_at_home = true;
+      }
+    };
+
+    auto update = [&] {
+      autorun_dhl();
+      autorun_print_at_home();
+    };
+
+    auto set_first_name = [&](auto value) {
+      if (value == std::exchange(first_name, value))
+        return;
+
+      full_name_dirty = true;
+
+      update();
+    };
+    auto set_last_name = [&](auto value) {
+      if (value == std::exchange(last_name, value))
+        return;
+
+      full_name_dirty = true;
+
+      update();
+    };
+    auto set_pseudonym = [&](auto value) {
+      if (value == std::exchange(pseudonym, value))
+        return;
+
+      display_name_dirty = true;
+
+      update();
+    };
+    auto set_shipment = [&](auto value) {
+      if (value == std::exchange(shipment, value))
+        return;
+
+      autorun_dhl_dirty = true;
+      autorun_print_at_home_dirty = true;
+
+      update();
+    };
+
+    update();
+
+    test_business_card(msgs, assigner{set_first_name}, assigner{set_last_name},
+                       assigner{set_pseudonym}, assigner{set_shipment});
+  };
 };
