@@ -74,6 +74,24 @@ auto test_business_card(auto &msgs, auto &&first_name, auto &&last_name,
                         });
   msgs.clear();
 
+  pseudonym.reset();
+  msgs.clear();
+
+  first_name = "Jane";
+  expect(that % msgs == msgs_t{
+                            "full_name",
+                            "display_name",
+                            "is_writer",
+                            "business_card",
+                            "autorun:dhl",
+                            "Shipping via DHL: Business card of Jane Doe",
+                        });
+  msgs.clear();
+
+  pseudonym = "John Doe"s;
+  first_name = "John"s;
+  msgs.clear();
+
   // Change the pseudonym to a different value, which should trigger
   // a calculation of display_name and all the dependent calculations
   pseudonym = "Jane Doe"s;
