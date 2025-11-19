@@ -473,14 +473,32 @@ static suite<"integration_tests"> _ = [] {
   "business card (encapsulated)"_test = [=] {
     auto msgs = std::multiset<std::string>{};
 
+    auto full_name_dirty = true;
+
+    auto atom2 = [](auto value, auto &observer) {
+      auto store = std::make_unique<decltype(value)>(value);
+
+      auto getter = [p = store.get()] { return *p; };
+      auto setter = [p = store.get(), &observer](auto value) {
+        if (value == std::exchange(*p, value))
+          return;
+
+        observer = true;
+
+        // update();
+      };
+
+      return std::tuple{getter, setter};
+    };
+
     // atoms
-    auto first_name = "John"s;
+    auto [first_name, set_first_name] = atom2("John"s, full_name_dirty);
+
     auto last_name = "Doe"s;
     auto pseudonym = std::optional<std::string>{};
     auto shipment = shipment_t::dhl;
 
     // calcs
-    auto full_name_dirty = true;
     auto full_name_cache = std::optional<std::string>{};
 
     auto display_name_dirty = true;
@@ -501,7 +519,7 @@ static suite<"integration_tests"> _ = [] {
         return false;
 
       msgs.insert("full_name");
-      const auto value = first_name + " " + last_name;
+      const auto value = first_name() + " " + last_name;
       if (value == std::exchange(full_name_cache, value))
         return false;
 
@@ -626,14 +644,6 @@ static suite<"integration_tests"> _ = [] {
       autorun_print_at_home();
     };
 
-    auto set_first_name = [&](auto value) {
-      if (value == std::exchange(first_name, value))
-        return;
-
-      full_name_dirty = true;
-
-      update();
-    };
     auto set_last_name = [&](auto value) {
       if (value == std::exchange(last_name, value))
         return;
