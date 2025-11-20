@@ -512,6 +512,34 @@ static suite<"integration_tests"> _ = [] {
       };
     };
 
+    auto calc2 = [](auto f, auto &dirty, auto &observer) {
+      auto cache = std::make_unique<std::optional<decltype(f())>>();
+
+      auto updater = [&, f, p = cache.get()] {
+        if (not std::exchange(dirty, false))
+          return false;
+
+        const auto value = f();
+        if (value == std::exchange(*p, value))
+          return false;
+
+        if (observer)
+          *observer = true;
+
+        return true;
+      };
+
+      auto getter = [updater, cache = std::move(cache)] {
+        updater();
+        return cache->value();
+      };
+
+      return std::tuple{
+          updater,
+          std::move(getter),
+      };
+    };
+
     auto full_name_dirty = true;
     auto display_name_dirty = true;
     auto autorun_dhl_dirty = true;
@@ -536,25 +564,13 @@ static suite<"integration_tests"> _ = [] {
     auto business_card_dirty = true;
     auto business_card_cache = std::optional<std::string>{};
 
-    auto full_name_observers_display_name = false;
-    auto update_full_name = [&] {
-      if (not std::exchange(full_name_dirty, false))
-        return false;
-
-      msgs.insert("full_name");
-      const auto value = first_name() + " " + last_name();
-      if (value == std::exchange(full_name_cache, value))
-        return false;
-
-      if (full_name_observers_display_name)
-        display_name_dirty = true;
-
-      return true;
-    };
-    auto full_name = [&] {
-      update_full_name();
-      return full_name_cache.value();
-    };
+    bool *full_name_observers_display_name = nullptr;
+    auto [update_full_name, full_name] = calc2(
+        [&] {
+          msgs.insert("full_name");
+          return first_name() + " " + last_name();
+        },
+        full_name_dirty, full_name_observers_display_name);
 
     auto update_display_name = [&] {
       if (not display_name_dirty) {
@@ -564,14 +580,14 @@ static suite<"integration_tests"> _ = [] {
       if (not std::exchange(display_name_dirty, false))
         return false;
 
-      full_name_observers_display_name = false;
+      full_name_observers_display_name = nullptr;
 
       msgs.insert("display_name");
       const auto value = [&] {
         if (pseudonym().has_value())
           return pseudonym().value();
         const auto res = full_name();
-        full_name_observers_display_name = true;
+        full_name_observers_display_name = &display_name_dirty;
         return res;
       }();
       if (value == std::exchange(display_name_cache, value))
