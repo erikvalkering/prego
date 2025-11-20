@@ -496,8 +496,8 @@ static suite<"integration_tests"> _ = [] {
       auto store = std::make_unique<decltype(value)>(value);
 
       auto getter = [p = store.get()] { return *p; };
-      auto setter = [p = store.get(), &observer](auto value) {
-        if (value == std::exchange(*p, value))
+      auto setter = [&, store = std::move(store)](auto value) {
+        if (value == std::exchange(*store, value))
           return;
 
         observer = true;
@@ -505,7 +505,10 @@ static suite<"integration_tests"> _ = [] {
         // update();
       };
 
-      return std::tuple{getter, setter};
+      return std::tuple{
+          getter,
+          std::move(setter),
+      };
     };
 
     auto full_name_dirty = true;
