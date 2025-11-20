@@ -37,7 +37,7 @@ auto expensive_author_registry_lookup(const std::string &name) {
 }
 
 template <typename F> struct assigner {
-  F f;
+  F &f;
   decltype(auto) operator=(auto &&value) {
     return f(std::forward<decltype(value)>(value));
   }
