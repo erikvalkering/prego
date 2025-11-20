@@ -493,7 +493,7 @@ static suite<"integration_tests"> _ = [] {
 
     auto update = std::function<void()>{};
 
-    auto atom2 = [&](auto value, auto &observer) {
+    auto atom2 = [&](auto value, auto &...observers) {
       auto store = std::make_unique<decltype(value)>(value);
 
       auto getter = [p = store.get()] { return *p; };
@@ -501,7 +501,7 @@ static suite<"integration_tests"> _ = [] {
         if (value == std::exchange(*store, value))
           return;
 
-        observer = true;
+        ((observers = true), ...);
 
         update();
       };
