@@ -534,10 +534,7 @@ static suite<"integration_tests"> _ = [] {
         return cache->value();
       };
 
-      return std::tuple{
-          updater,
-          std::move(getter),
-      };
+      return getter;
     };
 
     auto full_name_dirty = true;
@@ -565,7 +562,7 @@ static suite<"integration_tests"> _ = [] {
     auto business_card_cache = std::optional<std::string>{};
 
     bool *full_name_observers_display_name = nullptr;
-    auto [update_full_name, full_name] = calc2(
+    auto full_name = calc2(
         [&] {
           msgs.insert("full_name");
           return first_name() + " " + last_name();
@@ -575,7 +572,7 @@ static suite<"integration_tests"> _ = [] {
     auto update_display_name = [&] {
       if (not display_name_dirty) {
         if (full_name_observers_display_name)
-          update_full_name();
+          full_name();
       }
       if (not std::exchange(display_name_dirty, false))
         return false;
