@@ -491,8 +491,9 @@ static suite<"integration_tests"> _ = [] {
   "business card (encapsulated)"_test = [=] {
     auto msgs = std::multiset<std::string>{};
 
+    auto update = std::function<void()>{};
 
-    auto atom2 = [](auto value, auto &observer) {
+    auto atom2 = [&](auto value, auto &observer) {
       auto store = std::make_unique<decltype(value)>(value);
 
       auto getter = [p = store.get()] { return *p; };
@@ -502,7 +503,7 @@ static suite<"integration_tests"> _ = [] {
 
         observer = true;
 
-        // update();
+        update();
       };
 
       return std::tuple{
@@ -661,7 +662,7 @@ static suite<"integration_tests"> _ = [] {
       }
     };
 
-    auto update = [&] {
+    update = [&] {
       autorun_dhl();
       autorun_print_at_home();
     };
