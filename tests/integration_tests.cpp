@@ -491,7 +491,6 @@ static suite<"integration_tests"> _ = [] {
   "business card (encapsulated)"_test = [=] {
     auto msgs = std::multiset<std::string>{};
 
-    auto full_name_dirty = true;
 
     auto atom2 = [](auto value, auto &observer) {
       auto store = std::make_unique<decltype(value)>(value);
@@ -508,6 +507,8 @@ static suite<"integration_tests"> _ = [] {
 
       return std::tuple{getter, setter};
     };
+
+    auto full_name_dirty = true;
 
     // atoms
     auto [first_name, set_first_name] = atom2("John"s, full_name_dirty);
