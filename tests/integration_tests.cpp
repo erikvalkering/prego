@@ -45,7 +45,8 @@ template <typename F> struct assigner {
 };
 
 auto test_business_card(auto &msgs, auto &&first_name, auto &&last_name,
-                        auto &&pseudonym, auto &&shipment) {
+                        auto &&pseudonym, auto &&shipment,
+                        auto &&enable_extra) {
   using msgs_t = std::remove_cvref_t<decltype(msgs)>;
 
   expect(that % msgs == msgs_t{
@@ -56,6 +57,7 @@ auto test_business_card(auto &msgs, auto &&first_name, auto &&last_name,
                             "full_name",
                             "Shipping via DHL: Business card of John Doe",
                             "autorun:print_at_home",
+                            "autorun:extra",
                         });
   msgs.clear();
 
@@ -224,6 +226,16 @@ auto test_business_card(auto &msgs, auto &&first_name, auto &&last_name,
                             "Emailing: Business card of John Doe",
                         });
   msgs.clear();
+
+  shipment = shipment_t::opt_out;
+  enable_extra = true;
+  msgs.clear();
+
+  pseudonym = "Jane Doe";
+  expect(that % msgs == msgs_t{
+                            "display_name",
+                            "is_writer",
+                        });
 }
 
 static suite<"integration_tests"> _ = [] {
@@ -287,7 +299,15 @@ static suite<"integration_tests"> _ = [] {
         email(msgs, business_card);
     } + tag("autorun:print_at_home"));
 
-    test_business_card(msgs, first_name, last_name, pseudonym, shipment);
+    atom enable_extra = false;
+    autorun([=] {
+      if (not enable_extra)
+        return;
+      is_writer();
+    } + tag("autorun:extra"));
+
+    test_business_card(msgs, first_name, last_name, pseudonym, shipment,
+                       enable_extra);
 
     // TODO: implement transactional mutations
   };
@@ -300,6 +320,7 @@ static suite<"integration_tests"> _ = [] {
     auto last_name = "Doe"s;
     auto pseudonym = std::optional<std::string>{};
     auto shipment = shipment_t::dhl;
+    auto enable_extra = false;
 
     // calcs
     auto full_name_dirty = true;
@@ -316,6 +337,7 @@ static suite<"integration_tests"> _ = [] {
 
     auto autorun_dhl_dirty = true;
     auto autorun_print_at_home_dirty = true;
+    auto autorun_extra_dirty = true;
 
     auto full_name_observers_display_name = false;
     auto update_full_name = [&] {
@@ -368,6 +390,7 @@ static suite<"integration_tests"> _ = [] {
       return display_name_cache.value();
     };
 
+    auto is_writer_observers_autorun_extra = false;
     auto update_is_writer = [&] {
       update_display_name();
       if (not std::exchange(is_writer_dirty, false))
@@ -379,6 +402,8 @@ static suite<"integration_tests"> _ = [] {
         return false;
 
       business_card_dirty = true;
+      if (is_writer_observers_autorun_extra)
+        autorun_extra_dirty = true;
 
       return true;
     };
@@ -443,9 +468,24 @@ static suite<"integration_tests"> _ = [] {
       }
     };
 
+    auto autorun_extra = [&] {
+      if (is_writer_observers_autorun_extra)
+        update_is_writer();
+      if (not std::exchange(autorun_extra_dirty, false))
+        return;
+
+      is_writer_observers_autorun_extra = false;
+      msgs.insert("autorun:extra");
+      if (enable_extra) {
+        is_writer();
+        is_writer_observers_autorun_extra = true;
+      }
+    };
+
     auto update = [&] {
       autorun_dhl();
       autorun_print_at_home();
+      autorun_extra();
     };
 
     auto set_first_name = [&](auto value) {
@@ -481,11 +521,20 @@ static suite<"integration_tests"> _ = [] {
 
       update();
     };
+    auto set_enable_extra = [&](auto value) {
+      if (value == std::exchange(enable_extra, value))
+        return;
+
+      autorun_extra_dirty = true;
+
+      update();
+    };
 
     update();
 
     test_business_card(msgs, assigner{set_first_name}, assigner{set_last_name},
-                       assigner{set_pseudonym}, assigner{set_shipment});
+                       assigner{set_pseudonym}, assigner{set_shipment},
+                       assigner{set_enable_extra});
   };
 
   "business card (encapsulated)"_test = [=] {
@@ -541,6 +590,7 @@ static suite<"integration_tests"> _ = [] {
     auto display_name_dirty = true;
     auto autorun_dhl_dirty = true;
     auto autorun_print_at_home_dirty = true;
+    auto autorun_extra_dirty = true;
 
     // atoms
     auto [first_name, set_first_name] = atom2("John"s, full_name_dirty);
@@ -549,6 +599,7 @@ static suite<"integration_tests"> _ = [] {
         atom2(std::optional<std::string>{}, display_name_dirty);
     auto [shipment, set_shipment] =
         atom2(shipment_t::dhl, autorun_dhl_dirty, autorun_print_at_home_dirty);
+    auto [enable_extra, set_enable_extra] = atom2(false, autorun_extra_dirty);
 
     // calcs
     auto full_name_cache = std::optional<std::string>{};
@@ -600,6 +651,7 @@ static suite<"integration_tests"> _ = [] {
       return display_name_cache.value();
     };
 
+    bool is_writer_observers_autorun_extra = false;
     auto update_is_writer = [&] {
       update_display_name();
       if (not std::exchange(is_writer_dirty, false))
@@ -611,6 +663,8 @@ static suite<"integration_tests"> _ = [] {
         return false;
 
       business_card_dirty = true;
+      if (is_writer_observers_autorun_extra)
+        autorun_extra_dirty = true;
 
       return true;
     };
@@ -675,14 +729,31 @@ static suite<"integration_tests"> _ = [] {
       }
     };
 
+    auto autorun_extra = [&] {
+      if (is_writer_observers_autorun_extra)
+        is_writer();
+      if (not std::exchange(autorun_extra_dirty, false))
+        return;
+
+      is_writer_observers_autorun_extra = false;
+
+      msgs.insert("autorun:extra");
+      if (enable_extra()) {
+        is_writer();
+        is_writer_observers_autorun_extra = true;
+      }
+    };
+
     update = [&] {
       autorun_dhl();
       autorun_print_at_home();
+      autorun_extra();
     };
 
     update();
 
     test_business_card(msgs, assigner{set_first_name}, assigner{set_last_name},
-                       assigner{set_pseudonym}, assigner{set_shipment});
+                       assigner{set_pseudonym}, assigner{set_shipment},
+                       assigner{set_enable_extra});
   };
 };
