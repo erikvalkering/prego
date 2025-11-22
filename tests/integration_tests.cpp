@@ -561,7 +561,8 @@ static suite<"integration_tests"> _ = [] {
       };
     };
 
-    auto calc2 = [](auto f, auto &dirty, auto &observer) {
+    auto calc2 = [](auto f, auto &dirty,
+                    auto &...observers) {
       auto cache = std::make_unique<std::optional<decltype(f())>>();
 
       auto updater = [&, f, p = cache.get()] {
@@ -572,8 +573,7 @@ static suite<"integration_tests"> _ = [] {
         if (value == std::exchange(*p, value))
           return false;
 
-        if (observer)
-          *observer = true;
+        ((observers && (*observers = true)), ...);
 
         return true;
       };
