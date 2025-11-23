@@ -562,10 +562,14 @@ static suite<"integration_tests"> _ = [] {
     };
 
     auto calc2 = [](auto f, auto &dirty,
+                    std::vector<std::function<void()>> deps,
                     auto &...observers) {
       auto cache = std::make_unique<std::optional<decltype(f())>>();
 
-      auto updater = [&, f, p = cache.get()] {
+      auto updater = [&, f, deps, p = cache.get()] {
+        for (auto &dep : deps)
+          dep();
+
         if (not std::exchange(dirty, false))
           return false;
 
@@ -618,7 +622,7 @@ static suite<"integration_tests"> _ = [] {
           msgs.insert("full_name");
           return first_name() + " " + last_name();
         },
-        full_name_dirty, full_name_observers_display_name);
+        full_name_dirty, {}, full_name_observers_display_name);
 
     auto update_display_name = [&] {
       if (not display_name_dirty) {
