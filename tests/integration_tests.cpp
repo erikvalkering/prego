@@ -236,6 +236,16 @@ auto test_business_card(auto &msgs, auto &&first_name, auto &&last_name,
                             "display_name",
                             "is_writer",
                         });
+  msgs.clear();
+
+  first_name = "John";
+  expect(that % msgs == msgs_t{"autorun:extra"});
+
+  enable_extra = false;
+  msgs.clear();
+
+  first_name = "Jane";
+  expect(that % msgs == msgs_t{});
 }
 
 static suite<"integration_tests"> _ = [] {
@@ -304,6 +314,7 @@ static suite<"integration_tests"> _ = [] {
       if (not enable_extra)
         return;
       is_writer();
+      first_name();
     } + tag("autorun:extra"));
 
     test_business_card(msgs, first_name, last_name, pseudonym, shipment,
