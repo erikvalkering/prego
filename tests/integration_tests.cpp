@@ -655,33 +655,21 @@ static suite<"integration_tests"> _ = [] {
       return display_name_cache.value();
     };
 
-    bool is_writer_observers_autorun_extra = false;
-    auto update_is_writer = [&] {
-      update_display_name();
-      if (not std::exchange(is_writer_dirty, false))
-        return false;
-
-      msgs.insert("is_writer");
-      const auto value = expensive_author_registry_lookup(display_name());
-      if (value == std::exchange(is_writer_cache, value))
-        return false;
-
-      business_card_dirty = true;
-      if (is_writer_observers_autorun_extra)
-        autorun_extra_dirty = true;
-
-      return true;
-    };
-    auto is_writer = [&] {
-      update_is_writer();
-      return is_writer_cache.value();
-    };
+    const auto is_writer_observers_business_card = &business_card_dirty;
+    bool *is_writer_observers_autorun_extra = nullptr;
+    auto is_writer = calc2(
+        [&] {
+          msgs.insert("is_writer");
+          return expensive_author_registry_lookup(display_name());
+        },
+        is_writer_dirty, {display_name}, is_writer_observers_business_card,
+        is_writer_observers_autorun_extra);
 
     auto business_card_observers_autorun_dhl = false;
     auto business_card_observers_autorun_print_at_home = false;
     auto update_business_card = [&] {
       update_display_name();
-      update_is_writer();
+      is_writer();
       if (not std::exchange(business_card_dirty, false))
         return false;
 
@@ -739,12 +727,12 @@ static suite<"integration_tests"> _ = [] {
       if (not std::exchange(autorun_extra_dirty, false))
         return;
 
-      is_writer_observers_autorun_extra = false;
+      is_writer_observers_autorun_extra = nullptr;
 
       msgs.insert("autorun:extra");
       if (enable_extra()) {
         is_writer();
-        is_writer_observers_autorun_extra = true;
+        is_writer_observers_autorun_extra = &autorun_extra_dirty;
       }
     };
 
