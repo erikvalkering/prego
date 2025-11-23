@@ -479,6 +479,7 @@ static suite<"integration_tests"> _ = [] {
       }
     };
 
+    auto first_name_observers_autorun_extra = false;
     auto autorun_extra = [&] {
       if (is_writer_observers_autorun_extra)
         update_is_writer();
@@ -486,10 +487,13 @@ static suite<"integration_tests"> _ = [] {
         return;
 
       is_writer_observers_autorun_extra = false;
+      first_name_observers_autorun_extra = false;
       msgs.insert("autorun:extra");
       if (enable_extra) {
         is_writer();
         is_writer_observers_autorun_extra = true;
+        // first_name();
+        first_name_observers_autorun_extra = true;
       }
     };
 
@@ -504,6 +508,8 @@ static suite<"integration_tests"> _ = [] {
         return;
 
       full_name_dirty = true;
+      if (first_name_observers_autorun_extra)
+        autorun_extra_dirty = true;
 
       update();
     };
