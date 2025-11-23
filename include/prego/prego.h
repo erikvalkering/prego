@@ -607,9 +607,15 @@ public:
   virtual void on_nonreactive() override final {
     const auto observer = this->weak_from_this();
     for (auto &observable : observables) {
-      if (auto p = observable.lock())
+      if (auto p = observable.lock()) {
+        // Keep observing, but non-reactively.
+        // NOTE: We should *not* use unobserve(), because
+        // we might become reactive again, and we don't
+        // want to loose the cache (the cache can only be reused if we are
+        // reactive (which we aren't) or if we can traverse the observables
+        // (which we wouldn't have if we'd use unobserve()).
         p->observe(observer, false);
-      else {
+      } else {
         assert(false);
       }
     }
@@ -686,28 +692,22 @@ public:
     const auto observer = this->weak_from_this();
 
     // This code should be executed after the function
-    // has been invoked, to mark any non-reactive
-    // dependencies as such.
+    // has been invoked, to unobserve the previous observables.
     // However, in order te support functions that return
     // immovable types, we need to return the result immediately.
     // To achieve that, we use a scope_guard.
     auto _ = scope_guard{[&] {
-      // Set any previously-observed observables to
-      // non-reactive.
-      // NOTE: they should *not* be removed, for two reasons:
-      // - they might become reactive again, and we don't
-      //   want to loose their cache
-      // - they might be lazily observed again,
-      //   in which case the is_up_to_date() function
-      //   will traverse the observables to figure out
-      //   if it is still up to date.
+      // Remove any observables that we no longer observe.
+      // NOTE: the observables themselves will continue
+      // to observe their observables, but in a potentially
+      // non-reactive mode (see: on_nonreactive()).
       for (auto &observable : previous_observables) {
         if (observables.contains(observable))
           continue;
 
-        if (auto p = observable.lock())
+        if (auto p = observable.lock()) {
           p->unobserve(observer);
-        else {
+        } else {
           assert(false);
         }
       }
