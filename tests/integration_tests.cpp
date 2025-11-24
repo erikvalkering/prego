@@ -577,7 +577,7 @@ static suite<"integration_tests"> _ = [] {
 
     auto update = std::function<void()>{};
 
-    auto atom2 = [&](auto value, auto &...observers) {
+    auto atom2 = [&](auto value, auto &&...observers) {
       auto store = std::make_unique<decltype(value)>(value);
 
       auto getter = [p = store.get()] { return *p; };
@@ -585,7 +585,7 @@ static suite<"integration_tests"> _ = [] {
         if (value == std::exchange(*store, value))
           return;
 
-        ((observers = true), ...);
+        ((observers && (*observers = true)), ...);
 
         update();
       };
@@ -632,13 +632,13 @@ static suite<"integration_tests"> _ = [] {
     auto autorun_extra_dirty = true;
 
     // atoms
-    auto [first_name, set_first_name] = atom2("John"s, full_name_dirty);
-    auto [last_name, set_last_name] = atom2("Doe"s, full_name_dirty);
+    auto [first_name, set_first_name] = atom2("John"s, &full_name_dirty);
+    auto [last_name, set_last_name] = atom2("Doe"s, &full_name_dirty);
     auto [pseudonym, set_pseudonym] =
-        atom2(std::optional<std::string>{}, display_name_dirty);
-    auto [shipment, set_shipment] =
-        atom2(shipment_t::dhl, autorun_dhl_dirty, autorun_print_at_home_dirty);
-    auto [enable_extra, set_enable_extra] = atom2(false, autorun_extra_dirty);
+        atom2(std::optional<std::string>{}, &display_name_dirty);
+    auto [shipment, set_shipment] = atom2(shipment_t::dhl, &autorun_dhl_dirty,
+                                          &autorun_print_at_home_dirty);
+    auto [enable_extra, set_enable_extra] = atom2(false, &autorun_extra_dirty);
 
     // calcs
     auto full_name_cache = std::optional<std::string>{};
