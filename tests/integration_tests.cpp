@@ -598,7 +598,7 @@ static suite<"integration_tests"> _ = [] {
 
     auto calc2 = [](auto f, auto &dirty,
                     std::vector<std::function<void()>> deps,
-                    auto &...observers) {
+                    auto &&...observers) {
       auto cache = std::make_unique<std::optional<decltype(f())>>();
 
       auto updater = [&, f, deps, p = cache.get()] {
@@ -690,14 +690,13 @@ static suite<"integration_tests"> _ = [] {
       return display_name_cache.value();
     };
 
-    const auto is_writer_observers_business_card = &business_card_dirty;
     bool *is_writer_observers_autorun_extra = nullptr;
     auto is_writer = calc2(
         [&] {
           msgs.insert("is_writer");
           return expensive_author_registry_lookup(display_name());
         },
-        is_writer_dirty, {display_name}, is_writer_observers_business_card,
+        is_writer_dirty, {display_name}, &business_card_dirty,
         is_writer_observers_autorun_extra);
 
     auto business_card_observers_autorun_dhl = false;
