@@ -246,6 +246,24 @@ auto test_business_card(auto &msgs, auto &&first_name, auto &&last_name,
 
   first_name = "Jane";
   expect(that % msgs == msgs_t{});
+
+  // check that if full_name is not reactive, changing its dependencies will
+  // still trigger a recalculation once it becomes reactive again.
+  shipment = shipment_t::dhl;
+  pseudonym.reset();
+  pseudonym = "Jane Doe";
+  first_name = "John";
+  msgs.clear();
+
+  pseudonym.reset();
+  expect(that % msgs == msgs_t{
+                            "display_name",
+                            "full_name",
+                            "is_writer",
+                            "business_card",
+                            "autorun:dhl",
+                            "Shipping via DHL: Business card of John Doe",
+                        });
 }
 
 static suite<"integration_tests"> _ = [] {
