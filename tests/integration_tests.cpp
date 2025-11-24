@@ -631,8 +631,11 @@ static suite<"integration_tests"> _ = [] {
     auto autorun_print_at_home_dirty = true;
     auto autorun_extra_dirty = true;
 
+    bool *first_name_observers_autorun_extra = nullptr;
+
     // atoms
-    auto [first_name, set_first_name] = atom2("John"s, &full_name_dirty);
+    auto [first_name, set_first_name] =
+        atom2("John"s, &full_name_dirty, first_name_observers_autorun_extra);
     auto [last_name, set_last_name] = atom2("Doe"s, &full_name_dirty);
     auto [pseudonym, set_pseudonym] =
         atom2(std::optional<std::string>{}, &display_name_dirty);
@@ -762,11 +765,14 @@ static suite<"integration_tests"> _ = [] {
         return;
 
       is_writer_observers_autorun_extra = nullptr;
+      first_name_observers_autorun_extra = nullptr;
 
       msgs.insert("autorun:extra");
       if (enable_extra()) {
         is_writer();
         is_writer_observers_autorun_extra = &autorun_extra_dirty;
+        first_name();
+        first_name_observers_autorun_extra = &autorun_extra_dirty;
       }
     };
 
