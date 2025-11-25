@@ -1,5 +1,6 @@
 #include <boost/ut.hpp>
 
+#include <functional>
 #include <prego/prego.h>
 
 #include <format>
@@ -596,33 +597,42 @@ static suite<"integration_tests"> _ = [] {
       };
     };
 
-    auto calc2 = [](auto f, auto &dirty,
-                    std::vector<std::function<void()>> deps,
-                    auto &&...observers) {
-      auto cache = std::make_shared<std::optional<decltype(f())>>();
+    auto check_dep = [](auto &&dep) {
+      if constexpr (std::invocable<decltype(dep)>) {
+        return dep();
+      } else {
+        return dep && (*dep)();
+      }
+    };
 
-      auto updater = [&, f, deps, p = cache.get()] {
-        for (auto &dep : deps)
-          dep();
+    auto calc2 = [=](auto f, auto &dirty, auto &&...deps) {
+      return [&, f](auto &&...observers) {
+        auto cache = std::make_shared<std::optional<decltype(f())>>();
 
-        if (not std::exchange(dirty, false))
-          return false;
+        auto updater = [&, f, p = cache.get()] {
+          if (not dirty) {
+            (check_dep(deps), ...);
+          }
 
-        const auto value = f();
-        if (value == std::exchange(*p, value))
-          return false;
+          if (not std::exchange(dirty, false))
+            return false;
 
-        ((observers && (*observers = true)), ...);
+          const auto value = f();
+          if (value == std::exchange(*p, value))
+            return false;
 
-        return true;
+          ((observers && (*observers = true)), ...);
+
+          return true;
+        };
+
+        auto getter = [updater, cache = std::move(cache)] {
+          updater();
+          return cache->value();
+        };
+
+        return getter;
       };
-
-      auto getter = [updater, cache = std::move(cache)] {
-        updater();
-        return cache->value();
-      };
-
-      return getter;
     };
 
     auto full_name_dirty = true;
@@ -655,7 +665,7 @@ static suite<"integration_tests"> _ = [] {
           msgs.insert("full_name");
           return first_name() + " " + last_name();
         },
-        full_name_dirty, {}, full_name_observers_display_name);
+        full_name_dirty)(full_name_observers_display_name);
 
     auto update_display_name = [&] {
       if (not display_name_dirty) {
@@ -694,8 +704,8 @@ static suite<"integration_tests"> _ = [] {
           msgs.insert("is_writer");
           return expensive_author_registry_lookup(display_name());
         },
-        is_writer_dirty, {display_name}, &business_card_dirty,
-        is_writer_observers_autorun_extra);
+        is_writer_dirty,
+        display_name)(&business_card_dirty, is_writer_observers_autorun_extra);
 
     bool *business_card_observers_autorun_dhl = nullptr;
     bool *business_card_observers_autorun_print_at_home = nullptr;
@@ -705,9 +715,9 @@ static suite<"integration_tests"> _ = [] {
           return std::format("Business card of {}{}", display_name(),
                              is_writer() ? ", writer" : "");
         },
-        business_card_dirty, {display_name, is_writer},
-        business_card_observers_autorun_dhl,
-        business_card_observers_autorun_print_at_home);
+        business_card_dirty, display_name,
+        is_writer)(business_card_observers_autorun_dhl,
+                   business_card_observers_autorun_print_at_home);
 
     auto autorun_dhl = [&] {
       if (business_card_observers_autorun_dhl)
