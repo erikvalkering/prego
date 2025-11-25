@@ -599,7 +599,7 @@ static suite<"integration_tests"> _ = [] {
     auto calc2 = [](auto f, auto &dirty,
                     std::vector<std::function<void()>> deps,
                     auto &&...observers) {
-      auto cache = std::make_unique<std::optional<decltype(f())>>();
+      auto cache = std::make_shared<std::optional<decltype(f())>>();
 
       auto updater = [&, f, deps, p = cache.get()] {
         for (auto &dep : deps)
