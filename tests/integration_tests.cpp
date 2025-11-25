@@ -644,13 +644,9 @@ static suite<"integration_tests"> _ = [] {
     auto [enable_extra, set_enable_extra] = atom2(false, &autorun_extra_dirty);
 
     // calcs
-    auto full_name_cache = std::optional<std::string>{};
-
     auto display_name_cache = std::optional<std::string>{};
 
     auto is_writer_dirty = true;
-    auto is_writer_cache = std::optional<bool>{};
-
     auto business_card_dirty = true;
 
     bool *full_name_observers_display_name = nullptr;
