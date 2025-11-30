@@ -614,10 +614,12 @@ static suite<"integration_tests"> _ = [] {
             (check_dep(deps), ...);
           }
 
-          if (not std::exchange(dirty, false))
+          if (not dirty)
             return false;
 
           const auto value = f();
+          dirty = false;
+
           if (value == std::exchange(*p, value))
             return false;
 
