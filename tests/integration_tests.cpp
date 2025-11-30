@@ -8,6 +8,7 @@
 #include <print>
 #include <set>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -657,8 +658,6 @@ static suite<"integration_tests"> _ = [] {
     auto [enable_extra, set_enable_extra] = atom2(false, &autorun_extra_dirty);
 
     // calcs
-    auto display_name_cache = std::optional<std::string>{};
-
     auto is_writer_dirty = true;
     auto business_card_dirty = true;
 
@@ -670,36 +669,23 @@ static suite<"integration_tests"> _ = [] {
         },
         full_name_dirty)(full_name_observers_display_name);
 
-    auto update_display_name = [&] {
-      if (not display_name_dirty) {
-        if (full_name_observers_display_name)
-          full_name();
-      }
-      if (not std::exchange(display_name_dirty, false))
-        return false;
+    auto display_name_dependencies_full_name =
+        std::add_pointer_t<decltype(full_name)>{};
+    auto display_name = calc2(
+        [&] {
+          full_name_observers_display_name = nullptr;
+          display_name_dependencies_full_name = nullptr;
 
-      full_name_observers_display_name = nullptr;
-
-      msgs.insert("display_name");
-      const auto value = [&] {
-        if (pseudonym().has_value())
-          return pseudonym().value();
-        const auto res = full_name();
-        full_name_observers_display_name = &display_name_dirty;
-        return res;
-      }();
-      if (value == std::exchange(display_name_cache, value))
-        return false;
-
-      is_writer_dirty = true;
-      business_card_dirty = true;
-
-      return true;
-    };
-    auto display_name = [&] {
-      update_display_name();
-      return display_name_cache.value();
-    };
+          msgs.insert("display_name");
+          if (pseudonym().has_value())
+            return pseudonym().value();
+          const auto res = full_name();
+          full_name_observers_display_name = &display_name_dirty;
+          display_name_dependencies_full_name = &full_name;
+          return res;
+        },
+        display_name_dirty, pseudonym, display_name_dependencies_full_name)(
+        &business_card_dirty, &is_writer_dirty);
 
     bool *is_writer_observers_autorun_extra = nullptr;
     auto is_writer = calc2(
