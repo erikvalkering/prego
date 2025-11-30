@@ -599,9 +599,10 @@ static suite<"integration_tests"> _ = [] {
 
     auto check_dep = [](auto &&dep) {
       if constexpr (std::invocable<decltype(dep)>) {
-        return dep();
+        dep();
       } else {
-        return dep && (*dep)();
+        if (dep)
+          (*dep)();
       }
     };
 
