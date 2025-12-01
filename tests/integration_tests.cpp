@@ -639,6 +639,15 @@ static suite<"integration_tests"> _ = [] {
       };
     };
 
+    auto autorun = [&](auto f, auto &&...args) {
+      return calc2(
+          [=] {
+            f();
+            return 0;
+          },
+          std::forward<decltype(args)>(args)...);
+    };
+
     auto full_name_dirty = true;
     auto display_name_dirty = true;
     auto autorun_dhl_dirty = true;
@@ -708,54 +717,59 @@ static suite<"integration_tests"> _ = [] {
         is_writer)(business_card_observers_autorun_dhl,
                    business_card_observers_autorun_print_at_home);
 
-    auto autorun_dhl = [&] {
-      if (business_card_observers_autorun_dhl)
-        business_card();
-      if (not std::exchange(autorun_dhl_dirty, false))
-        return;
+    auto autorun_dhl_dependencies_business_card =
+        std::add_pointer_t<decltype(business_card)>{};
+    auto autorun_dhl = autorun(
+        [&] {
+          business_card_observers_autorun_dhl = nullptr;
+          autorun_dhl_dependencies_business_card = nullptr;
 
-      business_card_observers_autorun_dhl = nullptr;
+          msgs.insert("autorun:dhl");
+          if (shipment() == shipment_t::dhl) {
+            ship_via_dhl(msgs, business_card());
+            business_card_observers_autorun_dhl = &autorun_dhl_dirty;
+            autorun_dhl_dependencies_business_card = &business_card;
+          }
+        },
+        autorun_dhl_dirty, autorun_dhl_dependencies_business_card)();
 
-      msgs.insert("autorun:dhl");
-      if (shipment() == shipment_t::dhl) {
-        ship_via_dhl(msgs, business_card());
-        business_card_observers_autorun_dhl = &autorun_dhl_dirty;
-      }
-    };
+    auto autorun_print_at_home_dependencies_business_card =
+        std::add_pointer_t<decltype(business_card)>{};
+    auto autorun_print_at_home = autorun(
+        [&] {
+          business_card_observers_autorun_print_at_home = nullptr;
+          autorun_print_at_home_dependencies_business_card = nullptr;
 
-    auto autorun_print_at_home = [&] {
-      if (business_card_observers_autorun_print_at_home)
-        business_card();
-      if (not std::exchange(autorun_print_at_home_dirty, false))
-        return;
+          msgs.insert("autorun:print_at_home");
+          if (shipment() == shipment_t::print_at_home) {
+            email(msgs, business_card());
+            business_card_observers_autorun_print_at_home =
+                &autorun_print_at_home_dirty;
+            autorun_print_at_home_dependencies_business_card = &business_card;
+          }
+        },
+        autorun_print_at_home_dirty,
+        autorun_print_at_home_dependencies_business_card)();
 
-      business_card_observers_autorun_print_at_home = nullptr;
+    auto autorun_extra_dependencies_is_writer =
+        std::add_pointer_t<decltype(is_writer)>{};
+    auto autorun_extra = autorun(
+        [&] {
+          is_writer_observers_autorun_extra = nullptr;
+          autorun_extra_dependencies_is_writer = nullptr;
+          first_name_observers_autorun_extra = nullptr;
 
-      msgs.insert("autorun:print_at_home");
-      if (shipment() == shipment_t::print_at_home) {
-        email(msgs, business_card());
-        business_card_observers_autorun_print_at_home =
-            &autorun_print_at_home_dirty;
-      }
-    };
+          msgs.insert("autorun:extra");
+          if (enable_extra()) {
+            is_writer();
+            is_writer_observers_autorun_extra = &autorun_extra_dirty;
+            autorun_extra_dependencies_is_writer = &is_writer;
 
-    auto autorun_extra = [&] {
-      if (is_writer_observers_autorun_extra)
-        is_writer();
-      if (not std::exchange(autorun_extra_dirty, false))
-        return;
-
-      is_writer_observers_autorun_extra = nullptr;
-      first_name_observers_autorun_extra = nullptr;
-
-      msgs.insert("autorun:extra");
-      if (enable_extra()) {
-        is_writer();
-        is_writer_observers_autorun_extra = &autorun_extra_dirty;
-        first_name();
-        first_name_observers_autorun_extra = &autorun_extra_dirty;
-      }
-    };
+            first_name();
+            first_name_observers_autorun_extra = &autorun_extra_dirty;
+          }
+        },
+        autorun_extra_dirty, autorun_extra_dependencies_is_writer)();
 
     update = [&] {
       autorun_dhl();
