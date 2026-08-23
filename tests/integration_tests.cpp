@@ -613,7 +613,7 @@ static suite<"integration_tests"> _ = [] {
 
     auto calc2 = [=](auto f, auto &dirty, auto &&...deps) {
       return [&, f](auto &&...observers) {
-        auto cache = std::make_unique<std::optional<decltype(f())>>();
+        auto cache = std::optional<decltype(f())>();
 
         auto updater = [&, f](auto &cache){
           if (not dirty) {
@@ -634,9 +634,9 @@ static suite<"integration_tests"> _ = [] {
           return true;
         };
 
-        auto getter = [updater, cache = std::move(cache)] {
-          updater(*cache);
-          return cache->value();
+        auto getter = [updater, cache = std::move(cache)] mutable {
+          updater(cache);
+          return cache.value();
         };
 
         return getter;
