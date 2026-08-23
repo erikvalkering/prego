@@ -648,11 +648,14 @@ static suite<"integration_tests"> _ = [] {
           std::forward<decltype(args)>(args)...);
     };
 
+    // unconditional observers
     auto full_name_dirty = true;
     auto display_name_dirty = true;
     auto autorun_dhl_dirty = true;
     auto autorun_print_at_home_dirty = true;
     auto autorun_extra_dirty = true;
+    auto is_writer_dirty = true;
+    auto business_card_dirty = true;
 
     bool *first_name_observers_autorun_extra = nullptr;
 
@@ -667,8 +670,6 @@ static suite<"integration_tests"> _ = [] {
     auto [enable_extra, set_enable_extra] = atom2(false, &autorun_extra_dirty);
 
     // calcs
-    auto is_writer_dirty = true;
-    auto business_card_dirty = true;
 
     bool *full_name_observers_display_name = nullptr;
     auto full_name = calc2(
