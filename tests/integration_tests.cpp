@@ -612,9 +612,9 @@ static suite<"integration_tests"> _ = [] {
 
     auto calc2 = [=](auto f, auto &dirty, auto &&...deps) {
       return [&, f](auto &&...observers) {
-        auto cache = std::make_shared<std::optional<decltype(f())>>();
+        auto cache = std::make_unique<std::optional<decltype(f())>>();
 
-        auto updater = [&, f, p = cache.get()] {
+        auto updater = [&, f](auto &cache){
           if (not dirty) {
             (check_dep(deps), ...);
           }
@@ -625,7 +625,7 @@ static suite<"integration_tests"> _ = [] {
           const auto value = f();
           dirty = false;
 
-          if (value == std::exchange(*p, value))
+          if (value == std::exchange(cache, value))
             return false;
 
           ((observers && (*observers = true)), ...);
@@ -634,8 +634,7 @@ static suite<"integration_tests"> _ = [] {
         };
 
         auto getter = [updater, cache = std::move(cache)] {
-          // TODO: pass cache as argument to updater, so that it can be turned into a unique_ptr
-          updater();
+          updater(*cache);
           return cache->value();
         };
 
