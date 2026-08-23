@@ -581,7 +581,8 @@ static suite<"integration_tests"> _ = [] {
 
     // TODO: uncouple observers during creation: use slots nttp param
     // TODO: encapsulate value dirty and observers in state class
-    // TODO: as in-between, use only state class but manual dependency management
+    // TODO: as in-between, use only state class but manual dependency management. wire the state classes together, wheras atom2/calc2/autorun2 below is already more of a library solution
+    // TODO: automatic registration
     auto atom2 = [&](auto value, auto &&...observers) {
       auto store = std::make_unique<decltype(value)>(value);
 
@@ -785,7 +786,7 @@ static suite<"integration_tests"> _ = [] {
                        assigner{set_enable_extra});
 
     // TODO: The manual and encapsulated versions encode a
-    // fixed dependency graph, which is not the case for
+    // _fixed_ dependency graph, which is not the case for
     // the prego version.
     // TODO: dep management is non-trivial, still insufficient and intrusive
     // TODO: Observers version
