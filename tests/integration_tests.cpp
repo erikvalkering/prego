@@ -661,7 +661,12 @@ static suite<"integration_tests"> _ = [] {
     auto is_writer_dirty = true;
     auto business_card_dirty = true;
 
+    // conditional observers
     bool *first_name_observers_autorun_extra = nullptr;
+    bool *full_name_observers_display_name = nullptr;
+    bool *is_writer_observers_autorun_extra = nullptr;
+    bool *business_card_observers_autorun_dhl = nullptr;
+    bool *business_card_observers_autorun_print_at_home = nullptr;
 
     // atoms
     auto [first_name, set_first_name] =
@@ -674,8 +679,6 @@ static suite<"integration_tests"> _ = [] {
     auto [enable_extra, set_enable_extra] = atom2(false, &autorun_extra_dirty);
 
     // calcs
-
-    bool *full_name_observers_display_name = nullptr;
     auto full_name = calc2(
         [&] {
           msgs.insert("full_name");
@@ -683,8 +686,7 @@ static suite<"integration_tests"> _ = [] {
         },
         full_name_dirty)(full_name_observers_display_name);
 
-    auto display_name_dependencies_full_name =
-        std::add_pointer_t<decltype(full_name)>{};
+    decltype(full_name) *display_name_dependencies_full_name = nullptr;
     auto display_name = calc2(
         [&] {
           full_name_observers_display_name = nullptr;
@@ -701,7 +703,6 @@ static suite<"integration_tests"> _ = [] {
         display_name_dirty, pseudonym, display_name_dependencies_full_name)(
         &business_card_dirty, &is_writer_dirty);
 
-    bool *is_writer_observers_autorun_extra = nullptr;
     auto is_writer = calc2(
         [&] {
           msgs.insert("is_writer");
@@ -710,8 +711,6 @@ static suite<"integration_tests"> _ = [] {
         is_writer_dirty,
         display_name)(&business_card_dirty, is_writer_observers_autorun_extra);
 
-    bool *business_card_observers_autorun_dhl = nullptr;
-    bool *business_card_observers_autorun_print_at_home = nullptr;
     auto business_card = calc2(
         [&] {
           msgs.insert("business_card");
@@ -722,8 +721,8 @@ static suite<"integration_tests"> _ = [] {
         is_writer)(business_card_observers_autorun_dhl,
                    business_card_observers_autorun_print_at_home);
 
-    auto autorun_dhl_dependencies_business_card =
-        std::add_pointer_t<decltype(business_card)>{};
+    // autoruns
+    decltype(business_card) *autorun_dhl_dependencies_business_card = nullptr;
     auto autorun_dhl = autorun2(
         [&] {
           business_card_observers_autorun_dhl = nullptr;
@@ -738,8 +737,7 @@ static suite<"integration_tests"> _ = [] {
         },
         autorun_dhl_dirty, autorun_dhl_dependencies_business_card)();
 
-    auto autorun_print_at_home_dependencies_business_card =
-        std::add_pointer_t<decltype(business_card)>{};
+    decltype(business_card) *autorun_print_at_home_dependencies_business_card = nullptr;
     auto autorun_print_at_home = autorun2(
         [&] {
           business_card_observers_autorun_print_at_home = nullptr;
@@ -756,8 +754,7 @@ static suite<"integration_tests"> _ = [] {
         autorun_print_at_home_dirty,
         autorun_print_at_home_dependencies_business_card)();
 
-    auto autorun_extra_dependencies_is_writer =
-        std::add_pointer_t<decltype(is_writer)>{};
+    decltype(is_writer) *autorun_extra_dependencies_is_writer = nullptr;
     auto autorun_extra = autorun2(
         [&] {
           is_writer_observers_autorun_extra = nullptr;
