@@ -579,6 +579,9 @@ static suite<"integration_tests"> _ = [] {
 
     auto update = std::function<void()>{};
 
+    // TODO: uncouple observers during creation: use slots nttp param
+    // TODO: encapsulate value dirty and observers in state class
+    // TODO: as in-between, use only state class but manual dependency management
     auto atom2 = [&](auto value, auto &&...observers) {
       auto store = std::make_unique<decltype(value)>(value);
 
@@ -631,6 +634,7 @@ static suite<"integration_tests"> _ = [] {
         };
 
         auto getter = [updater, cache = std::move(cache)] {
+          // TODO: pass cache as argument to updater, so that it can be turned into a unique_ptr
           updater();
           return cache->value();
         };
@@ -783,5 +787,12 @@ static suite<"integration_tests"> _ = [] {
     test_business_card(msgs, assigner{set_first_name}, assigner{set_last_name},
                        assigner{set_pseudonym}, assigner{set_shipment},
                        assigner{set_enable_extra});
+
+    // TODO: The manual and encapsulated versions encode a
+    // fixed dependency graph, which is not the case for
+    // the prego version.
+    // TODO: dep management is non-trivial, still insufficient and intrusive
+    // TODO: Observers version
+    // TODO: are unchanged atoms handled properly?
   };
 };
