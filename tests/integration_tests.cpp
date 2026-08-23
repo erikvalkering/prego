@@ -639,7 +639,7 @@ static suite<"integration_tests"> _ = [] {
       };
     };
 
-    auto autorun = [&](auto f, auto &&...args) {
+    auto autorun2 = [&](auto f, auto &&...args) {
       return calc2(
           [=] {
             f();
@@ -719,7 +719,7 @@ static suite<"integration_tests"> _ = [] {
 
     auto autorun_dhl_dependencies_business_card =
         std::add_pointer_t<decltype(business_card)>{};
-    auto autorun_dhl = autorun(
+    auto autorun_dhl = autorun2(
         [&] {
           business_card_observers_autorun_dhl = nullptr;
           autorun_dhl_dependencies_business_card = nullptr;
@@ -735,7 +735,7 @@ static suite<"integration_tests"> _ = [] {
 
     auto autorun_print_at_home_dependencies_business_card =
         std::add_pointer_t<decltype(business_card)>{};
-    auto autorun_print_at_home = autorun(
+    auto autorun_print_at_home = autorun2(
         [&] {
           business_card_observers_autorun_print_at_home = nullptr;
           autorun_print_at_home_dependencies_business_card = nullptr;
@@ -753,7 +753,7 @@ static suite<"integration_tests"> _ = [] {
 
     auto autorun_extra_dependencies_is_writer =
         std::add_pointer_t<decltype(is_writer)>{};
-    auto autorun_extra = autorun(
+    auto autorun_extra = autorun2(
         [&] {
           is_writer_observers_autorun_extra = nullptr;
           autorun_extra_dependencies_is_writer = nullptr;
