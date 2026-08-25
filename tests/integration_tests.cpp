@@ -551,7 +551,7 @@ static suite<"integration_tests"> _ = [] {
                        assigner{set_enable_extra});
   };
 
-  "business card (encapsulated)"_test = [=] {
+  "business card (top-down)"_test = [=] {
     auto msgs = std::multiset<std::string>{};
 
     auto update = std::function<void()>{};
