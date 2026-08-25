@@ -576,11 +576,11 @@ static suite<"integration_tests"> _ = [] {
     };
 
     // atoms
-    auto first_name = "John"s;
-    auto last_name = "Doe"s;
-    auto pseudonym = std::optional<std::string>{};
-    auto shipment = shipment_t::dhl;
-    auto enable_extra = false;
+    auto first_name = atom3("John"s);
+    auto last_name = atom3("Doe"s);
+    auto pseudonym = atom3(std::optional<std::string>{});
+    auto shipment = atom3(shipment_t::dhl);
+    auto enable_extra = atom3(false);
 
     // calcs
     auto full_name_dirty = true;
@@ -604,7 +604,7 @@ static suite<"integration_tests"> _ = [] {
       if (not std::exchange(full_name_dirty, false)) return false;
 
       msgs.insert("full_name");
-      const auto value = first_name + " " + last_name;
+      const auto value = first_name() + " " + last_name();
       if (value == std::exchange(full_name_cache, value)) return false;
 
       if (full_name_observers_display_name) display_name_dirty = true;
@@ -626,7 +626,7 @@ static suite<"integration_tests"> _ = [] {
 
       msgs.insert("display_name");
       const auto value = [&] {
-        if (pseudonym.has_value()) return pseudonym.value();
+        if (pseudonym().has_value()) return pseudonym().value();
         const auto res = full_name();
         full_name_observers_display_name = true;
         return res;
@@ -692,7 +692,7 @@ static suite<"integration_tests"> _ = [] {
       business_card_observers_autorun_dhl = false;
 
       msgs.insert("autorun:dhl");
-      if (shipment == shipment_t::dhl) {
+      if (shipment() == shipment_t::dhl) {
         ship_via_dhl(msgs, business_card());
         business_card_observers_autorun_dhl = true;
       }
@@ -705,7 +705,7 @@ static suite<"integration_tests"> _ = [] {
       business_card_observers_autorun_print_at_home = false;
 
       msgs.insert("autorun:print_at_home");
-      if (shipment == shipment_t::print_at_home) {
+      if (shipment() == shipment_t::print_at_home) {
         email(msgs, business_card());
         business_card_observers_autorun_print_at_home = true;
       }
@@ -719,7 +719,7 @@ static suite<"integration_tests"> _ = [] {
       is_writer_observers_autorun_extra = false;
       first_name_observers_autorun_extra = false;
       msgs.insert("autorun:extra");
-      if (enable_extra) {
+      if (enable_extra()) {
         is_writer();
         is_writer_observers_autorun_extra = true;
         // first_name();
@@ -734,7 +734,7 @@ static suite<"integration_tests"> _ = [] {
     };
 
     auto set_first_name = [&](auto value) {
-      if (value == std::exchange(first_name, value)) return;
+      if (value == std::exchange(first_name.value, value)) return;
 
       full_name_dirty = true;
       if (first_name_observers_autorun_extra) autorun_extra_dirty = true;
@@ -742,21 +742,21 @@ static suite<"integration_tests"> _ = [] {
       update();
     };
     auto set_last_name = [&](auto value) {
-      if (value == std::exchange(last_name, value)) return;
+      if (value == std::exchange(last_name.value, value)) return;
 
       full_name_dirty = true;
 
       update();
     };
     auto set_pseudonym = [&](auto value) {
-      if (value == std::exchange(pseudonym, value)) return;
+      if (value == std::exchange(pseudonym.value, value)) return;
 
       display_name_dirty = true;
 
       update();
     };
     auto set_shipment = [&](auto value) {
-      if (value == std::exchange(shipment, value)) return;
+      if (value == std::exchange(shipment.value, value)) return;
 
       autorun_dhl_dirty = true;
       autorun_print_at_home_dirty = true;
@@ -764,7 +764,7 @@ static suite<"integration_tests"> _ = [] {
       update();
     };
     auto set_enable_extra = [&](auto value) {
-      if (value == std::exchange(enable_extra, value)) return;
+      if (value == std::exchange(enable_extra.value, value)) return;
 
       autorun_extra_dirty = true;
 
