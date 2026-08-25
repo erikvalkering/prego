@@ -492,6 +492,7 @@ static suite<"integration_tests"> _ = [] {
       if (enable_extra) {
         is_writer();
         is_writer_observers_autorun_extra = true;
+        // TODO: why is the next line commented out?
         // first_name();
         first_name_observers_autorun_extra = true;
       }
