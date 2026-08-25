@@ -1,9 +1,9 @@
 AccessModifierOffset: -4
-AlignAfterOpenBracket: DontAlign
+AlignAfterOpenBracket: Align
 AlignConsecutiveAssignments: false
 AlignConsecutiveDeclarations: false
 AlignEscapedNewlines: Left
-AlignOperands: true
+AlignOperands: Align
 AlignTrailingComments: false
 AllowAllParametersOfDeclarationOnNextLine: false
 AllowShortBlocksOnASingleLine: true
@@ -17,9 +17,11 @@ AlwaysBreakBeforeMultilineStrings: true
 AlwaysBreakTemplateDeclarations: false
 BinPackArguments: false
 BinPackParameters: false
+
 BraceWrapping:
+  AfterCaseLabel: false
   AfterClass: false
-  AfterControlStatement: false
+  AfterControlStatement: Never
   AfterEnum: false
   AfterFunction: false
   AfterNamespace: false
@@ -32,39 +34,43 @@ BraceWrapping:
   SplitEmptyFunction: false
   SplitEmptyNamespace: true
   SplitEmptyRecord: true
+
 BreakAfterJavaFieldAnnotations: true
-BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeBinaryOperators: None
 BreakBeforeBraces: Custom
 BreakBeforeInheritanceComma: true
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializers: BeforeColon
 BreakConstructorInitializersBeforeComma: false
 BreakStringLiterals: true
-ColumnLimit: 0
+ColumnLimit: 80
 CommentPragmas: '^ IWYU pragma:'
 CompactNamespaces: false
 ConstructorInitializerAllOnOneLineOrOnePerLine: false
 ConstructorInitializerIndentWidth: 4
-ContinuationIndentWidth: 4
-Cpp11BracedListStyle: false
+ContinuationIndentWidth: 2
+Cpp11BracedListStyle: true
 DerivePointerAlignment: false
 DisableFormat: false
 ExperimentalAutoDetectBinPacking: true
 FixNamespaceComments: true
+
 ForEachMacros:
   - foreach
   - Q_FOREACH
   - BOOST_FOREACH
+
 IncludeCategories:
   - Priority: 2
-    Regex: ^"(llvm|llvm-c|clang|clang-c)/
+    Regex: '^"(llvm|llvm-c|clang|clang-c)/'
   - Priority: 3
-    Regex: ^(<|"(gtest|gmock|isl|json)/)
+    Regex: '^(<|"(gtest|gmock|isl|json)/)'
   - Priority: 1
-    Regex: .*
-IncludeIsMainRegex: (Test)?$
+    Regex: '.*'
+
+IncludeIsMainRegex: '(Test)?$'
 IndentCaseLabels: true
-IndentWidth: 4
+IndentWidth: 2
 IndentWrappedFunctionNames: true
 JavaScriptQuotes: Leave
 JavaScriptWrapImports: true
@@ -92,8 +98,6 @@ SpacesInCStyleCastParentheses: false
 SpacesInContainerLiterals: true
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
-Standard: Cpp11
+Standard: c++20
 TabWidth: 4
 UseTab: Never
-BlockIndent: true
-<!-- ColumnLimit: 120 -->
