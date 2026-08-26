@@ -46,6 +46,27 @@ template<typename F> struct assigner {
   auto reset() { (*this) = std::nullopt; }
 };
 
+auto atom3(auto value) {
+  struct state {
+    decltype(value) value;
+    auto operator()() const { return value; }
+  };
+
+  return state{value};
+}
+
+auto calc3 = [](auto f) {
+  struct state {
+    decltype(f) f;
+    bool dirty = true;
+    std::optional<decltype(f())> cache;
+
+    auto operator()() const { return f(); }
+  };
+
+  return state{f};
+};
+
 auto test_business_card(auto &msgs,
                         auto &&first_name,
                         auto &&last_name,
@@ -555,26 +576,6 @@ static suite<"integration_tests"> _ = [] {
   "business card (encapsulated)"_test = [=] {
     auto msgs = std::multiset<std::string>{};
 
-    auto atom3 = [](auto value) {
-      struct state {
-        decltype(value) value;
-        auto operator()() const { return value; }
-      };
-
-      return state{value};
-    };
-
-    auto calc3 = [&](auto f) {
-      struct state {
-        decltype(f) f;
-        bool dirty = true;
-        std::optional<decltype(f())> cache;
-
-        auto operator()() const { return f(); }
-      };
-
-      return state{f};
-    };
 
     // atoms
     auto first_name = atom3("John"s);
