@@ -81,6 +81,10 @@ template<typename observer_tag> auto link(auto &dependency, bool &dirty_flag) {
   observer_ref<observer_tag>(dependency.observers).dirty = &dirty_flag;
 }
 
+template<typename observer_tag> auto unlink(auto &dependency) {
+  observer_ref<observer_tag>(dependency.observers).dirty = nullptr;
+}
+
 auto test_business_card(auto &msgs,
                         auto &&first_name,
                         auto &&last_name,
@@ -730,19 +734,18 @@ static suite<"integration_tests"> _ = [] {
       }
     };
 
-    auto first_name_observers_autorun_extra = false;
     auto autorun_extra = [&] {
       if (is_writer_observers_autorun_extra) update_is_writer();
       if (not std::exchange(autorun_extra_dirty, false)) return;
 
       is_writer_observers_autorun_extra = false;
-      first_name_observers_autorun_extra = false;
+      unlink<autorun_extra_tag>(first_name);
       msgs.insert("autorun:extra");
       if (enable_extra()) {
         is_writer();
         is_writer_observers_autorun_extra = true;
         // first_name();
-        first_name_observers_autorun_extra = true;
+        link<autorun_extra_tag>(first_name, autorun_extra_dirty);
       }
     };
 
@@ -757,7 +760,8 @@ static suite<"integration_tests"> _ = [] {
       if (value == std::exchange(first_name.value, value)) return;
 
       *observer_ref<full_name_tag>(first_name.observers).dirty = true;
-      if (first_name_observers_autorun_extra) autorun_extra_dirty = true;
+      observer_ref<autorun_extra_tag>(first_name.observers).dirty &&
+        (*observer_ref<autorun_extra_tag>(first_name.observers).dirty = true);
 
       update();
     };
