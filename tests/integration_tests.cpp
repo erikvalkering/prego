@@ -65,6 +65,18 @@ template<typename... observer_tags> auto atom3(auto value) {
   return state{value};
 }
 
+auto set_value(auto &atom, auto value, auto on_changed) {
+  if (value == std::exchange(atom.value, value)) return;
+
+  []<typename... tags>(std::tuple<observer_ref_t<tags>...> &observers) {
+    ((observer_ref<tags>(observers).dirty &&
+      (*observer_ref<tags>(observers).dirty = true)),
+     ...);
+  }(atom.observers);
+
+  on_changed();
+};
+
 auto calc3 = [](auto f) {
   struct state {
     decltype(f) f;
@@ -757,13 +769,7 @@ static suite<"integration_tests"> _ = [] {
 
     link<full_name_tag>(first_name, full_name_dirty);
     auto set_first_name = [&](auto value) {
-      if (value == std::exchange(first_name.value, value)) return;
-
-      *observer_ref<full_name_tag>(first_name.observers).dirty = true;
-      observer_ref<autorun_extra_tag>(first_name.observers).dirty &&
-        (*observer_ref<autorun_extra_tag>(first_name.observers).dirty = true);
-
-      update();
+      set_value(first_name, value, update);
     };
     auto set_last_name = [&](auto value) {
       if (value == std::exchange(last_name.value, value)) return;
