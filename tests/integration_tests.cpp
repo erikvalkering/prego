@@ -46,9 +46,19 @@ template<typename F> struct assigner {
   auto reset() { (*this) = std::nullopt; }
 };
 
-auto atom3(auto value) {
+template<typename tag> struct observer_ref_t {
+  bool *dirty = nullptr;
+};
+
+template<typename tag> auto &observer_ref(auto &observers) {
+  return std::get<observer_ref_t<tag>>(observers);
+}
+
+template<typename... observer_tags> auto atom3(auto value) {
   struct state {
     decltype(value) value;
+    std::tuple<observer_ref_t<observer_tags>...> observers;
+
     auto operator()() const { return value; }
   };
 
