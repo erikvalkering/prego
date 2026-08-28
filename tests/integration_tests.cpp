@@ -77,6 +77,10 @@ auto calc3 = [](auto f) {
   return state{f};
 };
 
+template<typename observer_tag> auto link(auto &dependency, bool &dirty_flag) {
+  observer_ref<observer_tag>(dependency.observers).dirty = &dirty_flag;
+}
+
 auto test_business_card(auto &msgs,
                         auto &&first_name,
                         auto &&last_name,
@@ -586,9 +590,12 @@ static suite<"integration_tests"> _ = [] {
   "business card (encapsulated)"_test = [=] {
     auto msgs = std::multiset<std::string>{};
 
+    // observer tags
+    struct full_name_tag;
+    struct autorun_extra_tag;
 
     // atoms
-    auto first_name = atom3("John"s);
+    auto first_name = atom3<full_name_tag, autorun_extra_tag>("John"s);
     auto last_name = atom3("Doe"s);
     auto pseudonym = atom3(std::optional<std::string>{});
     auto shipment = atom3(shipment_t::dhl);
@@ -745,10 +752,11 @@ static suite<"integration_tests"> _ = [] {
       autorun_extra();
     };
 
+    link<full_name_tag>(first_name, full_name_dirty);
     auto set_first_name = [&](auto value) {
       if (value == std::exchange(first_name.value, value)) return;
 
-      full_name_dirty = true;
+      *observer_ref<full_name_tag>(first_name.observers).dirty = true;
       if (first_name_observers_autorun_extra) autorun_extra_dirty = true;
 
       update();
