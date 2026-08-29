@@ -611,14 +611,18 @@ static suite<"integration_tests"> _ = [] {
 
     // observer tags
     struct full_name_tag;
+    struct display_name_tag;
+    struct autorun_dhl_tag;
+    struct autorun_print_at_home_tag;
     struct autorun_extra_tag;
 
     // atoms
     auto first_name = atom3<full_name_tag, autorun_extra_tag>("John"s);
-    auto last_name = atom3("Doe"s);
-    auto pseudonym = atom3(std::optional<std::string>{});
-    auto shipment = atom3(shipment_t::dhl);
-    auto enable_extra = atom3(false);
+    auto last_name = atom3<full_name_tag>("Doe"s);
+    auto pseudonym = atom3<display_name_tag>(std::optional<std::string>{});
+    auto shipment =
+      atom3<autorun_dhl_tag, autorun_print_at_home_tag>(shipment_t::dhl);
+    auto enable_extra = atom3<autorun_extra_tag>(false);
 
     // calcs
     auto full_name_dirty = true;
@@ -777,34 +781,24 @@ static suite<"integration_tests"> _ = [] {
     auto set_first_name = [&](auto value) {
       set_value(first_name, value, update);
     };
+
+    link<full_name_tag>(last_name, full_name_dirty);
     auto set_last_name = [&](auto value) {
-      if (value == std::exchange(last_name.value, value)) return;
-
-      full_name_dirty = true;
-
-      update();
+      set_value(last_name, value, update);
     };
+
+    link<display_name_tag>(pseudonym, display_name_dirty);
     auto set_pseudonym = [&](auto value) {
-      if (value == std::exchange(pseudonym.value, value)) return;
-
-      display_name_dirty = true;
-
-      update();
+      set_value(pseudonym, value, update);
     };
-    auto set_shipment = [&](auto value) {
-      if (value == std::exchange(shipment.value, value)) return;
 
-      autorun_dhl_dirty = true;
-      autorun_print_at_home_dirty = true;
+    link<autorun_dhl_tag>(shipment, autorun_dhl_dirty);
+    link<autorun_print_at_home_tag>(shipment, autorun_print_at_home_dirty);
+    auto set_shipment = [&](auto value) { set_value(shipment, value, update); };
 
-      update();
-    };
+    link<autorun_extra_tag>(enable_extra, autorun_extra_dirty);
     auto set_enable_extra = [&](auto value) {
-      if (value == std::exchange(enable_extra.value, value)) return;
-
-      autorun_extra_dirty = true;
-
-      update();
+      set_value(enable_extra, value, update);
     };
 
     update();
