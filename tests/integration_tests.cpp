@@ -656,7 +656,7 @@ static suite<"integration_tests"> _ = [] {
 
     auto update_display_name = [&] {
       if (not display_name_dirty) {
-        if (full_name_observers_display_name) update_full_name();
+        if (full_name_observers_display_name) full_name();
       }
       if (not std::exchange(display_name_dirty, false)) return false;
 
