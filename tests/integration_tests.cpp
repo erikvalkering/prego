@@ -77,17 +77,18 @@ auto set_value(auto &atom, auto value, auto on_changed) {
   on_changed();
 };
 
-auto calc3 = [](auto f) {
+template<typename... observer_tags> auto calc3(auto f) {
   struct state {
     decltype(f) f;
     bool dirty = true;
     std::optional<decltype(f())> cache;
+    std::tuple<observer_ref_t<observer_tags>...> observers;
 
     auto operator()() const { return f(); }
   };
 
   return state{f};
-};
+}
 
 template<typename observer_tag> auto link(auto &dependency, bool &dirty_flag) {
   observer_ref<observer_tag>(dependency.observers).dirty = &dirty_flag;
