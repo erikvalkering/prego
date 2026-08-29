@@ -391,6 +391,9 @@ static suite<"integration_tests"> _ = [] {
       msgs, first_name, last_name, pseudonym, shipment, enable_extra);
 
     // TODO: implement transactional mutations
+    // TODO: implement true dynamic dependency graph: in a loop (with a
+    // user-specified count at runtime (or even a atomic or calculated state)),
+    // attach (a therefore variable number of) autoruns
   };
 
   "business card (naive)"_test = [=] {
@@ -748,6 +751,9 @@ static suite<"integration_tests"> _ = [] {
 
     auto autorun_extra = [&] {
       if (is_writer_observers_autorun_extra) update_is_writer();
+      // TODO: what if first_name becomes a calc? shouldn't we check it here?
+      // for example, if pseudonym is set, is_writer doesn't change, but this
+      // autorun should still be called.
       if (not std::exchange(autorun_extra_dirty, false)) return;
 
       is_writer_observers_autorun_extra = false;
