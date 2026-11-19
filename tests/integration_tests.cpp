@@ -644,9 +644,6 @@ static suite<"integration_tests"> _ = [] {
     auto enable_extra = atom3<autorun_extra_tag>(false);
 
     // calcs
-    auto full_name_dirty = true;
-    auto full_name_cache = std::optional<std::string>{};
-
     auto display_name_dirty = true;
     auto display_name_cache = std::optional<std::string>{};
 
@@ -660,36 +657,25 @@ static suite<"integration_tests"> _ = [] {
     auto autorun_print_at_home_dirty = true;
     auto autorun_extra_dirty = true;
 
-    auto full_name_observers_display_name = false;
-    auto update_full_name = [&] {
-      if (not std::exchange(full_name_dirty, false)) return false;
-
+    auto full_name = calc3<display_name_tag>([&] {
       msgs.insert("full_name");
-      const auto value = first_name() + " " + last_name();
-      if (value == std::exchange(full_name_cache, value)) return false;
-
-      if (full_name_observers_display_name) display_name_dirty = true;
-
-      return true;
-    };
-    auto full_name = [&] {
-      update_full_name();
-      return full_name_cache.value();
-    };
+      return first_name() + " " + last_name();
+    });
 
     auto update_display_name = [&] {
       if (not display_name_dirty) {
-        if (full_name_observers_display_name) full_name();
+        if (observer_ref<display_name_tag>(full_name.observers).dirty)
+          full_name();
       }
       if (not std::exchange(display_name_dirty, false)) return false;
 
-      full_name_observers_display_name = false;
+      unlink<display_name_tag>(full_name);
 
       msgs.insert("display_name");
       const auto value = [&] {
         if (pseudonym().has_value()) return pseudonym().value();
         const auto res = full_name();
-        full_name_observers_display_name = true;
+        link<display_name_tag>(full_name, display_name_dirty);
         return res;
       }();
       if (value == std::exchange(display_name_cache, value)) return false;
@@ -796,12 +782,12 @@ static suite<"integration_tests"> _ = [] {
       autorun_extra();
     };
 
-    link<full_name_tag>(first_name, full_name_dirty);
+    link<full_name_tag>(first_name, full_name.dirty);
     auto set_first_name = [&](auto value) {
       set_value(first_name, value, update);
     };
 
-    link<full_name_tag>(last_name, full_name_dirty);
+    link<full_name_tag>(last_name, full_name.dirty);
     auto set_last_name = [&](auto value) {
       set_value(last_name, value, update);
     };
