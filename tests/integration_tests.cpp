@@ -80,11 +80,29 @@ auto set_value(auto &atom, auto value, auto on_changed) {
 template<typename... observer_tags> auto calc3(auto f) {
   struct state {
     decltype(f) f;
-    bool dirty = true;
-    std::optional<decltype(f())> cache;
-    std::tuple<observer_ref_t<observer_tags>...> observers;
+    mutable bool dirty = true;
+    mutable std::optional<decltype(f())> cache;
+    mutable std::tuple<observer_ref_t<observer_tags>...> observers;
 
-    auto operator()() const { return f(); }
+    auto update() const {
+      if (not std::exchange(dirty, false)) return false;
+
+      const auto value = f();
+      if (value == std::exchange(cache, value)) return false;
+
+      []<typename... tags>(std::tuple<observer_ref_t<tags>...> &observers) {
+        ((observer_ref<tags>(observers).dirty &&
+          (*observer_ref<tags>(observers).dirty = true)),
+         ...);
+      }(observers);
+
+      return true;
+    }
+
+    auto operator()() const {
+      update();
+      return cache.value();
+    }
   };
 
   return state{f};
